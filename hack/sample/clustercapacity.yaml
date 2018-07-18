@@ -1,0 +1,6 @@
+apiVersion: capacity.supergiant.io/v1
+kind: ClusterCapacity
+metadata:
+  name: clustercapacity-example
+spec:
+  foo: bar
