@@ -5,7 +5,10 @@ import (
 	capacityv1 "github.com/supergiant/capacity/pkg/apis/capacity/v1"
 	rscheme "github.com/supergiant/capacity/pkg/client/clientset/versioned/scheme"
 	"github.com/supergiant/capacity/pkg/controller/clustercapacity"
+	"github.com/supergiant/capacity/pkg/controller/node"
+	"github.com/supergiant/capacity/pkg/controller/pod"
 	"github.com/supergiant/capacity/pkg/inject/args"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -23,8 +26,24 @@ func init() {
 		}
 
 		// Add Kubernetes informers
+		if err := arguments.ControllerManager.AddInformerProvider(&corev1.Node{}, arguments.KubernetesInformers.Core().V1().Nodes()); err != nil {
+			return err
+		}
+		if err := arguments.ControllerManager.AddInformerProvider(&corev1.Pod{}, arguments.KubernetesInformers.Core().V1().Pods()); err != nil {
+			return err
+		}
 
 		if c, err := clustercapacity.ProvideController(arguments); err != nil {
+			return err
+		} else {
+			arguments.ControllerManager.AddController(c)
+		}
+		if c, err := node.ProvideController(arguments); err != nil {
+			return err
+		} else {
+			arguments.ControllerManager.AddController(c)
+		}
+		if c, err := pod.ProvideController(arguments); err != nil {
 			return err
 		} else {
 			arguments.ControllerManager.AddController(c)
@@ -39,6 +58,28 @@ func init() {
 		APIGroups: []string{"capacity.supergiant.io"},
 		Resources: []string{"*"},
 		Verbs:     []string{"*"},
+	})
+	Injector.PolicyRules = append(Injector.PolicyRules, rbacv1.PolicyRule{
+		APIGroups: []string{
+			"",
+		},
+		Resources: []string{
+			"nodes",
+		},
+		Verbs: []string{
+			"get", "list", "watch",
+		},
+	})
+	Injector.PolicyRules = append(Injector.PolicyRules, rbacv1.PolicyRule{
+		APIGroups: []string{
+			"",
+		},
+		Resources: []string{
+			"pods",
+		},
+		Verbs: []string{
+			"get", "list", "watch",
+		},
 	})
 	// Inject GroupVersions
 	Injector.GroupVersions = append(Injector.GroupVersions, schema.GroupVersion{
