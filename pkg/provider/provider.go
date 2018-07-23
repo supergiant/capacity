@@ -12,8 +12,8 @@ type Machine struct {
 	CreatedAt time.Time
 }
 
-type MachineSize struct {
-	Type   string
+type MachineType struct {
+	Name   string
 	CPU    resource.Quantity
 	Memory resource.Quantity
 }
@@ -21,7 +21,7 @@ type MachineSize struct {
 type Provider interface {
 	Name() string
 	Machines() ([]*Machine, error)
-	AvailableMachineTypes() ([]MachineSize)
-	CreateMachine(*Machine) (*Machine, error)
+	AvailableMachineTypes() ([]MachineType)
+	CreateMachine(string) (*Machine, error)
 	DeleteMachine(string) error
 }

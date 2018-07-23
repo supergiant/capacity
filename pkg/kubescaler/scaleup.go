@@ -15,9 +15,12 @@ func (s *Kubescaler) scaleUp(unschedulablePods []*corev1.Pod, readyNodes []*core
 		return false, nil
 	}
 
-	// get required cpu/mem for unscheduled pods and pick up a machine type
+	// calculate required cpu/mem for unscheduled pods and pick up a machine type
+	podsCpu, podsMem := totalCPUMem(podsToScale)
+	mtype := bestMachineFor(podsCpu, podsMem, s.config.AllowedMachines)
+	err := s.workerManager.Create(mtype.Name)
 
-	return false, nil
+	return true, err
 }
 
 func (s *Kubescaler) filteredUnschedulablePods(pods []*corev1.Pod, readyNodes []*corev1.Node, currentTime time.Time) []*corev1.Pod {
@@ -45,13 +48,22 @@ func (s *Kubescaler) filteredUnschedulablePods(pods []*corev1.Pod, readyNodes []
 	return filtered
 }
 
-func hasMachineFor(cpu, mem resource.Quantity, machines []provider.MachineSize) bool {
-	for _, m := range machines {
+func hasMachineFor(cpu, mem resource.Quantity, machineTypes []provider.MachineType) bool {
+	for _, m := range machineTypes {
 		if m.CPU.Cmp(cpu) >= 0 && m.Memory.Cmp(mem) == 1 {
 			return true
 		}
 	}
 	return false
+}
+
+func bestMachineFor(cpu, mem resource.Quantity, machineTypes []provider.MachineType) provider.MachineType {
+	for _, m := range machineTypes {
+		if m.CPU.Cmp(cpu) >= 0 && m.Memory.Cmp(mem) == 1 {
+			return m
+		}
+	}
+	return machineTypes[len(machineTypes)-1]
 }
 
 func isNewPod(pod *corev1.Pod, currentTime time.Time) bool {
@@ -85,6 +97,30 @@ func getCPUMem(pod *corev1.Pod) (resource.Quantity, resource.Quantity) {
 		} else {
 			cpu.Add(*c.Resources.Requests.Memory())
 		}
+	}
+	return cpu, mem
+}
+
+func getCPUMemTo(cpu, mem resource.Quantity, pod *corev1.Pod) {
+	for _, c := range pod.Spec.Containers {
+		if !c.Resources.Limits.Cpu().IsZero() {
+			cpu.Add(*c.Resources.Limits.Cpu())
+		} else {
+			cpu.Add(*c.Resources.Requests.Cpu())
+		}
+
+		if !c.Resources.Limits.Memory().IsZero() {
+			cpu.Add(*c.Resources.Limits.Memory())
+		} else {
+			cpu.Add(*c.Resources.Requests.Memory())
+		}
+	}
+}
+
+func totalCPUMem(pods []*corev1.Pod) (resource.Quantity, resource.Quantity) {
+	var cpu, mem resource.Quantity
+	for _, pod := range pods {
+		getCPUMemTo(cpu, mem, pod)
 	}
 	return cpu, mem
 }

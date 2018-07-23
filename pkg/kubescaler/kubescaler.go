@@ -21,7 +21,7 @@ type Config struct {
 
 	MaxMachineProvisionTime time.Duration
 
-	AllowedMachines []provider.MachineSize
+	AllowedMachines []provider.MachineType
 }
 
 type Kubescaler struct {

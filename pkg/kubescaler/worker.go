@@ -43,6 +43,11 @@ type WorkerManager struct {
 	provider    provider.Provider
 }
 
+func (r *WorkerManager) Create(machineType string) error {
+	_, err := r.provider.CreateMachine(machineType)
+	return err
+}
+
 func (r *WorkerManager) Get(name string) (*Worker, error) {
 	node, err := r.nodesClient.Get(name, nil)
 	if err != nil {
