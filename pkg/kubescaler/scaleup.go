@@ -10,7 +10,7 @@ import (
 )
 
 func (s *Kubescaler) scaleUp(unschedulablePods []*corev1.Pod, readyNodes []*corev1.Node, currentTime time.Time) (bool, error) {
-	podsToScale := s.filteredUnschedulablePods(unschedulablePods, readyNodes, currentTime)
+	podsToScale := filterIgnoringPods(unschedulablePods, readyNodes, s.config.AllowedMachines, currentTime)
 	if len(podsToScale) > 0 {
 		return false, nil
 	}
@@ -23,23 +23,26 @@ func (s *Kubescaler) scaleUp(unschedulablePods []*corev1.Pod, readyNodes []*core
 	return true, err
 }
 
-func (s *Kubescaler) filteredUnschedulablePods(pods []*corev1.Pod, readyNodes []*corev1.Node, currentTime time.Time) []*corev1.Pod {
+func filterIgnoringPods(pods []*corev1.Pod, readyNodes []*corev1.Node, allowedMachines []provider.MachineType, currentTime time.Time) []*corev1.Pod {
 	filtered := make([]*corev1.Pod, 0)
 	for _, pod := range pods {
 		cpu, mem := getCPUMem(pod)
 
 		ignore := isNewPod(pod, currentTime) ||
 			// skip standalone pods
-			metav1.GetControllerOf(pod) == nil ||
+			!hasController(pod) ||
 			// skip daemonSet pods
 			hasDaemonSetController(pod) ||
 			// skip pods without explicit resource requests/limits
-			cpu.IsZero() || mem.IsZero() ||
+			cpu.Value() == 0 || mem.Value() == 0 ||
 			// skip too large pods
-			!hasMachineFor(cpu, mem, s.config.AllowedMachines) ||
+			!hasMachineFor(cpu, mem, allowedMachines) ||
 			// skip pod if it could be scheduled on one of the ready nodes
 			hasEnoughResources(readyNodes, cpu, mem)
 
+		println(pod.Name, "hasNoController=", !hasController(pod), "hadDS=", hasDaemonSetController(pod),
+			"hasMachineFor=", hasMachineFor(cpu,mem, allowedMachines), "hasRSS=", hasEnoughResources(readyNodes, cpu, mem),
+				"ignored=", ignore)
 		if !ignore {
 			filtered = append(filtered, pod)
 
@@ -64,6 +67,10 @@ func bestMachineFor(cpu, mem resource.Quantity, machineTypes []provider.MachineT
 		}
 	}
 	return machineTypes[len(machineTypes)-1]
+}
+
+func hasController(pod *corev1.Pod) bool {
+	return metav1.GetControllerOf(pod) != nil
 }
 
 func isNewPod(pod *corev1.Pod, currentTime time.Time) bool {
@@ -93,15 +100,15 @@ func getCPUMem(pod *corev1.Pod) (resource.Quantity, resource.Quantity) {
 		}
 
 		if !c.Resources.Limits.Memory().IsZero() {
-			cpu.Add(*c.Resources.Limits.Memory())
+			mem.Add(*c.Resources.Limits.Memory())
 		} else {
-			cpu.Add(*c.Resources.Requests.Memory())
+			mem.Add(*c.Resources.Requests.Memory())
 		}
 	}
 	return cpu, mem
 }
 
-func getCPUMemTo(cpu, mem resource.Quantity, pod *corev1.Pod) {
+func getCPUMemTo(cpu, mem *resource.Quantity, pod *corev1.Pod) {
 	for _, c := range pod.Spec.Containers {
 		if !c.Resources.Limits.Cpu().IsZero() {
 			cpu.Add(*c.Resources.Limits.Cpu())
@@ -110,9 +117,9 @@ func getCPUMemTo(cpu, mem resource.Quantity, pod *corev1.Pod) {
 		}
 
 		if !c.Resources.Limits.Memory().IsZero() {
-			cpu.Add(*c.Resources.Limits.Memory())
+			mem.Add(*c.Resources.Limits.Memory())
 		} else {
-			cpu.Add(*c.Resources.Requests.Memory())
+			mem.Add(*c.Resources.Requests.Memory())
 		}
 	}
 }
@@ -120,7 +127,7 @@ func getCPUMemTo(cpu, mem resource.Quantity, pod *corev1.Pod) {
 func totalCPUMem(pods []*corev1.Pod) (resource.Quantity, resource.Quantity) {
 	var cpu, mem resource.Quantity
 	for _, pod := range pods {
-		getCPUMemTo(cpu, mem, pod)
+		getCPUMemTo(&cpu, &mem, pod)
 	}
 	return cpu, mem
 }

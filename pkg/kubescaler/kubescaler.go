@@ -6,7 +6,7 @@ import (
 	"github.com/supergiant/capacity/pkg/provider"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	kube_util "k8s.io/autoscaler/cluster-autoscaler/utils/kubernetes"
+	kubeutil "k8s.io/autoscaler/cluster-autoscaler/utils/kubernetes"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -28,7 +28,7 @@ type Kubescaler struct {
 	config         Config
 	provider       provider.Provider
 	kclient        kubernetes.Clientset
-	listerRegistry kube_util.ListerRegistry
+	listerRegistry kubeutil.ListerRegistry
 	workerManager  WorkerManager
 }
 
@@ -50,8 +50,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 		return err
 	}
 
-	// Check if there has been a constant difference between the number of nodes in k8s and
-	// the number of nodes on the cloud provider side.
+	// remove machines that are provisioning for a long time
 	removed, err := s.removeFailedMachines(rss, currentTime)
 	if err != nil {
 		return err

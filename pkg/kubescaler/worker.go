@@ -6,6 +6,7 @@ import (
 	"github.com/supergiant/capacity/pkg/provider"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/typed/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -49,7 +50,7 @@ func (r *WorkerManager) Create(machineType string) error {
 }
 
 func (r *WorkerManager) Get(name string) (*Worker, error) {
-	node, err := r.nodesClient.Get(name, nil)
+	node, err := r.nodesClient.Get(name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -68,5 +69,5 @@ func (r *WorkerManager) Delete(name string, force bool) error {
 		}
 	}
 
-	return s.provider.DeleteMachine(w.MachineName)
+	return r.provider.DeleteMachine(w.MachineName)
 }
