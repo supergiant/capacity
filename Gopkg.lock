@@ -160,7 +160,7 @@
     "pkg/signals",
     "pkg/test"
   ]
-  revision = "0d202644773ffd789e963155aeb743d42418e0ac"
+  revision = "24a15ff82a44cb47423c341b0fd7a68f6b286845"
 
 [[projects]]
   name = "github.com/mailru/easyjson"
@@ -230,10 +230,25 @@
   version = "v1.4.1"
 
 [[projects]]
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/spf13/pflag"
   packages = ["."]
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
   version = "v1.0.1"
+
+[[projects]]
+  name = "github.com/stretchr/testify"
+  packages = [
+    "assert",
+    "require"
+  ]
+  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
+  version = "v1.2.2"
 
 [[projects]]
   name = "golang.org/x/crypto"
@@ -454,7 +469,7 @@
   branch = "master"
   name = "k8s.io/autoscaler"
   packages = ["cluster-autoscaler/utils/kubernetes"]
-  revision = "d07b38a594b0411818e2bb0f829fd6768bdc0a1d"
+  revision = "e1ad10aea4a727e6d8b00640b474c7f30460acaf"
 
 [[projects]]
   name = "k8s.io/client-go"
@@ -636,8 +651,8 @@
 [[projects]]
   name = "k8s.io/kubernetes"
   packages = ["pkg/api/v1/pod"]
-  revision = "b1b29978270dc22fecc592ac55d903350454310a"
-  version = "v1.11.1"
+  revision = "d4ab47518836c750f9949b9e0d387f20fb92260b"
+  version = "v1.10.1"
 
 [[projects]]
   name = "sigs.k8s.io/testing_frameworks"
@@ -650,6 +665,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b5346d5b39e4cf2b3a874299395c73464eb94c10634ce521dd3e60e42aa2f720"
+  inputs-digest = "dee0029291b5242c07eb7e92ee7ac339455c0b550d5ff162e2ca8e8b83e47286"
   solver-name = "gps-cdcl"
   solver-version = 1
