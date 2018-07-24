@@ -59,16 +59,16 @@ func (r *WorkerManager) Get(name string) (*Worker, error) {
 }
 
 func (r *WorkerManager) Delete(name string, force bool) error {
-	w, err := r.Get(name)
-	if err != nil {
-		return err
-	}
+	//w, err := r.Get(name)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//if !force {
+	//	if err := r.nodesClient.Delete(w.NodeName, nil); err != nil {
+	//		return err
+	//	}
+	//}
 
-	if !force {
-		if err := r.nodesClient.Delete(w.NodeName, nil); err != nil {
-			return err
-		}
-	}
-
-	return r.provider.DeleteMachine(w.MachineName)
+	return r.provider.DeleteMachine(name)
 }

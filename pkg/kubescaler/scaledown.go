@@ -9,12 +9,14 @@ import (
 func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, readyNodes []*corev1.Node) error {
 	scheduledPods = filterDaemonSetPods(filterStandalonePods(scheduledPods))
 	nodeMap := podsPerNode(scheduledPods)
-	if len(nodeMap) == len(readyNodes) {
-		// each node has at least one non standalone/daemonSet pod
+
+	emptyNodes := nodesWithNoPods(readyNodes, nodeMap)
+	if len(emptyNodes) == 0 {
 		return nil
 	}
 
-	for _, node := range emptyNodes(readyNodes, nodeMap) {
+	// TODO: log empty nodes
+	for _, node := range emptyNodes {
 		if !IsReserved(node) {
 			// gracefully remove a node
 			if err := s.DeleteWorker(node.Name, false); err != nil {
@@ -54,14 +56,14 @@ func filterDaemonSetPods(pods []*corev1.Pod) []*corev1.Pod {
 	return filtered
 }
 
-func emptyNodes(readyNodes []*corev1.Node, nodePods map[string]int) []*corev1.Node {
+func nodesWithNoPods(readyNodes []*corev1.Node, nodePods map[string]int) []*corev1.Node {
 	nonEmptyNodes := sets.NewString()
-	for nodeName := range nodePods {
+	for nodeName, _ := range nodePods {
 		nonEmptyNodes.Insert(nodeName)
 	}
 	emptyNodes := make([]*corev1.Node, 0)
 	for _, node := range readyNodes {
-		if !nonEmptyNodes.Has(node.Name) {
+		if nonEmptyNodes.Has(node.Name) {
 			emptyNodes = append(emptyNodes, node)
 		}
 	}

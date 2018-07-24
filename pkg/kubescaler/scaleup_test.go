@@ -49,13 +49,24 @@ var (
 var (
 	allowedMachine = provider.MachineType{"42cpu42Mi", resource42, resource42Mi}
 
-	nodeReady = corev1.Node{
+	NodeReadyName = "nodeReady"
+	nodeReady     = corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "nodeReady",
+			Name: NodeReadyName,
 		},
 		Status: corev1.NodeStatus{
 			Allocatable: resourceList13CPU13Mi,
 		},
+	}
+	NodeScaleDownName = "nodeScaleDown"
+	NodeScaleDown     = corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: NodeScaleDownName,
+		},
+		Status: corev1.NodeStatus{
+			Allocatable: resourceList42CPU42Mi,
+		},
+
 	}
 
 	podNew = corev1.Pod{
@@ -94,10 +105,11 @@ var (
 			},
 		},
 		Spec: corev1.PodSpec{
+			NodeName: NodeReadyName,
 			Containers: []corev1.Container{
 				{
 					Resources: corev1.ResourceRequirements{
-						Requests: resourceList33CPU33Mi,
+						Requests: resourceList13CPU13Mi,
 					},
 				},
 			},
@@ -115,6 +127,7 @@ var (
 			},
 		},
 		Spec: corev1.PodSpec{
+			NodeName: NodeReadyName,
 			Containers: []corev1.Container{
 				{
 					Resources: corev1.ResourceRequirements{
@@ -156,6 +169,10 @@ func (p *fakeProvider) CreateMachine(typeName string) (*provider.Machine, error)
 	return nil, p.err
 }
 
+func (p *fakeProvider) DeleteMachine(name string) error {
+	return p.err
+}
+
 func TestKubescalerScaleUp(t *testing.T) {
 	tcs := []struct {
 		pods            []*corev1.Pod
@@ -165,12 +182,16 @@ func TestKubescalerScaleUp(t *testing.T) {
 		expectedErr     error
 	}{
 		{
-			pods:            []*corev1.Pod{&podNew, &podStandAlone, &podWithRequests},
 			nodes:           []*corev1.Node{&nodeReady},
 			allowedMachines: []provider.MachineType{allowedMachine},
 		},
 		{
 			pods:            []*corev1.Pod{&podNew, &podStandAlone, &podWithRequests},
+			nodes:           []*corev1.Node{&nodeReady},
+			allowedMachines: []provider.MachineType{allowedMachine},
+		},
+		{
+			pods:            []*corev1.Pod{&podNew, &podStandAlone, &podWithLimits},
 			nodes:           []*corev1.Node{&nodeReady},
 			allowedMachines: []provider.MachineType{allowedMachine},
 			providerErr:     fakeErr,
@@ -207,10 +228,7 @@ func TestFilterIgnoringPos(t *testing.T) {
 	}
 	readyNodes := []*corev1.Node{&nodeReady}
 	allowedMachines := []provider.MachineType{allowedMachine}
-	expectedRes := []*corev1.Pod{
-		&podWithRequests,
-		&podWithLimits,
-	}
+	expectedRes := []*corev1.Pod{&podWithLimits}
 
 	res := filterIgnoringPods(pods, readyNodes, allowedMachines, currentTime)
 	require.Equal(t, expectedRes, res)
@@ -357,7 +375,7 @@ func TestGetCPUMem(t *testing.T) {
 		{&podNew, resource.Quantity{}, resource.Quantity{}},
 		{&podStandAlone, resource.Quantity{}, resource.Quantity{}},
 		{&podDaemonSet, resource.Quantity{}, resource.Quantity{}},
-		{&podWithRequests, resource33, resource33Mi},
+		{&podWithRequests, resource13, resource13Mi},
 		{&podWithLimits, resource33, resource33Mi},
 		{&podWithHugeLimits, resource.MustParse("1024"), resource.MustParse("1024Gi")},
 	}
@@ -374,7 +392,7 @@ func TestTotalCPUMem(t *testing.T) {
 		&podWithRequests,
 		&podWithLimits,
 	}
-	expectedCPU, expectedMem := resource.MustParse("66"), resource.MustParse("66Mi")
+	expectedCPU, expectedMem := resource.MustParse("46"), resource.MustParse("46Mi")
 
 	cpu, mem := totalCPUMem(pods)
 	require.Equal(t, expectedCPU.Value(), cpu.Value(), "cpu")
