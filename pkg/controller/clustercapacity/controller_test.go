@@ -1,10 +1,9 @@
 package clustercapacity_test
 
 import (
+	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/supergiant/capacity/pkg/apis/capacity/v1"

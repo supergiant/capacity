@@ -3,10 +3,11 @@ package capacity
 import (
 	"strings"
 
-	"github.com/supergiant/capacity/pkg/provider"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes/typed/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/typed/core/v1"
+
+	"github.com/supergiant/capacity/pkg/provider"
 )
 
 const (

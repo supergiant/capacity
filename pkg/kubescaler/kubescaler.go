@@ -1,18 +1,24 @@
 package capacity
 
 import (
+	"errors"
 	"time"
 
-	"github.com/supergiant/capacity/pkg/provider"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubeutil "k8s.io/autoscaler/cluster-autoscaler/utils/kubernetes"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/supergiant/capacity/pkg/provider"
 )
 
 const (
 	// How old the oldest unschedulable pod should be before starting scale up.
 	unschedulablePodTimeBuffer = 2 * time.Second
+)
+
+var (
+	ErrNoAllowedMachined = errors.New("no allowed machines were provided")
 )
 
 type Config struct {
@@ -29,7 +35,7 @@ type Kubescaler struct {
 	provider       provider.Provider
 	kclient        kubernetes.Clientset
 	listerRegistry kubeutil.ListerRegistry
-	workerManager  WorkerManager
+	workerManager  *WorkerManager
 }
 
 func New() (*Kubescaler, error) {
@@ -67,12 +73,8 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 
 	if s.config.NodesCountMax >= len(rss.readyNodes) {
 		// try to scale up the cluster. In case of success no need to scale down
-		scaled, err := s.scaleUp(rss.unschedulablePods, rss.readyNodes, currentTime)
-		if err != nil {
+		if err = s.scaleUp(rss.unschedulablePods, rss.readyNodes, currentTime); err != nil {
 			return err
-		}
-		if scaled {
-			return nil
 		}
 	}
 

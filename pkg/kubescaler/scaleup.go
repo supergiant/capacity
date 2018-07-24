@@ -3,24 +3,27 @@ package capacity
 import (
 	"time"
 
-	"github.com/supergiant/capacity/pkg/provider"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/supergiant/capacity/pkg/provider"
 )
 
-func (s *Kubescaler) scaleUp(unschedulablePods []*corev1.Pod, readyNodes []*corev1.Node, currentTime time.Time) (bool, error) {
+func (s *Kubescaler) scaleUp(unschedulablePods []*corev1.Pod, readyNodes []*corev1.Node, currentTime time.Time) error {
 	podsToScale := filterIgnoringPods(unschedulablePods, readyNodes, s.config.AllowedMachines, currentTime)
-	if len(podsToScale) > 0 {
-		return false, nil
+	if len(podsToScale) == 0 {
+		return nil
 	}
 
 	// calculate required cpu/mem for unscheduled pods and pick up a machine type
 	podsCpu, podsMem := totalCPUMem(podsToScale)
-	mtype := bestMachineFor(podsCpu, podsMem, s.config.AllowedMachines)
-	err := s.workerManager.Create(mtype.Name)
+	mtype, err := bestMachineFor(podsCpu, podsMem, s.config.AllowedMachines)
+	if err != nil {
+		return err
+	}
 
-	return true, err
+	return s.workerManager.Create(mtype.Name)
 }
 
 func filterIgnoringPods(pods []*corev1.Pod, readyNodes []*corev1.Node, allowedMachines []provider.MachineType, currentTime time.Time) []*corev1.Pod {
@@ -40,9 +43,6 @@ func filterIgnoringPods(pods []*corev1.Pod, readyNodes []*corev1.Node, allowedMa
 			// skip pod if it could be scheduled on one of the ready nodes
 			hasEnoughResources(readyNodes, cpu, mem)
 
-		println(pod.Name, "hasNoController=", !hasController(pod), "hadDS=", hasDaemonSetController(pod),
-			"hasMachineFor=", hasMachineFor(cpu,mem, allowedMachines), "hasRSS=", hasEnoughResources(readyNodes, cpu, mem),
-				"ignored=", ignore)
 		if !ignore {
 			filtered = append(filtered, pod)
 
@@ -60,13 +60,16 @@ func hasMachineFor(cpu, mem resource.Quantity, machineTypes []provider.MachineTy
 	return false
 }
 
-func bestMachineFor(cpu, mem resource.Quantity, machineTypes []provider.MachineType) provider.MachineType {
+func bestMachineFor(cpu, mem resource.Quantity, machineTypes []provider.MachineType) (provider.MachineType, error) {
+	if len(machineTypes) == 0 {
+		return provider.MachineType{}, ErrNoAllowedMachined
+	}
 	for _, m := range machineTypes {
 		if m.CPU.Cmp(cpu) >= 0 && m.Memory.Cmp(mem) == 1 {
-			return m
+			return m, nil
 		}
 	}
-	return machineTypes[len(machineTypes)-1]
+	return machineTypes[len(machineTypes)-1], nil
 }
 
 func hasController(pod *corev1.Pod) bool {

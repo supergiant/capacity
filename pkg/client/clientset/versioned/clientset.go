@@ -4,10 +4,11 @@ package versioned
 
 import (
 	glog "github.com/golang/glog"
-	capacityv1 "github.com/supergiant/capacity/pkg/client/clientset/versioned/typed/capacity/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
+
+	capacityv1 "github.com/supergiant/capacity/pkg/client/clientset/versioned/typed/capacity/v1"
 )
 
 type Interface interface {

@@ -21,7 +21,7 @@ type MachineType struct {
 type Provider interface {
 	Name() string
 	Machines() ([]*Machine, error)
-	AvailableMachineTypes() ([]MachineType)
+	AvailableMachineTypes() []MachineType
 	CreateMachine(string) (*Machine, error)
 	DeleteMachine(string) error
 }

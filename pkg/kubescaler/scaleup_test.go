@@ -1,19 +1,22 @@
 package capacity
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/supergiant/capacity/pkg/provider"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/supergiant/capacity/pkg/provider"
 )
 
 var (
-	trueVar     = true
 	currentTime = time.Now()
+	trueVar     = true
+	fakeErr     = errors.New("fake error")
 
 	resource13   = resource.MustParse("13")
 	resource13Mi = resource.MustParse("13Mi")
@@ -57,19 +60,19 @@ var (
 
 	podNew = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "podNew",
+			Name:              "podNew",
 			CreationTimestamp: metav1.Time{currentTime.Add(time.Hour)},
 		},
 	}
 	podStandAlone = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "podStandAlone",
+			Name:              "podStandAlone",
 			CreationTimestamp: metav1.Time{currentTime.Add(-time.Hour)},
 		},
 	}
 	podDaemonSet = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "podDaemonSet",
+			Name:              "podDaemonSet",
 			CreationTimestamp: metav1.Time{currentTime.Add(-time.Hour)},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -81,7 +84,7 @@ var (
 	}
 	podWithRequests = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "podWithRequests",
+			Name:              "podWithRequests",
 			CreationTimestamp: metav1.Time{currentTime.Add(-time.Hour)},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -102,7 +105,7 @@ var (
 	}
 	podWithLimits = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "podWithLimits",
+			Name:              "podWithLimits",
 			CreationTimestamp: metav1.Time{currentTime.Add(-time.Hour)},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -123,7 +126,7 @@ var (
 	}
 	podWithHugeLimits = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "podWithHugeLimits",
+			Name:              "podWithHugeLimits",
 			CreationTimestamp: metav1.Time{currentTime.Add(-time.Hour)},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -143,6 +146,55 @@ var (
 		},
 	}
 )
+
+type fakeProvider struct {
+	provider.Provider
+	err error
+}
+
+func (p *fakeProvider) CreateMachine(typeName string) (*provider.Machine, error) {
+	return nil, p.err
+}
+
+func TestKubescalerScaleUp(t *testing.T) {
+	tcs := []struct {
+		pods            []*corev1.Pod
+		nodes           []*corev1.Node
+		allowedMachines []provider.MachineType
+		providerErr     error
+		expectedErr     error
+	}{
+		{
+			pods:            []*corev1.Pod{&podNew, &podStandAlone, &podWithRequests},
+			nodes:           []*corev1.Node{&nodeReady},
+			allowedMachines: []provider.MachineType{allowedMachine},
+		},
+		{
+			pods:            []*corev1.Pod{&podNew, &podStandAlone, &podWithRequests},
+			nodes:           []*corev1.Node{&nodeReady},
+			allowedMachines: []provider.MachineType{allowedMachine},
+			providerErr:     fakeErr,
+			expectedErr:     fakeErr,
+		},
+	}
+
+	for i, tc := range tcs {
+		ks := &Kubescaler{
+			config: Config{
+				AllowedMachines: tc.allowedMachines,
+			},
+			workerManager: &WorkerManager{
+				provider: &fakeProvider{
+					err: tc.providerErr,
+				},
+			},
+		}
+
+		err := ks.scaleUp(tc.pods, tc.nodes, currentTime)
+		require.Equalf(t, tc.expectedErr, err, "TC#%d", i+1)
+	}
+
+}
 
 func TestFilterIgnoringPos(t *testing.T) {
 	pods := []*corev1.Pod{
@@ -195,7 +247,11 @@ func TestBestMachineFor(t *testing.T) {
 		cpu, mem     resource.Quantity
 		machineTypes []provider.MachineType
 		expectedRes  provider.MachineType
+		expectedErr  error
 	}{
+		{
+			expectedErr: ErrNoAllowedMachined,
+		},
 		{
 			machineTypes: []provider.MachineType{machineType13, machineType42},
 			expectedRes:  machineType13,
@@ -233,8 +289,11 @@ func TestBestMachineFor(t *testing.T) {
 	}
 
 	for i, tc := range tcs {
-		res := bestMachineFor(tc.cpu, tc.mem, tc.machineTypes)
-		require.Equalf(t, tc.expectedRes, res, "TC#%d", i+1)
+		res, err := bestMachineFor(tc.cpu, tc.mem, tc.machineTypes)
+		require.Equalf(t, tc.expectedErr, err, "TC#%d", i+1)
+		if err != nil {
+			require.Equalf(t, tc.expectedRes, res, "TC#%d", i+1)
+		}
 	}
 }
 
