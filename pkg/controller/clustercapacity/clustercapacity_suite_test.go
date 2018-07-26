@@ -8,11 +8,12 @@ import (
 	"github.com/kubernetes-sigs/kubebuilder/pkg/test"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
 	"github.com/supergiant/capacity/pkg/client/clientset/versioned"
 	"github.com/supergiant/capacity/pkg/inject"
 	"github.com/supergiant/capacity/pkg/inject/args"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 var (

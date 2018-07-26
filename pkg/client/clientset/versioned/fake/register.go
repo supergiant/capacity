@@ -3,11 +3,12 @@
 package fake
 
 import (
-	capacityv1 "github.com/supergiant/capacity/pkg/apis/capacity/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
+
+	capacityv1 "github.com/supergiant/capacity/pkg/apis/capacity/v1"
 )
 
 var scheme = runtime.NewScheme()

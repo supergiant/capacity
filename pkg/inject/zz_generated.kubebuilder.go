@@ -2,16 +2,17 @@ package inject
 
 import (
 	"github.com/kubernetes-sigs/kubebuilder/pkg/inject/run"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes/scheme"
+
 	capacityv1 "github.com/supergiant/capacity/pkg/apis/capacity/v1"
 	rscheme "github.com/supergiant/capacity/pkg/client/clientset/versioned/scheme"
 	"github.com/supergiant/capacity/pkg/controller/clustercapacity"
 	"github.com/supergiant/capacity/pkg/controller/node"
 	"github.com/supergiant/capacity/pkg/controller/pod"
 	"github.com/supergiant/capacity/pkg/inject/args"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/kubernetes/scheme"
 )
 
 func init() {

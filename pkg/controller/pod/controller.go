@@ -4,16 +4,15 @@ import (
 	"log"
 
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller"
+	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/eventhandlers"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/types"
-	"k8s.io/client-go/tools/record"
-
 	corev1 "k8s.io/api/core/v1"
 	corev1informer "k8s.io/client-go/informers/core/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	corev1lister "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/record"
 
 	"github.com/supergiant/capacity/pkg/inject/args"
-	"github.com/kubernetes-sigs/kubebuilder/pkg/controller/eventhandlers"
 )
 
 // EDIT THIS FILE

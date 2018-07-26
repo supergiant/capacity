@@ -11,7 +11,6 @@ import (
 	capacityv1client "github.com/supergiant/capacity/pkg/client/clientset/versioned/typed/capacity/v1"
 	capacityv1informer "github.com/supergiant/capacity/pkg/client/informers/externalversions/capacity/v1"
 	capacityv1lister "github.com/supergiant/capacity/pkg/client/listers/capacity/v1"
-
 	"github.com/supergiant/capacity/pkg/inject/args"
 )
 

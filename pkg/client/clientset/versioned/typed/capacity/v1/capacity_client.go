@@ -3,10 +3,11 @@
 package v1
 
 import (
-	v1 "github.com/supergiant/capacity/pkg/apis/capacity/v1"
-	"github.com/supergiant/capacity/pkg/client/clientset/versioned/scheme"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	rest "k8s.io/client-go/rest"
+
+	v1 "github.com/supergiant/capacity/pkg/apis/capacity/v1"
+	"github.com/supergiant/capacity/pkg/client/clientset/versioned/scheme"
 )
 
 type CapacityV1Interface interface {
