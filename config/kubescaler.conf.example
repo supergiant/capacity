@@ -1,0 +1,26 @@
+{
+  "sshPubKey": "REPLACE_IT",
+  "clusterName": "REPLACE_IT",
+  "masterPrivateAddr": "REPLACE_IT",
+  "kubeAPIPort": "REPLACE_IT",
+  "kubeAPIPassword": "REPLACE_IT",
+  "providerName": "REPLACE_IT",
+  "provider": {
+    "awsIAMRole": "kubernetes-node",
+    "awsImageID": "ami-cc0900ac",
+    "awsKeyID": "REPLACE_IT",
+    "awsKeyName": "REPLACE_IT",
+    "awsRegion": "REPLACE_IT",
+    "awsSecretKey": "REPLACE_IT",
+    "awsSecurityGroups": "REPLACE_IT",
+    "awsSubnetID": "REPLACE_IT",
+    "awsTags": "key=val",
+    "awsVolSize": "100",
+    "awsVolType": "gp2"
+  },
+  "stopped": false,
+  "nodesCountMin": 0,
+  "nodesCountMax": 0,
+  "machineTypes": [],
+  "maxMachineProvisionTime": 0
+}

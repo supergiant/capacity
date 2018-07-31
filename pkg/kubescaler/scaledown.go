@@ -1,12 +1,16 @@
 package capacity
 
 import (
+	"context"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+
+	"github.com/supergiant/capacity/pkg/kubescaler/workers"
 )
 
-func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, readyNodes []*corev1.Node) error {
+func (s *Kubescaler) scaleDown(ctx context.Context, scheduledPods []*corev1.Pod, readyNodes []*corev1.Node) error {
 	scheduledPods = filterDaemonSetPods(filterStandalonePods(scheduledPods))
 	nodeMap := podsPerNode(scheduledPods)
 
@@ -17,9 +21,9 @@ func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, readyNodes []*corev1
 
 	// TODO: log empty nodes
 	for _, node := range emptyNodes {
-		if !IsReserved(node) {
+		if !workers.IsReserved(node) {
 			// gracefully remove a node
-			if err := s.DeleteWorker(node.Name, false); err != nil {
+			if err := s.DeleteWorker(ctx, node.Name, node.Spec.ProviderID); err != nil {
 				return err
 			}
 		}

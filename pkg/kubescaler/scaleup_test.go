@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/supergiant/capacity/pkg/provider"
+	"github.com/supergiant/capacity/pkg/providers"
 )
 
 var (
@@ -25,8 +25,8 @@ var (
 	resource42   = resource.MustParse("42")
 	resource42Mi = resource.MustParse("42Mi")
 
-	machineType13 = provider.MachineType{"13", resource13, resource13Mi}
-	machineType42 = provider.MachineType{"42", resource42, resource42Mi}
+	machineType13 = providers.MachineType{"13", resource13, resource13Mi}
+	machineType42 = providers.MachineType{"42", resource42, resource42Mi}
 
 	resourceList13CPU13Mi = corev1.ResourceList{
 		"cpu":    resource13,
@@ -47,7 +47,7 @@ var (
 )
 
 var (
-	allowedMachine = provider.MachineType{"42cpu42Mi", resource42, resource42Mi}
+	allowedMachine = providers.MachineType{"42cpu42Mi", resource42, resource42Mi}
 
 	NodeReadyName = "nodeReady"
 	nodeReady     = corev1.Node{
@@ -66,7 +66,6 @@ var (
 		Status: corev1.NodeStatus{
 			Allocatable: resourceList42CPU42Mi,
 		},
-
 	}
 
 	podNew = corev1.Pod{
@@ -161,11 +160,11 @@ var (
 )
 
 type fakeProvider struct {
-	provider.Provider
+	providers.Provider
 	err error
 }
 
-func (p *fakeProvider) CreateMachine(typeName string) (*provider.Machine, error) {
+func (p *fakeProvider) CreateMachine(typeName string) (*providers.Machine, error) {
 	return nil, p.err
 }
 
@@ -177,23 +176,23 @@ func TestKubescalerScaleUp(t *testing.T) {
 	tcs := []struct {
 		pods            []*corev1.Pod
 		nodes           []*corev1.Node
-		allowedMachines []provider.MachineType
+		allowedMachines []providers.MachineType
 		providerErr     error
 		expectedErr     error
 	}{
 		{
 			nodes:           []*corev1.Node{&nodeReady},
-			allowedMachines: []provider.MachineType{allowedMachine},
+			allowedMachines: []providers.MachineType{allowedMachine},
 		},
 		{
 			pods:            []*corev1.Pod{&podNew, &podStandAlone, &podWithRequests},
 			nodes:           []*corev1.Node{&nodeReady},
-			allowedMachines: []provider.MachineType{allowedMachine},
+			allowedMachines: []providers.MachineType{allowedMachine},
 		},
 		{
 			pods:            []*corev1.Pod{&podNew, &podStandAlone, &podWithLimits},
 			nodes:           []*corev1.Node{&nodeReady},
-			allowedMachines: []provider.MachineType{allowedMachine},
+			allowedMachines: []providers.MachineType{allowedMachine},
 			providerErr:     fakeErr,
 			expectedErr:     fakeErr,
 		},
@@ -202,10 +201,10 @@ func TestKubescalerScaleUp(t *testing.T) {
 	for i, tc := range tcs {
 		ks := &Kubescaler{
 			config: Config{
-				AllowedMachines: tc.allowedMachines,
+				MachineTypes: tc.allowedMachines,
 			},
 			workerManager: &WorkerManager{
-				provider: &fakeProvider{
+				providers: &fakeProvider{
 					err: tc.providerErr,
 				},
 			},
@@ -227,7 +226,7 @@ func TestFilterIgnoringPos(t *testing.T) {
 		&podWithHugeLimits,
 	}
 	readyNodes := []*corev1.Node{&nodeReady}
-	allowedMachines := []provider.MachineType{allowedMachine}
+	allowedMachines := []providers.MachineType{allowedMachine}
 	expectedRes := []*corev1.Pod{&podWithLimits}
 
 	res := filterIgnoringPods(pods, readyNodes, allowedMachines, currentTime)
@@ -237,19 +236,19 @@ func TestFilterIgnoringPos(t *testing.T) {
 func TestHasMachineFor(t *testing.T) {
 	tcs := []struct {
 		cpu, mem     resource.Quantity
-		machineTypes []provider.MachineType
+		machineTypes []providers.MachineType
 		expectedRes  bool
 	}{
 		{
 			cpu:          resource.MustParse("43"),
-			machineTypes: []provider.MachineType{machineType42},
+			machineTypes: []providers.MachineType{machineType42},
 		},
 		{
 			mem:          resource.MustParse("43Mi"),
-			machineTypes: []provider.MachineType{machineType42},
+			machineTypes: []providers.MachineType{machineType42},
 		},
 		{
-			machineTypes: []provider.MachineType{machineType42},
+			machineTypes: []providers.MachineType{machineType42},
 			expectedRes:  true,
 		},
 	}
@@ -263,45 +262,45 @@ func TestHasMachineFor(t *testing.T) {
 func TestBestMachineFor(t *testing.T) {
 	tcs := []struct {
 		cpu, mem     resource.Quantity
-		machineTypes []provider.MachineType
-		expectedRes  provider.MachineType
+		machineTypes []providers.MachineType
+		expectedRes  providers.MachineType
 		expectedErr  error
 	}{
 		{
 			expectedErr: ErrNoAllowedMachined,
 		},
 		{
-			machineTypes: []provider.MachineType{machineType13, machineType42},
+			machineTypes: []providers.MachineType{machineType13, machineType42},
 			expectedRes:  machineType13,
 		},
 		{
 			cpu:          resource.MustParse("1"),
 			mem:          resource.MustParse("1Mi"),
-			machineTypes: []provider.MachineType{machineType13, machineType42},
+			machineTypes: []providers.MachineType{machineType13, machineType42},
 			expectedRes:  machineType13,
 		},
 		{
 			cpu:          resource.MustParse("13"),
 			mem:          resource.MustParse("12Mi"),
-			machineTypes: []provider.MachineType{machineType13, machineType42},
+			machineTypes: []providers.MachineType{machineType13, machineType42},
 			expectedRes:  machineType13,
 		},
 		{
 			cpu:          resource.MustParse("13"),
 			mem:          resource.MustParse("13Mi"),
-			machineTypes: []provider.MachineType{machineType13, machineType42},
+			machineTypes: []providers.MachineType{machineType13, machineType42},
 			expectedRes:  machineType42,
 		},
 		{
 			cpu:          resource.MustParse("35"),
 			mem:          resource.MustParse("45Mi"),
-			machineTypes: []provider.MachineType{machineType13, machineType42},
+			machineTypes: []providers.MachineType{machineType13, machineType42},
 			expectedRes:  machineType42,
 		},
 		{
 			cpu:          resource.MustParse("64"),
 			mem:          resource.MustParse("64Mi"),
-			machineTypes: []provider.MachineType{machineType13, machineType42},
+			machineTypes: []providers.MachineType{machineType13, machineType42},
 			expectedRes:  machineType42,
 		},
 	}

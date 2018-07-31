@@ -1,6 +1,7 @@
 package capacity
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -9,7 +10,10 @@ import (
 	kubeutil "k8s.io/autoscaler/cluster-autoscaler/utils/kubernetes"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/supergiant/capacity/pkg/provider"
+	"github.com/supergiant/capacity/pkg/kubernetes/config"
+	"github.com/supergiant/capacity/pkg/kubescaler/workers"
+	"github.com/supergiant/capacity/pkg/providers"
+	"github.com/supergiant/capacity/pkg/providers/factory"
 )
 
 const (
@@ -21,43 +25,72 @@ var (
 	ErrNoAllowedMachined = errors.New("no allowed machines were provided")
 )
 
-type Config struct {
-	NodesCountMin int
-	NodesCountMax int
-
-	MaxMachineProvisionTime time.Duration
-
-	AllowedMachines []provider.MachineType
-}
-
 type Kubescaler struct {
-	config         Config
-	provider       provider.Provider
-	kclient        kubernetes.Clientset
-	listerRegistry kubeutil.ListerRegistry
-	workerManager  *WorkerManager
+	*PersistentConfig
+	*workers.Manager
+
+	provider              providers.Provider
+	kclient               kubernetes.Clientset
+	listerRegistry        kubeutil.ListerRegistry
+	availableMachineTypes map[string]providers.MachineType
 }
 
-func New() (*Kubescaler, error) {
-	return nil, nil
+func New(kubeConfig, kubescalerConfig string) (*Kubescaler, error) {
+	conf, err := NewPersistentConfig(kubescalerConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	kclient, err := config.GetKubernetesClientSet("", kubeConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	v, err := kclient.ServerVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := conf.GetConfig()
+	vmProvider, err := factory.New(cfg.ProviderName, cfg.Provider)
+	if err != nil {
+		return nil, err
+	}
+
+	workersConf := workers.Config{
+		KubeVersion:       v.String(),
+		MasterPrivateAddr: cfg.MasterPrivateAddr,
+		KubeAPIPort:       cfg.KubeAPIPort,
+		KubeAPIPassword:   cfg.KubeAPIPassword,
+		ProviderName:      cfg.ProviderName,
+		SSHPubKey:         cfg.SSHPubKey,
+	}
+	wm, err := workers.NewManager(cfg.ClusterName, kclient.CoreV1().Nodes(), vmProvider, workersConf)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Kubescaler{
+		PersistentConfig: conf,
+		Manager:          wm,
+	}, nil
 }
 
-func (s *Kubescaler) GetWorker(name string) (*Worker, error) {
-	return s.workerManager.Get(name)
-}
+func (s *Kubescaler) RunOnce(ctx context.Context, currentTime time.Time) error {
+	config := s.GetConfig()
+	// TODO: turn on after e2e testing
+	//if config.Stopped {
+	if true {
+		return nil
+	}
 
-func (s *Kubescaler) DeleteWorker(name string, force bool) error {
-	return s.workerManager.Delete(name, force)
-}
-
-func (s *Kubescaler) RunOnce(currentTime time.Time) error {
-	rss, err := s.getResources()
+	rss, err := s.getResources(ctx)
 	if err != nil {
 		return err
 	}
 
 	// remove machines that are provisioning for a long time
-	removed, err := s.removeFailedMachines(rss, currentTime)
+	removed, err := s.removeFailedMachines(ctx, rss, currentTime)
 	if err != nil {
 		return err
 	}
@@ -71,15 +104,15 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 		return nil
 	}
 
-	if s.config.NodesCountMax >= len(rss.readyNodes) {
+	if config.NodesCountMax >= len(rss.readyNodes) {
 		// try to scale up the cluster. In case of success no need to scale down
-		if err = s.scaleUp(rss.unschedulablePods, rss.readyNodes, currentTime); err != nil {
+		if err = s.scaleUp(ctx, rss.unschedulablePods, rss.readyNodes, s.machineTypes(config.MachineTypes), currentTime); err != nil {
 			return err
 		}
 	}
 
-	if s.config.NodesCountMin < len(rss.readyNodes) {
-		if err = s.scaleDown(rss.scheduledPods, rss.readyNodes); err != nil {
+	if config.NodesCountMin < len(rss.readyNodes) {
+		if err = s.scaleDown(ctx, rss.scheduledPods, rss.readyNodes); err != nil {
 			return err
 		}
 	}
@@ -92,10 +125,10 @@ type resources struct {
 	unschedulablePods []*corev1.Pod
 	nodes             []*corev1.Node
 	readyNodes        []*corev1.Node
-	machines          []*provider.Machine
+	machines          []*providers.Machine
 }
 
-func (s *Kubescaler) getResources() (*resources, error) {
+func (s *Kubescaler) getResources(ctx context.Context) (*resources, error) {
 	var rss resources
 	var err error
 
@@ -115,7 +148,7 @@ func (s *Kubescaler) getResources() (*resources, error) {
 	if err != nil {
 		return nil, err
 	}
-	rss.machines, err = s.provider.Machines()
+	rss.machines, err = s.provider.Machines(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -123,15 +156,15 @@ func (s *Kubescaler) getResources() (*resources, error) {
 	return &rss, nil
 }
 
-func (s *Kubescaler) removeFailedMachines(rss *resources, currentTime time.Time) (bool, error) {
+func (s *Kubescaler) removeFailedMachines(ctx context.Context, rss *resources, currentTime time.Time) (bool, error) {
 	var fixed bool
 	if len(rss.machines) == len(rss.readyNodes) {
 		return fixed, nil
 	}
 
 	for _, m := range rss.machines {
-		if m.CreatedAt.Add(s.config.MaxMachineProvisionTime).Before(currentTime) {
-			if err := s.provider.DeleteMachine(m.ID); err != nil {
+		if m.CreatedAt.Add(s.GetConfig().MaxMachineProvisionTime).Before(currentTime) {
+			if err := s.provider.DeleteMachine(ctx, m.ID); err != nil {
 				return fixed, err
 			}
 			fixed = true
@@ -141,12 +174,22 @@ func (s *Kubescaler) removeFailedMachines(rss *resources, currentTime time.Time)
 	return fixed, nil
 }
 
-func provisioningMachines(readyNodes []*corev1.Node, machines []*provider.Machine) []*provider.Machine {
+func (s *Kubescaler) machineTypes(types []string) []*providers.MachineType {
+	out := make([]*providers.MachineType, 0, len(types))
+	for _, t := range types {
+		if mt, ok := s.availableMachineTypes[t]; ok {
+			out = append(out, &mt)
+		}
+	}
+	return out
+}
+
+func provisioningMachines(readyNodes []*corev1.Node, machines []*providers.Machine) []*providers.Machine {
 	registered := sets.NewString()
 	for _, node := range readyNodes {
 		registered.Insert(node.Spec.ProviderID)
 	}
-	unregistered := make([]*provider.Machine, 0)
+	unregistered := make([]*providers.Machine, 0)
 	for _, machine := range machines {
 		if !registered.Has(machine.ID) {
 			unregistered = append(unregistered, machine)
