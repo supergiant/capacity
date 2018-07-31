@@ -20,16 +20,17 @@ func (args) Version() string {
 }
 
 func main() {
-	// setup the default logger
-	log.New()
-	log.SetOutput(os.Stderr)
-
 	args := &args{
 		KubescalerConfig: "/etc/kubescaler.conf",
 		ListenAddr:       ":8081",
 		LogLevel:         "info",
 	}
 	arg.MustParse(args)
+
+	// setup logger
+	log.New()
+	log.SetOutput(os.Stdout)
+	log.SetLevel(args.LogLevel)
 
 	srv, err := capacityserver.New(capacityserver.Config{
 		KubescalerConfig: args.KubescalerConfig,

@@ -27,13 +27,17 @@ func SetFormatter(formatter logrus.Formatter) {
 }
 
 // SetLevel sets the standard logger level.
-func SetLevel(level logrus.Level) {
-	logrus.SetLevel(level)
+func SetLevel(level string) {
+	l, err := logrus.ParseLevel(level)
+	if err != nil {
+		l = logrus.InfoLevel
+	}
+	logrus.SetLevel(l)
 }
 
 // Debug logs a message at level Debug on the standard logger.
 func Debug(args ...interface{}) {
-	logger.Debugln(args...)
+	logger.Debug(args...)
 }
 
 // Debugf logs a message at level Debug on the standard logger.
@@ -43,7 +47,7 @@ func Debugf(format string, args ...interface{}) {
 
 // Info logs a message at level Info on the standard logger.
 func Info(args ...interface{}) {
-	logger.Infoln(args...)
+	logger.Info(args...)
 }
 
 // Infof logs a message at level Info on the standard logger.
@@ -53,7 +57,7 @@ func Infof(format string, args ...interface{}) {
 
 // Warn logs a message at level Warn on the standard logger.
 func Warn(args ...interface{}) {
-	logger.Warnln(args...)
+	logger.Warn(args...)
 }
 
 // Warnf logs a message at level Warn on the standard logger.
@@ -73,7 +77,7 @@ func Errorf(format string, args ...interface{}) {
 
 // Fatal logs a message at level Fatal on the standard logger.
 func Fatal(args ...interface{}) {
-	logger.Fatalln(args...)
+	logger.Fatal(args...)
 }
 
 // Fatalf logs a message at level Fatal on the standard logger.

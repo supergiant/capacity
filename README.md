@@ -18,7 +18,7 @@ go run ./cmd/capacity-service/main.go  --kubescaler-config config/kubescaler.con
 
 Get a kubescaler config:
 ```
-➜  capacity git:(capacity_app) ✗ curl -s -XGET localhost:8081/kubescaler/config | jq
+➜ $ curl -s -XGET localhost:8081/kubescaler/config | jq
 {
   "sshPubKey": "",
   "clusterName": "clusterName",
@@ -49,7 +49,7 @@ Get a kubescaler config:
 
 Update a kubescaler config:
 ```
-➜  capacity git:(capacity_app) ✗ curl -s -XPATCH -d'{"nodesCountMin":1000}' localhost:8081/kubescaler/config | jq
+➜ $ curl -s -XPATCH -d'{"nodesCountMin":1000}' localhost:8081/kubescaler/config | jq
 {
   "sshPubKey": "",
   "clusterName": "clusterName",
@@ -80,7 +80,7 @@ Update a kubescaler config:
 
 List kubescaler workers:
 ```
-➜  capacity git:(capacity_app) ✗ curl -s -XGET localhost:8081/kubescaler/workers | jq
+➜ $ curl -s -XGET localhost:8081/kubescaler/workers | jq
 [
   {
     "ClusterName": "clusterName",
@@ -105,11 +105,11 @@ List kubescaler workers:
 
 Create a kubescaler worker:
 ```
-➜  capacity git:(capacity_app) ✗ curl -s -XPOST -d'{"MachineType":"t2.micro"}' localhost:8081/kubescaler/workers
+➜ $ curl -s -XPOST -d'{"MachineType":"t2.micro"}' localhost:8081/kubescaler/workers
 ```
 
 Delete a kubescaler worker:
 ```
-➜  capacity git:(capacity_app) ✗ curl -s -XDELETE -d'{"MachineID":"i-0e2aac09d0774e74e"}' localhost:8081/kubescaler/workers
+➜ $ curl -s -XDELETE -d'{"MachineID":"i-0e2aac09d0774e74e"}' localhost:8081/kubescaler/workers
 
 ```
