@@ -7,6 +7,7 @@ import (
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers"
 	"github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/log"
+	"github.com/rs/cors"
 )
 
 type Config struct {
@@ -35,7 +36,7 @@ func New(conf Config) (*API, error) {
 		ks: ks,
 		srv: http.Server{
 			Addr:         conf.ListenAddr,
-			Handler:      handler,
+			Handler:      cors.Default().Handler(handler),
 			ReadTimeout:  30 * time.Second,
 			WriteTimeout: 30 * time.Second,
 			IdleTimeout:  120 * time.Second,

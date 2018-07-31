@@ -323,6 +323,12 @@
   version = "v1.0.0"
 
 [[projects]]
+  name = "github.com/rs/cors"
+  packages = ["."]
+  revision = "3fb1b69b103a84de38a19c3c6ec073dd6caa4d3f"
+  version = "v1.5.0"
+
+[[projects]]
   branch = "extend_aws_provider"
   name = "github.com/saheienko/supergiant"
   packages = ["pkg/clouds/aws"]
@@ -764,6 +770,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "970001341ca89295b7d1af25b231e2b87a2ff07a82efd551891fcc405ba23512"
+  inputs-digest = "bf517afd7a7d11467676fe71dde746d553cace9bb0035ee6353000acac98a498"
   solver-name = "gps-cdcl"
   solver-version = 1
