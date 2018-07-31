@@ -5,14 +5,15 @@ import (
 	"errors"
 	"time"
 
-	"github.com/supergiant/capacity/pkg/kubernetes/config"
-	"github.com/supergiant/capacity/pkg/kubescaler/workers"
-	"github.com/supergiant/capacity/pkg/providers"
-	"github.com/supergiant/capacity/pkg/providers/factory"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubeutil "k8s.io/autoscaler/cluster-autoscaler/utils/kubernetes"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/supergiant/capacity/pkg/kubernetes/config"
+	"github.com/supergiant/capacity/pkg/kubescaler/workers"
+	"github.com/supergiant/capacity/pkg/providers"
+	"github.com/supergiant/capacity/pkg/providers/factory"
 )
 
 const (

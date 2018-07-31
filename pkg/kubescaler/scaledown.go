@@ -3,10 +3,11 @@ package capacity
 import (
 	"context"
 
-	"github.com/supergiant/capacity/pkg/kubescaler/workers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+
+	"github.com/supergiant/capacity/pkg/kubescaler/workers"
 )
 
 func (s *Kubescaler) scaleDown(ctx context.Context, scheduledPods []*corev1.Pod, readyNodes []*corev1.Node) error {

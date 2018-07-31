@@ -4,10 +4,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rs/cors"
+
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers"
 	"github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/log"
-	"github.com/rs/cors"
 )
 
 type Config struct {

@@ -4,10 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/supergiant/capacity/pkg/providers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/supergiant/capacity/pkg/providers"
 )
 
 func (s *Kubescaler) scaleUp(ctx context.Context, unschedulablePods []*corev1.Pod, readyNodes []*corev1.Node, machineTypes []*providers.MachineType, currentTime time.Time) error {

@@ -4,8 +4,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/supergiant/capacity/pkg/providers"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/supergiant/capacity/pkg/providers"
 )
 
 func TestKubescalerScaleDown(t *testing.T) {

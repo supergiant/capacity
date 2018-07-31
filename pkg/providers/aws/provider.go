@@ -7,9 +7,10 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/supergiant/capacity/pkg/providers"
 	"github.com/saheienko/supergiant/pkg/clouds/aws"
 	"k8s.io/apimachinery/pkg/api/resource"
+
+	"github.com/supergiant/capacity/pkg/providers"
 )
 
 // Provider name:

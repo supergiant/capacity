@@ -1,11 +1,13 @@
 package main
 
 import (
+	"os"
+
 	"github.com/alexflint/go-arg"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
+
 	"github.com/supergiant/capacity/pkg/capacityserver"
 	"github.com/supergiant/capacity/pkg/log"
-	"os"
 )
 
 type args struct {
