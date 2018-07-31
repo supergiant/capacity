@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/supergiant/capacity/pkg/providers/aws"
 	"github.com/supergiant/capacity/pkg/providers"
+	"github.com/supergiant/capacity/pkg/providers/aws"
 )
 
 type Config struct {
@@ -50,6 +50,9 @@ func NewPersistentConfig(filepath string) (*PersistentConfig, error) {
 	if err != nil {
 		if os.IsNotExist(err) {
 			if err = writeDefaultConfig(filepath); err != nil {
+				return nil, err
+			}
+			if rc, err = fileReadCloser(filepath); err != nil {
 				return nil, err
 			}
 		} else {
@@ -120,19 +123,25 @@ func fileWriteCloser(filepath string) (io.WriteCloser, error) {
 
 func writeDefaultConfig(filepath string) error {
 	conf := &Config{
+		SSHPubKey:         "REPLACE_IT",
+		ClusterName:       "REPLACE_IT",
+		MasterPrivateAddr: "REPLACE_IT",
+		KubeAPIPort:       "REPLACE_IT",
+		KubeAPIPassword:   "REPLACE_IT",
+		ProviderName:      "REPLACE_IT",
 		Provider: map[string]string{
-			aws.KeyID:          "your-key-id",
-			aws.SecretKey:      "your-secret-key",
-			aws.Region:         "us-west-1",
-			aws.KeyName:        "your-key",
+			aws.KeyID:          "REPLACE_IT",
+			aws.SecretKey:      "REPLACE_IT",
+			aws.Region:         "REPLACE_IT",
+			aws.KeyName:        "REPLACE_IT",
 			aws.ImageID:        "ami-cc0900ac",
 			aws.IAMRole:        "kubernetes-node",
-			aws.SecurityGroups: strings.Join([]string{"sg-dcf8a6a4"}, providers.ListSep),
-			aws.SubnetID:       "subnet-8bf9ded0",
+			aws.SecurityGroups: strings.Join([]string{"REPLACE_IT"}, providers.ListSep),
+			aws.SubnetID:       "REPLACE_IT",
 			aws.VolType:        "gp2",
 			aws.VolSize:        "100",
 			aws.Tags: strings.Join([]string{
-				providers.TagCluster + providers.KeyValSep + "clusterName",
+				"key" + providers.KeyValSep + "val",
 			}, providers.ListSep),
 		},
 		MachineTypes: make([]string, 0),
