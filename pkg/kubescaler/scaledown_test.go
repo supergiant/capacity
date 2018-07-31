@@ -4,38 +4,37 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/supergiant/capacity/pkg/providers"
 	corev1 "k8s.io/api/core/v1"
-
-	"github.com/supergiant/capacity/pkg/provider"
 )
 
 func TestKubescalerScaleDown(t *testing.T) {
 	tcs := []struct {
 		pods            []*corev1.Pod
 		nodes           []*corev1.Node
-		allowedMachines []provider.MachineType
+		allowedMachines []providers.MachineType
 		providerErr     error
 		expectedErr     error
 	}{
 		{
 			pods:            []*corev1.Pod{&podNew, &podStandAlone, &podWithRequests},
 			nodes:           []*corev1.Node{&nodeReady},
-			allowedMachines: []provider.MachineType{allowedMachine},
+			allowedMachines: []providers.MachineType{allowedMachine},
 		},
 		{
 			pods:            []*corev1.Pod{&podWithHugeLimits, &podStandAlone},
 			nodes:           []*corev1.Node{&nodeReady, &NodeScaleDown},
-			allowedMachines: []provider.MachineType{allowedMachine},
+			allowedMachines: []providers.MachineType{allowedMachine},
 		},
 		{
 			pods:            []*corev1.Pod{&podWithHugeLimits, &podWithRequests},
 			nodes:           []*corev1.Node{&nodeReady, &NodeScaleDown},
-			allowedMachines: []provider.MachineType{allowedMachine},
+			allowedMachines: []providers.MachineType{allowedMachine},
 		},
 		{
 			pods:            []*corev1.Pod{&podWithHugeLimits, &podWithRequests},
 			nodes:           []*corev1.Node{&nodeReady, &NodeScaleDown},
-			allowedMachines: []provider.MachineType{allowedMachine},
+			allowedMachines: []providers.MachineType{allowedMachine},
 			providerErr:     fakeErr,
 			expectedErr:     fakeErr,
 		},
@@ -44,10 +43,10 @@ func TestKubescalerScaleDown(t *testing.T) {
 	for i, tc := range tcs {
 		ks := &Kubescaler{
 			config: Config{
-				AllowedMachines: tc.allowedMachines,
+				MachineTypes: tc.allowedMachines,
 			},
 			workerManager: &WorkerManager{
-				provider: &fakeProvider{
+				providers: &fakeProvider{
 					err: tc.providerErr,
 				},
 			},
