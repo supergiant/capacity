@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/supergiant/capacity/pkg/provider/aws"
 	"github.com/supergiant/capacity/pkg/provider"
+	"github.com/supergiant/capacity/pkg/provider/aws"
 )
 
 type Config struct {

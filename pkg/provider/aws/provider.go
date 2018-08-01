@@ -72,7 +72,7 @@ func New(clusterName string, config provider.Config) (*AWSProvider, error) {
 
 	return &AWSProvider{
 		clusterName: clusterName,
-		region: region,
+		region:      region,
 		instConf: Config{
 			KeyName:        config[KeyName],
 			ImageID:        config[ImageID],

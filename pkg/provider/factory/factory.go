@@ -1,9 +1,10 @@
 package factory
 
 import (
+	"strings"
+
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/aws"
-	"strings"
 )
 
 func New(clusterName, provider string, config provider.Config) (provider.Provider, error) {

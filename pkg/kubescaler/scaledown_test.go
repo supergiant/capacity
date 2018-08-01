@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/pborman/uuid"
+
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
 	"github.com/supergiant/capacity/pkg/provider"
 )
