@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/supergiant/capacity/pkg/log"
-	"github.com/supergiant/capacity/pkg/providers"
+	"github.com/supergiant/capacity/pkg/provider"
 )
 
 const (
@@ -22,6 +22,8 @@ const (
 
 	LabelValueTrue  = "true"
 	LabelValueFalse = "false"
+
+	ClusterRole = "worker"
 )
 
 type Config struct {
@@ -34,13 +36,14 @@ type Config struct {
 }
 
 type Worker struct {
-	ClusterName string
-	MachineID   string
-	MachineName string
-	MachineType string
-	CreatedAt   time.Time
-	NodeName    string
-	Reserved    bool
+	ClusterName  string
+	MachineID    string
+	MachineName  string
+	MachineType  string
+	MachineState string
+	CreatedAt    time.Time
+	NodeName     string
+	Reserved     bool
 }
 
 func NewWorker(node *corev1.Node) *Worker {
@@ -64,10 +67,10 @@ type Manager struct {
 	clusterName string
 	userData    string
 	nodesClient v1.NodeInterface
-	provider    providers.Provider
+	provider    provider.Provider
 }
 
-func NewManager(clusterName string, nodesClient v1.NodeInterface, provider providers.Provider, conf Config) (*Manager, error) {
+func NewManager(clusterName string, nodesClient v1.NodeInterface, provider provider.Provider, conf Config) (*Manager, error) {
 	t, err := template.New("userData").Parse(userDataTpl)
 	if err != nil {
 		return nil, err
@@ -88,8 +91,12 @@ func NewManager(clusterName string, nodesClient v1.NodeInterface, provider provi
 	}, nil
 }
 
-func (m *Manager) CreateWorker(ctx context.Context, mtype string) error {
-	return m.provider.CreateMachine(ctx, m.clusterName, m.workerName(), mtype, m.userData, nil)
+func (m *Manager) CreateWorker(ctx context.Context, mtype string) (*Worker, error) {
+	machine, err := m.provider.CreateMachine(ctx, m.workerName(), mtype, ClusterRole, m.userData, nil)
+	if err != nil {
+		return nil, err
+	}
+	return m.workerFrom(machine, nil), nil
 }
 
 func (m *Manager) ListWorkers(ctx context.Context) ([]*Worker, error) {
@@ -103,34 +110,26 @@ func (m *Manager) ListWorkers(ctx context.Context) ([]*Worker, error) {
 	}
 
 	workers := make([]*Worker, len(machines))
-	nodeName, reserved := "", false
-	for i, machine := range machines {
-		if node, ok := nodeProviderMap[machine.ID]; ok {
-			nodeName, reserved = node.Name, IsReserved(node)
-		}
-
-		workers[i] = &Worker{
-			ClusterName: m.clusterName,
-			MachineID:   machines[i].ID,
-			MachineName: machines[i].Name,
-			MachineType: machines[i].Type,
-			CreatedAt:   machines[i].CreatedAt,
-			NodeName:    nodeName,
-			Reserved:    reserved,
-		}
+	for i := range machines {
+		workers[i] = m.workerFrom(machines[i], nodeProviderMap[machines[i].ID])
 	}
 
 	return workers, nil
 }
 
-func (m *Manager) DeleteWorker(ctx context.Context, nodeName, id string) error {
+func (m *Manager) DeleteWorker(ctx context.Context, nodeName, id string) (*Worker, error) {
 	if nodeName != "" {
 		if err := m.nodesClient.Delete(nodeName, nil); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return m.provider.DeleteMachine(ctx, id)
+	machine, err := m.provider.DeleteMachine(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.workerFrom(machine, nil), nil
 }
 
 func (m *Manager) nodesMap() (map[string]*corev1.Node, error) {
@@ -150,4 +149,22 @@ func (m *Manager) nodesMap() (map[string]*corev1.Node, error) {
 
 func (m *Manager) workerName() string {
 	return fmt.Sprintf("%s-%s-%s", m.clusterName, "worker", uuid.NewUUID().String())
+}
+
+func (m *Manager) workerFrom(machine *provider.Machine, node *corev1.Node) *Worker {
+	nodeName, reserved := "", false
+	if node != nil {
+		nodeName, reserved = node.Name, IsReserved(node)
+	}
+
+	return &Worker{
+		ClusterName:  m.clusterName,
+		MachineID:    machine.ID,
+		MachineName:  machine.Name,
+		MachineType:  machine.Type,
+		MachineState: machine.State,
+		CreatedAt:    machine.CreatedAt,
+		NodeName:     nodeName,
+		Reserved:     reserved,
+	}
 }

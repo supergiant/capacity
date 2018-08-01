@@ -53,21 +53,26 @@ func (k *kubescalerHandlerV1) patchConfig(w http.ResponseWriter, r *http.Request
 }
 
 func (k *kubescalerHandlerV1) createWorker(w http.ResponseWriter, r *http.Request) {
-	worker := workers.Worker{}
-	if err := json.NewDecoder(r.Body).Decode(&worker); err != nil {
+	worker := &workers.Worker{}
+	if err := json.NewDecoder(r.Body).Decode(worker); err != nil {
 		log.Errorf("handler: kubescaler: create worker: decode: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if err := k.ks.CreateWorker(r.Context(), worker.MachineType); err != nil {
+	worker, err := k.ks.CreateWorker(r.Context(), worker.MachineType)
+	if err != nil {
 		log.Errorf("handler: kubescaler: create worker: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	log.Infof("handler: kubescaler: %s worker (%s) has been created ", worker.MachineID, worker.MachineType)
 
-	log.Infof("handler: kubescaler: create worker with %s machine type", worker.MachineType)
 	w.WriteHeader(http.StatusAccepted)
+	if err = json.NewEncoder(w).Encode(worker); err != nil {
+		log.Errorf("handler: kubescaler: create %s worker: failed to write response: %v", worker.MachineID, err)
+		return
+	}
 }
 
 func (k *kubescalerHandlerV1) listWorkers(w http.ResponseWriter, r *http.Request) {
@@ -84,18 +89,23 @@ func (k *kubescalerHandlerV1) listWorkers(w http.ResponseWriter, r *http.Request
 }
 
 func (k *kubescalerHandlerV1) deleteWorker(w http.ResponseWriter, r *http.Request) {
-	worker := workers.Worker{}
-	if err := json.NewDecoder(r.Body).Decode(&worker); err != nil {
+	worker := &workers.Worker{}
+	if err := json.NewDecoder(r.Body).Decode(worker); err != nil {
 		log.Errorf("handler: kubescaler: create worker: decode: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if err := k.ks.DeleteWorker(r.Context(), worker.NodeName, worker.MachineID); err != nil {
+	worker, err := k.ks.DeleteWorker(r.Context(), worker.NodeName, worker.MachineID)
+	if err != nil {
 		log.Errorf("handler: kubescaler: delete %s worker: %v", worker.MachineID, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
 	log.Infof("handler: kubescaler: %s worker has been deleted", worker.MachineID)
+
+	if err = json.NewEncoder(w).Encode(worker); err != nil {
+		log.Errorf("handler: kubescaler: delete %s worker: failed to write response: %v", worker.MachineID, err)
+		return
+	}
 }

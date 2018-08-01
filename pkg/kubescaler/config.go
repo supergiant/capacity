@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/supergiant/capacity/pkg/providers"
-	"github.com/supergiant/capacity/pkg/providers/aws"
+	"github.com/supergiant/capacity/pkg/provider/aws"
+	"github.com/supergiant/capacity/pkg/provider"
 )
 
 type Config struct {
@@ -45,7 +45,6 @@ type PersistentConfig struct {
 }
 
 func NewPersistentConfig(filepath string) (*PersistentConfig, error) {
-	// TODO: add a default config
 	rc, err := fileReadCloser(filepath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -136,13 +135,10 @@ func writeDefaultConfig(filepath string) error {
 			aws.KeyName:        "REPLACE_IT",
 			aws.ImageID:        "ami-cc0900ac",
 			aws.IAMRole:        "kubernetes-node",
-			aws.SecurityGroups: strings.Join([]string{"REPLACE_IT"}, providers.ListSep),
+			aws.SecurityGroups: strings.Join([]string{"REPLACE_IT"}, provider.ListSep),
 			aws.SubnetID:       "REPLACE_IT",
 			aws.VolType:        "gp2",
 			aws.VolSize:        "100",
-			aws.Tags: strings.Join([]string{
-				"key" + providers.KeyValSep + "val",
-			}, providers.ListSep),
 		},
 		MachineTypes: make([]string, 0),
 	}

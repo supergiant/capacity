@@ -23,7 +23,7 @@ func (s *Kubescaler) scaleDown(ctx context.Context, scheduledPods []*corev1.Pod,
 	for _, node := range emptyNodes {
 		if !workers.IsReserved(node) {
 			// gracefully remove a node
-			if err := s.DeleteWorker(ctx, node.Name, node.Spec.ProviderID); err != nil {
+			if _, err := s.DeleteWorker(ctx, node.Name, node.Spec.ProviderID); err != nil {
 				return err
 			}
 		}

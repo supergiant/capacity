@@ -8,10 +8,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/supergiant/capacity/pkg/providers"
+	"github.com/supergiant/capacity/pkg/provider"
 )
 
-func (s *Kubescaler) scaleUp(ctx context.Context, unschedulablePods []*corev1.Pod, readyNodes []*corev1.Node, machineTypes []*providers.MachineType, currentTime time.Time) error {
+func (s *Kubescaler) scaleUp(ctx context.Context, unschedulablePods []*corev1.Pod, readyNodes []*corev1.Node, machineTypes []*provider.MachineType, currentTime time.Time) error {
 	podsToScale := filterIgnoringPods(unschedulablePods, readyNodes, machineTypes, currentTime)
 	if len(podsToScale) == 0 {
 		return nil
@@ -24,10 +24,11 @@ func (s *Kubescaler) scaleUp(ctx context.Context, unschedulablePods []*corev1.Po
 		return err
 	}
 
-	return s.CreateWorker(ctx, mtype.Name)
+	_, err = s.CreateWorker(ctx, mtype.Name)
+	return err
 }
 
-func filterIgnoringPods(pods []*corev1.Pod, readyNodes []*corev1.Node, allowedMachines []*providers.MachineType, currentTime time.Time) []*corev1.Pod {
+func filterIgnoringPods(pods []*corev1.Pod, readyNodes []*corev1.Node, allowedMachines []*provider.MachineType, currentTime time.Time) []*corev1.Pod {
 	filtered := make([]*corev1.Pod, 0)
 	for _, pod := range pods {
 		cpu, mem := getCPUMem(pod)
@@ -52,7 +53,7 @@ func filterIgnoringPods(pods []*corev1.Pod, readyNodes []*corev1.Node, allowedMa
 	return filtered
 }
 
-func hasMachineFor(cpu, mem resource.Quantity, machineTypes []*providers.MachineType) bool {
+func hasMachineFor(cpu, mem resource.Quantity, machineTypes []*provider.MachineType) bool {
 	for _, m := range machineTypes {
 		if m.CPU.Cmp(cpu) >= 0 && m.Memory.Cmp(mem) == 1 {
 			return true
@@ -61,9 +62,9 @@ func hasMachineFor(cpu, mem resource.Quantity, machineTypes []*providers.Machine
 	return false
 }
 
-func bestMachineFor(cpu, mem resource.Quantity, machineTypes []*providers.MachineType) (providers.MachineType, error) {
+func bestMachineFor(cpu, mem resource.Quantity, machineTypes []*provider.MachineType) (provider.MachineType, error) {
 	if len(machineTypes) == 0 {
-		return providers.MachineType{}, ErrNoAllowedMachined
+		return provider.MachineType{}, ErrNoAllowedMachined
 	}
 	for _, m := range machineTypes {
 		if m.CPU.Cmp(cpu) >= 0 && m.Memory.Cmp(mem) == 1 {
