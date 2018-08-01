@@ -1,4 +1,4 @@
-package providers
+package provider
 
 import (
 	"context"
@@ -25,6 +25,7 @@ type Machine struct {
 	Name      string
 	Type      string
 	CreatedAt time.Time
+	State     string
 }
 
 type MachineType struct {
@@ -39,6 +40,6 @@ type Provider interface {
 	Name() string
 	Machines(ctx context.Context) ([]*Machine, error)
 	AvailableMachineTypes(ctx context.Context) ([]*MachineType, error)
-	CreateMachine(ctx context.Context, clusterName, name, mtype, userData string, config Config) error
-	DeleteMachine(ctx context.Context, id string) error
+	CreateMachine(ctx context.Context, name, mtype, clusterRole, userData string, config Config) (*Machine, error)
+	DeleteMachine(ctx context.Context, id string) (*Machine, error)
 }

@@ -10,13 +10,15 @@ import (
 	"github.com/saheienko/supergiant/pkg/clouds/aws"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	"github.com/supergiant/capacity/pkg/providers"
+	"github.com/supergiant/capacity/pkg/provider"
 )
 
 // Provider name:
 const (
 	Name = "aws"
-) // AWS instance parameters:
+)
+
+// AWS instance parameters:
 const (
 	KeyID          = "awsKeyID"
 	SecretKey      = "awsSecretKey"
@@ -46,31 +48,40 @@ type Config struct {
 }
 
 type AWSProvider struct {
-	region   string
-	instConf Config
-	client   *aws.Client
+	clusterName string
+	region      string
+	instConf    Config
+	client      *aws.Client
 }
 
-func New(config providers.Config) (*AWSProvider, error) {
+func New(clusterName string, config provider.Config) (*AWSProvider, error) {
 	// TODO: parse and validate config
 	key, secret, region := config[KeyID], config[SecretKey], config[Region]
 
-	client, err := aws.New(key, secret, providers.ParseMap(config[Tags]))
+	// TODO: review tags behavior, it would be better to change this filter dynamically
+	tags := provider.ParseMap(config[Tags])
+	if tags == nil {
+		tags = make(map[string]string)
+	}
+	tags[provider.TagCluster] = clusterName
+
+	client, err := aws.New(key, secret, tags)
 	if err != nil {
 		return nil, err
 	}
 
 	return &AWSProvider{
+		clusterName: clusterName,
 		region: region,
 		instConf: Config{
 			KeyName:        config[KeyName],
 			ImageID:        config[ImageID],
 			IAMRole:        config[IAMRole],
-			SecurityGroups: providers.ParseList(config[SecurityGroups]),
+			SecurityGroups: provider.ParseList(config[SecurityGroups]),
 			SubnetID:       config[SubnetID],
 			VolType:        config[VolType],
 			VolSize:        int64(100),
-			Tags:           providers.ParseMap(config[Tags]),
+			Tags:           tags,
 		},
 		client: client,
 	}, nil
@@ -80,32 +91,27 @@ func (p *AWSProvider) Name() string {
 	return "aws"
 }
 
-func (p *AWSProvider) Machines(ctx context.Context) ([]*providers.Machine, error) {
+func (p *AWSProvider) Machines(ctx context.Context) ([]*provider.Machine, error) {
 	insts, err := p.client.ListRegionInstances(ctx, p.region, nil)
 	if err != nil {
 		return nil, nil
 	}
 
-	machines := make([]*providers.Machine, len(insts))
+	machines := make([]*provider.Machine, len(insts))
 	for i := range insts {
-		machines[i] = &providers.Machine{
-			ID:        *insts[i].InstanceId,
-			Name:      getName(insts[i].Tags),
-			Type:      *insts[i].InstanceType,
-			CreatedAt: *insts[i].LaunchTime,
-		}
+		machines[i] = machineFrom(insts[i])
 	}
 
 	return machines, nil
 }
 
-func (p *AWSProvider) AvailableMachineTypes(ctx context.Context) ([]*providers.MachineType, error) {
+func (p *AWSProvider) AvailableMachineTypes(ctx context.Context) ([]*provider.MachineType, error) {
 	instTypes, err := p.client.AvailableInstanceTypes(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	mTypes := make([]*providers.MachineType, len(instTypes))
+	mTypes := make([]*provider.MachineType, len(instTypes))
 	for i := range instTypes {
 		mem, err := parseMemory(instTypes[i].Attributes.Memory)
 		if err != nil {
@@ -115,7 +121,7 @@ func (p *AWSProvider) AvailableMachineTypes(ctx context.Context) ([]*providers.M
 		if err != nil {
 			return nil, err
 		}
-		mTypes[i] = &providers.MachineType{
+		mTypes[i] = &provider.MachineType{
 			Name:   instTypes[i].Attributes.InstanceType,
 			Memory: mem,
 			CPU:    cpu,
@@ -125,12 +131,13 @@ func (p *AWSProvider) AvailableMachineTypes(ctx context.Context) ([]*providers.M
 	return mTypes, nil
 }
 
-func (p *AWSProvider) CreateMachine(ctx context.Context, clusterName, name, mtype, userData string, config providers.Config) error {
+func (p *AWSProvider) CreateMachine(ctx context.Context, name, mtype, clusterRole, userData string, config provider.Config) (*provider.Machine, error) {
 	// TODO: merge and validate config parameters
 
-	return p.client.CreateInstance(ctx, aws.InstanceConfig{
-		ClusterName:    clusterName,
-		Name:           name,
+	inst, err := p.client.CreateInstance(ctx, aws.InstanceConfig{
+		TagName:        name,
+		TagClusterName: p.clusterName,
+		TagClusterRole: clusterRole,
 		Type:           mtype,
 		Region:         p.region,
 		ImageID:        p.instConf.ImageID,
@@ -143,10 +150,22 @@ func (p *AWSProvider) CreateMachine(ctx context.Context, clusterName, name, mtyp
 		Tags:           p.instConf.Tags,
 		UsedData:       base64.StdEncoding.EncodeToString([]byte(userData)),
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	return machineFrom(inst), nil
 }
 
-func (p *AWSProvider) DeleteMachine(ctx context.Context, id string) error {
-	return p.client.DeleteInstance(ctx, p.region, id)
+func (p *AWSProvider) DeleteMachine(ctx context.Context, id string) (*provider.Machine, error) {
+	instState, err := p.client.DeleteInstance(ctx, p.region, id)
+	if err != nil {
+		return nil, err
+	}
+	return &provider.Machine{
+		ID:    id,
+		State: toString(instState.CurrentState),
+	}, nil
 }
 
 func normalizeMemory(memory string) string {
@@ -171,6 +190,23 @@ func getName(tags []*ec2.Tag) string {
 	return ""
 }
 
+func toString(state *ec2.InstanceState) string {
+	if state == nil {
+		return ""
+	}
+	return *state.Name
+}
+
 func parseVolSize(size string) (int64, error) {
 	return strconv.ParseInt(size, 10, 64)
+}
+
+func machineFrom(inst *ec2.Instance) *provider.Machine {
+	return &provider.Machine{
+		ID:        *inst.InstanceId,
+		Name:      getName(inst.Tags),
+		Type:      *inst.InstanceType,
+		CreatedAt: *inst.LaunchTime,
+		State:     toString(inst.State),
+	}
 }
