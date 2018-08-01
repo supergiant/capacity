@@ -1,14 +1,12 @@
 package capacity
 
 import (
+	"sync"
 	"testing"
 
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-
-	"sync"
-
-	"github.com/pborman/uuid"
 
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
 	"github.com/supergiant/capacity/pkg/provider"
