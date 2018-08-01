@@ -36,14 +36,14 @@ type Config struct {
 }
 
 type Worker struct {
-	ClusterName  string
-	MachineID    string
-	MachineName  string
-	MachineType  string
-	MachineState string
-	CreatedAt    time.Time
-	NodeName     string
-	Reserved     bool
+	ClusterName  string    `json:"clusterName"`
+	MachineID    string    `json:"machineID"`
+	MachineName  string    `json:"machineName"`
+	MachineType  string    `json:"machineType"`
+	MachineState string    `json:"machineState"`
+	CreatedAt    time.Time `json:"createdAt"`
+	NodeName     string    `json:"nodeName"`
+	Reserved     bool      `json:"reserved"`
 }
 
 func NewWorker(node *corev1.Node) *Worker {

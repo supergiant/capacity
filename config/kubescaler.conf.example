@@ -14,7 +14,6 @@
     "awsSecretKey": "REPLACE_IT",
     "awsSecurityGroups": "REPLACE_IT",
     "awsSubnetID": "REPLACE_IT",
-    "awsTags": "key=val",
     "awsVolSize": "100",
     "awsVolType": "gp2"
   },
