@@ -28,7 +28,7 @@ func New(conf Config) (*API, error) {
 		return nil, err
 	}
 
-	handler, err := handlers.New(ks)
+	handler, err := handlers.Router(ks)
 	if err != nil {
 		return nil, err
 	}

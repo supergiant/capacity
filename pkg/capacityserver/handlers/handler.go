@@ -1,29 +1,26 @@
 package handlers
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/gorilla/mux"
 
 	"github.com/supergiant/capacity/pkg/kubescaler"
+	"github.com/supergiant/capacity/pkg/capacityserver/handlers/v1"
+	"github.com/supergiant/capacity/pkg/capacityserver/handlers/status"
 )
 
-var (
-	ErrNoKubescaler = errors.New("kubescaler should be provided")
-)
-
-func New(ks *capacity.Kubescaler) (*mux.Router, error) {
-	if ks == nil {
-		return nil, ErrNoKubescaler
+func Router(ks *capacity.Kubescaler) (*mux.Router, error) {
+	handlerV1, err := v1.New(ks)
+	if err != nil {
+		return nil, err
 	}
 
 	r := mux.NewRouter()
+	r.Path("/status").Methods(http.MethodGet).HandlerFunc(status.Handler)
 
-	r.Path("/status").Methods(http.MethodGet).HandlerFunc(getStatus)
-
-	ksHanler := kubescalerHandlerV1{ks}
-	ksHanler.register(r)
+	apiv1 := r.PathPrefix("/api/v1").Subrouter()
+	handlerV1.RegisterTo(apiv1)
 
 	return r, nil
 }
