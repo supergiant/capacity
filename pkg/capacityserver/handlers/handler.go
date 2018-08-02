@@ -5,9 +5,9 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers/v1"
-	"github.com/supergiant/capacity/pkg/capacityserver/handlers/status"
+	"github.com/supergiant/capacity/pkg/capacityserver/handlers/version"
+	"github.com/supergiant/capacity/pkg/kubescaler"
 )
 
 func Router(ks *capacity.Kubescaler) (*mux.Router, error) {
@@ -17,7 +17,7 @@ func Router(ks *capacity.Kubescaler) (*mux.Router, error) {
 	}
 
 	r := mux.NewRouter()
-	r.Path("/status").Methods(http.MethodGet).HandlerFunc(status.Handler)
+	r.Path("/version").Methods(http.MethodGet).HandlerFunc(version.Handler)
 
 	apiv1 := r.PathPrefix("/api/v1").Subrouter()
 	handlerV1.RegisterTo(apiv1)

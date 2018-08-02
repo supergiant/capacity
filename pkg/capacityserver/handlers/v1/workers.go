@@ -6,11 +6,11 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/pkg/errors"
+
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
 	"github.com/supergiant/capacity/pkg/log"
-	"github.com/pkg/errors"
 )
-
 
 var (
 	ErrInvalidWorkersManager = errors.New("invalid workers manager")
