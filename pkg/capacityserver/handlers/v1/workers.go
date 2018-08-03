@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-
 	"github.com/pkg/errors"
 
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
