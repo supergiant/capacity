@@ -2,16 +2,14 @@ package main
 
 import (
 	"flag"
-	"log"
-
-	// Import auth/gcp to connect to GKE clusters remotely
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"log" // Import auth/gcp to connect to GKE clusters remotely
 
 	configlib "github.com/kubernetes-sigs/kubebuilder/pkg/config"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/inject/run"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/install"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
 	extensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"github.com/supergiant/capacity/pkg/inject"
 	"github.com/supergiant/capacity/pkg/inject/args"

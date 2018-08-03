@@ -1,41 +1,44 @@
 package capacity
 
 import (
+	"sync"
 	"testing"
 
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/supergiant/capacity/pkg/providers"
+	"github.com/supergiant/capacity/pkg/kubescaler/workers"
+	"github.com/supergiant/capacity/pkg/provider"
 )
 
 func TestKubescalerScaleDown(t *testing.T) {
 	tcs := []struct {
 		pods            []*corev1.Pod
 		nodes           []*corev1.Node
-		allowedMachines []providers.MachineType
+		allowedMachines []provider.MachineType
 		providerErr     error
 		expectedErr     error
 	}{
 		{
 			pods:            []*corev1.Pod{&podNew, &podStandAlone, &podWithRequests},
 			nodes:           []*corev1.Node{&nodeReady},
-			allowedMachines: []providers.MachineType{allowedMachine},
+			allowedMachines: []provider.MachineType{allowedMachine},
 		},
 		{
 			pods:            []*corev1.Pod{&podWithHugeLimits, &podStandAlone},
 			nodes:           []*corev1.Node{&nodeReady, &NodeScaleDown},
-			allowedMachines: []providers.MachineType{allowedMachine},
+			allowedMachines: []provider.MachineType{allowedMachine},
 		},
 		{
 			pods:            []*corev1.Pod{&podWithHugeLimits, &podWithRequests},
 			nodes:           []*corev1.Node{&nodeReady, &NodeScaleDown},
-			allowedMachines: []providers.MachineType{allowedMachine},
+			allowedMachines: []provider.MachineType{allowedMachine},
 		},
 		{
 			pods:            []*corev1.Pod{&podWithHugeLimits, &podWithRequests},
 			nodes:           []*corev1.Node{&nodeReady, &NodeScaleDown},
-			allowedMachines: []providers.MachineType{allowedMachine},
+			allowedMachines: []provider.MachineType{allowedMachine},
 			providerErr:     fakeErr,
 			expectedErr:     fakeErr,
 		},
@@ -43,13 +46,17 @@ func TestKubescalerScaleDown(t *testing.T) {
 
 	for i, tc := range tcs {
 		ks := &Kubescaler{
-			config: Config{
-				MachineTypes: tc.allowedMachines,
-			},
-			workerManager: &WorkerManager{
-				providers: &fakeProvider{
-					err: tc.providerErr,
+			PersistentConfig: &PersistentConfig{
+				filepath: "/tmp/" + uuid.New(),
+				mu:       sync.RWMutex{},
+				conf: &Config{
+					MachineTypes: tc.allowedMachines,
 				},
+			},
+			Manager: &workers.Manager{
+				//provider: &fakeProvider{
+				//	err: tc.providerErr,
+				//},
 			},
 		}
 

@@ -12,8 +12,8 @@ import (
 
 	"github.com/supergiant/capacity/pkg/kubernetes/config"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
-	"github.com/supergiant/capacity/pkg/providers"
-	"github.com/supergiant/capacity/pkg/providers/factory"
+	"github.com/supergiant/capacity/pkg/provider"
+	"github.com/supergiant/capacity/pkg/provider/factory"
 )
 
 const (
@@ -29,10 +29,10 @@ type Kubescaler struct {
 	*PersistentConfig
 	*workers.Manager
 
-	provider              providers.Provider
+	provider              provider.Provider
 	kclient               kubernetes.Clientset
 	listerRegistry        kubeutil.ListerRegistry
-	availableMachineTypes map[string]providers.MachineType
+	availableMachineTypes map[string]provider.MachineType
 }
 
 func New(kubeConfig, kubescalerConfig string) (*Kubescaler, error) {
@@ -52,7 +52,7 @@ func New(kubeConfig, kubescalerConfig string) (*Kubescaler, error) {
 	}
 
 	cfg := conf.GetConfig()
-	vmProvider, err := factory.New(cfg.ProviderName, cfg.Provider)
+	vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ type resources struct {
 	unschedulablePods []*corev1.Pod
 	nodes             []*corev1.Node
 	readyNodes        []*corev1.Node
-	machines          []*providers.Machine
+	machines          []*provider.Machine
 }
 
 func (s *Kubescaler) getResources(ctx context.Context) (*resources, error) {
@@ -164,7 +164,7 @@ func (s *Kubescaler) removeFailedMachines(ctx context.Context, rss *resources, c
 
 	for _, m := range rss.machines {
 		if m.CreatedAt.Add(s.GetConfig().MaxMachineProvisionTime).Before(currentTime) {
-			if err := s.provider.DeleteMachine(ctx, m.ID); err != nil {
+			if _, err := s.provider.DeleteMachine(ctx, m.ID); err != nil {
 				return fixed, err
 			}
 			fixed = true
@@ -174,8 +174,8 @@ func (s *Kubescaler) removeFailedMachines(ctx context.Context, rss *resources, c
 	return fixed, nil
 }
 
-func (s *Kubescaler) machineTypes(types []string) []*providers.MachineType {
-	out := make([]*providers.MachineType, 0, len(types))
+func (s *Kubescaler) machineTypes(types []string) []*provider.MachineType {
+	out := make([]*provider.MachineType, 0, len(types))
 	for _, t := range types {
 		if mt, ok := s.availableMachineTypes[t]; ok {
 			out = append(out, &mt)
@@ -184,12 +184,12 @@ func (s *Kubescaler) machineTypes(types []string) []*providers.MachineType {
 	return out
 }
 
-func provisioningMachines(readyNodes []*corev1.Node, machines []*providers.Machine) []*providers.Machine {
+func provisioningMachines(readyNodes []*corev1.Node, machines []*provider.Machine) []*provider.Machine {
 	registered := sets.NewString()
 	for _, node := range readyNodes {
 		registered.Insert(node.Spec.ProviderID)
 	}
-	unregistered := make([]*providers.Machine, 0)
+	unregistered := make([]*provider.Machine, 0)
 	for _, machine := range machines {
 		if !registered.Has(machine.ID) {
 			unregistered = append(unregistered, machine)

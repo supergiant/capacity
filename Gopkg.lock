@@ -332,7 +332,7 @@
   branch = "extend_aws_provider"
   name = "github.com/saheienko/supergiant"
   packages = ["pkg/clouds/aws"]
-  revision = "e362b092101012e4f9aed10e1d86cf58767ad834"
+  revision = "71d0468adf6db68e9fff709e4cb9269696fc83ed"
 
 [[projects]]
   name = "github.com/sirupsen/logrus"
