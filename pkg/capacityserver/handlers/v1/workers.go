@@ -46,8 +46,10 @@ func (h *workersHandler) createWorker(w http.ResponseWriter, r *http.Request) {
 
 	if err = json.NewEncoder(w).Encode(worker); err != nil {
 		log.Errorf("handler: kubescaler: create %s worker: failed to write response: %v", worker.MachineID, err)
-		return
+		w.WriteHeader(http.StatusInternalServerError)
 	}
+
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (h *workersHandler) listWorkers(w http.ResponseWriter, r *http.Request) {
@@ -89,6 +91,5 @@ func (h *workersHandler) deleteWorker(w http.ResponseWriter, r *http.Request) {
 
 	if err = json.NewEncoder(w).Encode(worker); err != nil {
 		log.Errorf("handler: kubescaler: delete %s worker: failed to write response: %v", worker.MachineID, err)
-		return
 	}
 }
