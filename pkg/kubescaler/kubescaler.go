@@ -12,6 +12,7 @@ import (
 
 	"github.com/supergiant/capacity/pkg/kubernetes/config"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
+	"github.com/supergiant/capacity/pkg/kubescaler/workers/fake"
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/factory"
 )
@@ -27,7 +28,7 @@ var (
 
 type Kubescaler struct {
 	*PersistentConfig
-	*workers.Manager
+	workers.WInterface
 
 	provider              provider.Provider
 	kclient               kubernetes.Clientset
@@ -41,38 +42,44 @@ func New(kubeConfig, kubescalerConfig string) (*Kubescaler, error) {
 		return nil, err
 	}
 
-	kclient, err := config.GetKubernetesClientSet("", kubeConfig)
-	if err != nil {
-		return nil, err
-	}
+	var wm workers.WInterface
+	// TODO: add a fake worker manager for testing; remove or use a factory in future
+	if conf.GetConfig().ProviderName == "fake" {
+		wm = fake.NewManager()
+	} else {
+		kclient, err := config.GetKubernetesClientSet("", kubeConfig)
+		if err != nil {
+			return nil, err
+		}
 
-	v, err := kclient.ServerVersion()
-	if err != nil {
-		return nil, err
-	}
+		v, err := kclient.ServerVersion()
+		if err != nil {
+			return nil, err
+		}
 
-	cfg := conf.GetConfig()
-	vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)
-	if err != nil {
-		return nil, err
-	}
+		cfg := conf.GetConfig()
+		vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)
+		if err != nil {
+			return nil, err
+		}
 
-	workersConf := workers.Config{
-		KubeVersion:       v.String(),
-		MasterPrivateAddr: cfg.MasterPrivateAddr,
-		KubeAPIPort:       cfg.KubeAPIPort,
-		KubeAPIPassword:   cfg.KubeAPIPassword,
-		ProviderName:      cfg.ProviderName,
-		SSHPubKey:         cfg.SSHPubKey,
-	}
-	wm, err := workers.NewManager(cfg.ClusterName, kclient.CoreV1().Nodes(), vmProvider, workersConf)
-	if err != nil {
-		return nil, err
+		workersConf := workers.Config{
+			KubeVersion:       v.String(),
+			MasterPrivateAddr: cfg.MasterPrivateAddr,
+			KubeAPIPort:       cfg.KubeAPIPort,
+			KubeAPIPassword:   cfg.KubeAPIPassword,
+			ProviderName:      cfg.ProviderName,
+			SSHPubKey:         cfg.SSHPubKey,
+		}
+		wm, err = workers.NewManager(cfg.ClusterName, kclient.CoreV1().Nodes(), vmProvider, workersConf)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &Kubescaler{
 		PersistentConfig: conf,
-		Manager:          wm,
+		WInterface:       wm,
 	}, nil
 }
 
