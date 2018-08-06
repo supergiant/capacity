@@ -74,13 +74,8 @@ func (h *workersHandler) deleteWorker(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	worker := &workers.Worker{}
-	if err = json.NewDecoder(r.Body).Decode(worker); err != nil {
-		log.Errorf("handler: kubescaler: delete worker: decode: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
 
-	worker, err = h.m.DeleteWorker(r.Context(), worker.NodeName, worker.MachineID)
+	worker, err = h.m.DeleteWorker(r.Context(), "", vars["machineID"])
 	if err != nil {
 		log.Errorf("handler: kubescaler: delete %s worker: %v", worker.MachineID, err)
 		w.WriteHeader(http.StatusInternalServerError)
