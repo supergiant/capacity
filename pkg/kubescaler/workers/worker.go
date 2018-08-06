@@ -26,6 +26,14 @@ const (
 	ClusterRole = "worker"
 )
 
+var _ WInterface = &Manager{}
+
+type WInterface interface {
+	CreateWorker(ctx context.Context, mtype string) (*Worker, error)
+	ListWorkers(ctx context.Context) ([]*Worker, error)
+	DeleteWorker(ctx context.Context, nodeName, id string) (*Worker, error)
+}
+
 type Config struct {
 	SSHPubKey         string
 	KubeVersion       string

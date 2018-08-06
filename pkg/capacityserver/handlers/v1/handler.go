@@ -22,7 +22,7 @@ func New(ks *capacity.Kubescaler) (*HandlerV1, error) {
 	if ks == nil {
 		return nil, ErrNoKubescaler
 	}
-	wh, err := newWorkersHandler(ks.Manager)
+	wh, err := newWorkersHandler(ks.WInterface)
 	if err != nil {
 		return nil, err
 	}

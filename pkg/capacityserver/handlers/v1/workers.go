@@ -16,14 +16,14 @@ var (
 )
 
 type workersHandler struct {
-	m *workers.Manager
+	m workers.WInterface
 }
 
-func newWorkersHandler(pconf *workers.Manager) (*workersHandler, error) {
-	if pconf == nil {
+func newWorkersHandler(wiface workers.WInterface) (*workersHandler, error) {
+	if wiface == nil {
 		return nil, ErrInvalidWorkersManager
 	}
-	return &workersHandler{pconf}, nil
+	return &workersHandler{wiface}, nil
 }
 
 func (h *workersHandler) createWorker(w http.ResponseWriter, r *http.Request) {
