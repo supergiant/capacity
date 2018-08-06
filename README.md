@@ -18,7 +18,7 @@ go run ./cmd/capacity-service/main.go  --kubescaler-config config/kubescaler.con
 
 Get a kubescaler config:
 ```
-➜ $ curl -s -XGET localhost:8081/kubescaler/config | jq
+➜ $ curl -s -XGET localhost:8081/api/v1/config | jq
 {
   "sshPubKey": "",
   "clusterName": "clusterName",
@@ -49,7 +49,7 @@ Get a kubescaler config:
 
 Update a kubescaler config:
 ```
-➜ $ curl -s -XPATCH -d'{"nodesCountMin":1000}' localhost:8081/kubescaler/config | jq
+➜ $ curl -s -XPATCH -d'{"nodesCountMin":1000}' localhost:8081/api/v1/config | jq
 {
   "sshPubKey": "",
   "clusterName": "clusterName",
@@ -80,7 +80,7 @@ Update a kubescaler config:
 
 Create a kubescaler worker:
 ```
-➜ $ curl -s -XPOST -d'{"machineType":"m4.large"}' localhost:8081/kubescaler/workers | jq
+➜ $ curl -s -XPOST -d'{"machineType":"m4.large"}' localhost:8081/api/v1/workers | jq
     {
       "clusterName": "clusterName",
       "machineID": "i-01e9c47fede75cb9a",
@@ -95,7 +95,7 @@ Create a kubescaler worker:
 
 List kubescaler workers:
 ```
-➜ $ curl -s localhost:8081/kubescaler/workers | jq
+➜ $ curl -s localhost:8081/api/v1/workers | jq
     [
       {
         "clusterName": "clusterName",
@@ -132,16 +132,16 @@ List kubescaler workers:
 
 Delete a kubescaler worker:
 ```
-➜ curl -s -XDELETE -d'{"MachineID":"i-01e9c47fede75cb9a"}' localhost:8081/kubescaler/workers | jq
-  {
-    "clusterName": "clusterName",
-    "machineID": "i-01e9c47fede75cb9a",
-    "machineName": "",
-    "machineType": "",
-    "machineState": "shutting-down",
-    "createdAt": "0001-01-01T00:00:00Z",
-    "nodeName": "",
-    "reserved": false
-  }
+➜ curl -s -XDELETE localhost:8081/api/v1/workers/i-01e9c47fede75cb9a | jq
+    {
+      "clusterName": "fake",
+      "machineID": "i-01e9c47fede75cb9a",
+      "machineName": "clusterName-worker-e289335e-9579-11e8-b97f-9cb6d0f71293",
+      "machineType": "m4.large",
+      "machineState": "terminating",
+      "createdAt": "2018-08-06T14:26:27.736042905+03:00",
+      "nodeName": "",
+      "reserved": false
+    }
 
 ```
