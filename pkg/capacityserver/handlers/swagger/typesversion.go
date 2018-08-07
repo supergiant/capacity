@@ -8,4 +8,3 @@ type versionResponse struct {
 	// in:body
 	Version *version.Info `json:"version"`
 }
-

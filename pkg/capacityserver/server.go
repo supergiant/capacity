@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rs/cors"
+
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers"
 	"github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/log"
@@ -35,7 +37,7 @@ func New(conf Config) (*API, error) {
 		ks: ks,
 		srv: http.Server{
 			Addr:         conf.ListenAddr,
-			Handler:      h,
+			Handler:      cors.Default().Handler(h),
 			ReadTimeout:  30 * time.Second,
 			WriteTimeout: 30 * time.Second,
 			IdleTimeout:  120 * time.Second,
