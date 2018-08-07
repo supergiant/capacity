@@ -26,6 +26,20 @@ func newConfigHandler(pconf *capacity.PersistentConfig) (*configHandler, error) 
 }
 
 func (h *configHandler) getConfig(w http.ResponseWriter, r *http.Request) {
+	// swagger:route GET /api/v1/config config getConfig
+	//
+	// Returns a current view of the kubescaler configuration.
+	//
+	// This will show all configuration parameters of the application.
+	//
+	//     Produces:
+	//     - application/json
+	//
+	//     Schemes: https, http
+	//
+	//     Responses:
+	//     200: configResponse
+
 	if err := json.NewEncoder(w).Encode(h.pconf.GetConfig()); err != nil {
 		log.Errorf("handle: kubescaler: get config: failed to encode")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -33,6 +47,23 @@ func (h *configHandler) getConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *configHandler) patchConfig(w http.ResponseWriter, r *http.Request) {
+	// swagger:route PATCH /api/v1/config config updateConfig
+	//
+	// Returns a new view of the kubescaler configuration.
+	//
+	// This will update current configuration of the application.
+	//
+	//     Consumes:
+	//     - application/json
+	//
+	//     Produces:
+	//     - application/json
+	//
+	//     Schemes: https, http
+	//
+	//     Responses:
+	//     200: configResponse
+
 	patch := capacity.Config{}
 	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
 		log.Errorf("handler: kubescaler: patch config: decode: %v", err)

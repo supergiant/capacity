@@ -21,11 +21,11 @@ const (
 )
 
 type Machine struct {
-	ID        string
-	Name      string
-	Type      string
-	CreatedAt time.Time
-	State     string
+	ID                string
+	Name              string
+	Type              string
+	CreationTimestamp time.Time
+	State             string
 }
 
 type MachineType struct {
