@@ -1,0 +1,347 @@
+{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "schemes": [
+    "https",
+    "http"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "description": "the purpose of this application is to manage a cloud infrastructure\nin cost-effective way.",
+    "title": "Capacity service API.",
+    "termsOfService": "there are no TOS at this moment, use at your own risk we take no responsibility",
+    "version": "0.0.0"
+  },
+  "host": "localhost:8081",
+  "basePath": "/",
+  "paths": {
+    "/api/v1/config": {
+      "get": {
+        "description": "This will show all configuration parameters of the application.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "https",
+          "http"
+        ],
+        "tags": [
+          "config"
+        ],
+        "summary": "Returns a current view of the kubescaler configuration.",
+        "operationId": "getConfig",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/configResponse"
+          }
+        }
+      },
+      "patch": {
+        "description": "This will update current configuration of the application.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "https",
+          "http"
+        ],
+        "tags": [
+          "config"
+        ],
+        "summary": "Returns a new view of the kubescaler configuration.",
+        "operationId": "updateConfig",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/configResponse"
+          }
+        }
+      }
+    },
+    "/api/v1/workers": {
+      "get": {
+        "description": "This will show all workers.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "workers"
+        ],
+        "summary": "Lists all workers.",
+        "operationId": "listWorkers",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/workerListResponse"
+          }
+        }
+      },
+      "post": {
+        "description": "This will create a new worker.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "https",
+          "http"
+        ],
+        "tags": [
+          "workers"
+        ],
+        "summary": "Create a new worker with the specified machine type.",
+        "operationId": "createWorker",
+        "responses": {
+          "201": {
+            "$ref": "#/responses/workerResponse"
+          }
+        }
+      }
+    },
+    "/api/v1/workers/{machineID}": {
+      "delete": {
+        "description": "This will delete a worker.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "workers"
+        ],
+        "summary": "Delete a worker with the specified machineID.",
+        "operationId": "deleteWorker",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "MachineID",
+            "name": "machineID",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/workerResponse"
+          }
+        }
+      }
+    },
+    "/version": {
+      "get": {
+        "description": "This will show version information.",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "https",
+          "http"
+        ],
+        "tags": [
+          "version"
+        ],
+        "summary": "Returns version information.",
+        "operationId": "getVersion",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/versionResponse"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Config": {
+      "type": "object",
+      "properties": {
+        "clusterName": {
+          "type": "string",
+          "x-go-name": "ClusterName"
+        },
+        "kubeAPIPassword": {
+          "type": "string",
+          "x-go-name": "KubeAPIPassword"
+        },
+        "kubeAPIPort": {
+          "type": "string",
+          "x-go-name": "KubeAPIPort"
+        },
+        "machineTypes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "x-go-name": "MachineTypes"
+        },
+        "masterPrivateAddr": {
+          "type": "string",
+          "x-go-name": "MasterPrivateAddr"
+        },
+        "maxMachineProvisionTime": {
+          "$ref": "#/definitions/Duration"
+        },
+        "nodesCountMax": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "NodesCountMax"
+        },
+        "nodesCountMin": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "NodesCountMin"
+        },
+        "provider": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "x-go-name": "Provider"
+        },
+        "providerName": {
+          "type": "string",
+          "x-go-name": "ProviderName"
+        },
+        "sshPubKey": {
+          "type": "string",
+          "x-go-name": "SSHPubKey"
+        },
+        "stopped": {
+          "type": "boolean",
+          "x-go-name": "Stopped"
+        }
+      },
+      "x-go-package": "github.com/supergiant/capacity/pkg/kubescaler"
+    },
+    "Duration": {
+      "description": "A Duration represents the elapsed time between two instants\nas an int64 nanosecond count. The representation limits the\nlargest representable duration to approximately 290 years.",
+      "type": "integer",
+      "format": "int64",
+      "x-go-package": "time"
+    },
+    "Info": {
+      "type": "object",
+      "title": "Info contains versioning information.",
+      "properties": {
+        "buildDate": {
+          "type": "string",
+          "x-go-name": "BuildDate"
+        },
+        "compiler": {
+          "type": "string",
+          "x-go-name": "Compiler"
+        },
+        "gitCommit": {
+          "type": "string",
+          "x-go-name": "GitCommit"
+        },
+        "gitVersion": {
+          "type": "string",
+          "x-go-name": "GitVersion"
+        },
+        "goVersion": {
+          "type": "string",
+          "x-go-name": "GoVersion"
+        },
+        "platform": {
+          "type": "string",
+          "x-go-name": "Platform"
+        }
+      },
+      "x-go-package": "github.com/supergiant/capacity/pkg/version"
+    },
+    "Worker": {
+      "type": "object",
+      "required": [
+        "machineID"
+      ],
+      "properties": {
+        "clusterName": {
+          "description": "ClusterName is a kubernetes cluster name.",
+          "type": "string",
+          "x-go-name": "ClusterName"
+        },
+        "creationTimestamp": {
+          "description": "CreationTimestamp is a timestamp representing the server time when this object was created.",
+          "type": "string",
+          "format": "date-time",
+          "x-go-name": "CreationTimestamp"
+        },
+        "machineID": {
+          "description": "MachineID is a unique id of the provider's virtual machine.",
+          "type": "string",
+          "x-go-name": "MachineID"
+        },
+        "machineName": {
+          "description": "MachineName is a human-readable name of virtual machine.",
+          "type": "string",
+          "x-go-name": "MachineName"
+        },
+        "machineState": {
+          "description": "MachineState represent a virtual machine state.",
+          "type": "string",
+          "x-go-name": "MachineState"
+        },
+        "machineType": {
+          "description": "MachineType is type of virtual machine (eg. 't2.micro' for AWS).",
+          "type": "string",
+          "x-go-name": "MachineType"
+        },
+        "nodeName": {
+          "description": "NodeName represents a name of the kubernetes node that runs on top of that machine.",
+          "type": "string",
+          "x-go-name": "NodeName"
+        },
+        "reserved": {
+          "description": "Reserved is a parameter that is used to prevent downscaling of the worker.",
+          "type": "boolean",
+          "x-go-name": "Reserved"
+        }
+      },
+      "x-go-package": "github.com/supergiant/capacity/pkg/kubescaler/workers"
+    },
+    "WorkerList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Worker"
+          },
+          "x-go-name": "Items"
+        }
+      },
+      "x-go-package": "github.com/supergiant/capacity/pkg/kubescaler/workers"
+    }
+  },
+  "responses": {
+    "configResponse": {
+      "description": "configResponse contains an application config parameters.",
+      "schema": {
+        "$ref": "#/definitions/Config"
+      }
+    },
+    "versionResponse": {
+      "description": "versionResponse contains an application config parameters.",
+      "schema": {
+        "$ref": "#/definitions/Info"
+      }
+    },
+    "workerListResponse": {
+      "description": "workerListResponse contains a list of workers.",
+      "schema": {
+        "$ref": "#/definitions/WorkerList"
+      }
+    },
+    "workerResponse": {
+      "description": "workerResponse contains a worker representation.",
+      "schema": {
+        "$ref": "#/definitions/Worker"
+      }
+    }
+  }
+}

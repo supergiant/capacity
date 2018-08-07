@@ -1,5 +1,9 @@
 GOPKGS ?= ./...
 
+SWAGGER_ROOT = ./pkg/capacityserver/handlers
+SWAGGER_SPEC = ./apidocs/swagger.json
+SWAGGER_CLIENT = pkg/capacityclient
+
 fmt: goimports
 
 goimports:
@@ -28,3 +32,8 @@ gometalinter:
 	    --tests \
 	    $(GOPKGS)
 
+swagger:
+	@swagger generate -q spec -b $(SWAGGER_ROOT) -o $(SWAGGER_SPEC)
+	#@rm -rf $(SWAGGER_CLIENT)
+	#@mkdir $(SWAGGER_CLIENT)
+	#@swagger generate -q client -f $(SWAGGER_SPEC) -t $(SWAGGER_CLIENT)

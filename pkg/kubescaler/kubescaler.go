@@ -170,7 +170,7 @@ func (s *Kubescaler) removeFailedMachines(ctx context.Context, rss *resources, c
 	}
 
 	for _, m := range rss.machines {
-		if m.CreatedAt.Add(s.GetConfig().MaxMachineProvisionTime).Before(currentTime) {
+		if m.CreationTimestamp.Add(s.GetConfig().MaxMachineProvisionTime).Before(currentTime) {
 			if _, err := s.provider.DeleteMachine(ctx, m.ID); err != nil {
 				return fixed, err
 			}

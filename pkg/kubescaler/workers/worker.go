@@ -30,7 +30,7 @@ var _ WInterface = &Manager{}
 
 type WInterface interface {
 	CreateWorker(ctx context.Context, mtype string) (*Worker, error)
-	ListWorkers(ctx context.Context) ([]*Worker, error)
+	ListWorkers(ctx context.Context) (*WorkerList, error)
 	DeleteWorker(ctx context.Context, nodeName, id string) (*Worker, error)
 }
 
@@ -44,14 +44,27 @@ type Config struct {
 }
 
 type Worker struct {
-	ClusterName  string    `json:"clusterName"`
-	MachineID    string    `json:"machineID"`
-	MachineName  string    `json:"machineName"`
-	MachineType  string    `json:"machineType"`
-	MachineState string    `json:"machineState"`
-	CreatedAt    time.Time `json:"createdAt"`
-	NodeName     string    `json:"nodeName"`
-	Reserved     bool      `json:"reserved"`
+	// ClusterName is a kubernetes cluster name.
+	ClusterName string `json:"clusterName"`
+	// MachineID is a unique id of the provider's virtual machine.
+	// required: true
+	MachineID string `json:"machineID"`
+	// MachineName is a human-readable name of virtual machine.
+	MachineName string `json:"machineName"`
+	// MachineType is type of virtual machine (eg. 't2.micro' for AWS).
+	MachineType string `json:"machineType"`
+	// MachineState represent a virtual machine state.
+	MachineState string `json:"machineState"`
+	// CreationTimestamp is a timestamp representing the server time when this object was created.
+	CreationTimestamp time.Time `json:"creationTimestamp"`
+	// NodeName represents a name of the kubernetes node that runs on top of that machine.
+	NodeName string `json:"nodeName"`
+	// Reserved is a parameter that is used to prevent downscaling of the worker.
+	Reserved bool `json:"reserved"`
+}
+
+type WorkerList struct {
+	Items []*Worker `json:"items"`
 }
 
 func NewWorker(node *corev1.Node) *Worker {
@@ -107,7 +120,7 @@ func (m *Manager) CreateWorker(ctx context.Context, mtype string) (*Worker, erro
 	return m.workerFrom(machine, nil), nil
 }
 
-func (m *Manager) ListWorkers(ctx context.Context) ([]*Worker, error) {
+func (m *Manager) ListWorkers(ctx context.Context) (*WorkerList, error) {
 	machines, err := m.provider.Machines(ctx)
 	if err != nil {
 		return nil, err
@@ -122,7 +135,9 @@ func (m *Manager) ListWorkers(ctx context.Context) ([]*Worker, error) {
 		workers[i] = m.workerFrom(machines[i], nodeProviderMap[machines[i].ID])
 	}
 
-	return workers, nil
+	return &WorkerList{
+		Items: workers,
+	}, nil
 }
 
 func (m *Manager) DeleteWorker(ctx context.Context, nodeName, id string) (*Worker, error) {
@@ -166,13 +181,13 @@ func (m *Manager) workerFrom(machine *provider.Machine, node *corev1.Node) *Work
 	}
 
 	return &Worker{
-		ClusterName:  m.clusterName,
-		MachineID:    machine.ID,
-		MachineName:  machine.Name,
-		MachineType:  machine.Type,
-		MachineState: machine.State,
-		CreatedAt:    machine.CreatedAt,
-		NodeName:     nodeName,
-		Reserved:     reserved,
+		ClusterName:       m.clusterName,
+		MachineID:         machine.ID,
+		MachineName:       machine.Name,
+		MachineType:       machine.Type,
+		MachineState:      machine.State,
+		CreationTimestamp: machine.CreationTimestamp,
+		NodeName:          nodeName,
+		Reserved:          reserved,
 	}
 }

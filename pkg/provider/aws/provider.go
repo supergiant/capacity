@@ -203,10 +203,10 @@ func parseVolSize(size string) (int64, error) {
 
 func machineFrom(inst *ec2.Instance) *provider.Machine {
 	return &provider.Machine{
-		ID:        *inst.InstanceId,
-		Name:      getName(inst.Tags),
-		Type:      *inst.InstanceType,
-		CreatedAt: *inst.LaunchTime,
-		State:     toString(inst.State),
+		ID:                *inst.InstanceId,
+		Name:              getName(inst.Tags),
+		Type:              *inst.InstanceType,
+		CreationTimestamp: *inst.LaunchTime,
+		State:             toString(inst.State),
 	}
 }
