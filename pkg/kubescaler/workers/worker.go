@@ -13,6 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/typed/core/v1"
 
+	"github.com/pkg/errors"
+
 	"github.com/supergiant/capacity/pkg/log"
 	"github.com/supergiant/capacity/pkg/provider"
 )
@@ -96,7 +98,7 @@ type Manager struct {
 func NewManager(clusterName string, nodesClient v1.NodeInterface, provider provider.Provider, conf Config) (*Manager, error) {
 	mtypes, err := provider.MachineTypes(context.Background())
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "get machine types")
 	}
 
 	t, err := template.New("userData").Parse(userDataTpl)

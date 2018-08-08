@@ -29,9 +29,11 @@ type Machine struct {
 }
 
 type MachineType struct {
-	Name   string            `json:"name"`
-	CPU    resource.Quantity `json:"cpu"`
-	Memory resource.Quantity `json:"memory"`
+	Name           string            `json:"name"`
+	Memory         string            `json:"memory"`
+	CPU            string            `json:"cpu"`
+	MemoryResource resource.Quantity `json:"-"`
+	CPUResource    resource.Quantity `json:"-"`
 }
 
 type Config map[string]string

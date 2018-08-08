@@ -16,7 +16,9 @@ type Config struct {
 	SSHPubKey         string            `json:"sshPubKey"`
 	ClusterName       string            `json:"clusterName"`
 	MasterPrivateAddr string            `json:"masterPrivateAddr"`
+	KubeAPIHost       string            `json:"kubeAPIHost"`
 	KubeAPIPort       string            `json:"kubeAPIPort"`
+	KubeAPIUser       string            `json:"kubeAPIUser"`
 	KubeAPIPassword   string            `json:"kubeAPIPassword"`
 	ProviderName      string            `json:"providerName"`
 	Provider          map[string]string `json:"provider"`
