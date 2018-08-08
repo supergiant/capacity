@@ -3,6 +3,7 @@ package swagger
 import (
 	"github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
+	"github.com/supergiant/capacity/pkg/provider"
 )
 
 // configResponse contains an application config parameters.
@@ -10,6 +11,13 @@ import (
 type configResponse struct {
 	// in:body
 	Config *capacity.Config `json:"config"`
+}
+
+// machineTypesListResponse contains a list of workers.
+// swagger:response machineTypesListResponse
+type machineTypesListResponse struct {
+	// in:body
+	MachineTypes []*provider.MachineType `json:"machineTypes"`
 }
 
 // workerResponse contains a worker representation.
