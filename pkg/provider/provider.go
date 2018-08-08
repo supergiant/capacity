@@ -28,6 +28,7 @@ type Machine struct {
 	State             string    `json:"state"`
 }
 
+// TODO: split string and resource representation
 type MachineType struct {
 	Name           string            `json:"name"`
 	Memory         string            `json:"memory"`

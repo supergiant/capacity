@@ -90,7 +90,7 @@ func New(kubeConfig, kubescalerConfig string) (*Kubescaler, error) {
 func (s *Kubescaler) RunOnce(ctx context.Context, currentTime time.Time) error {
 	config := s.GetConfig()
 	// TODO: turn on after e2e testing
-	//if config.Stopped {
+	//if *config.Paused {
 	if true {
 		return nil
 	}
