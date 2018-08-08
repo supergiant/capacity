@@ -34,6 +34,8 @@ func (c *Config) Merge(in *Config) {
 		c.NodesCountMin = in.NodesCountMin
 	case in.NodesCountMax != 0:
 		c.NodesCountMax = in.NodesCountMax
+	case in.MachineTypes != nil:
+		c.MachineTypes = in.MachineTypes
 	}
 }
 
@@ -48,7 +50,7 @@ func NewPersistentConfig(filepath string) (*PersistentConfig, error) {
 	rc, err := fileReadCloser(filepath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			if err = writeDefaultConfig(filepath); err != nil {
+			if err = writeExampleConfig(filepath); err != nil {
 				return nil, err
 			}
 			if rc, err = fileReadCloser(filepath); err != nil {
@@ -120,7 +122,7 @@ func fileWriteCloser(filepath string) (io.WriteCloser, error) {
 	return os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 }
 
-func writeDefaultConfig(filepath string) error {
+func writeExampleConfig(filepath string) error {
 	conf := &Config{
 		SSHPubKey:         "REPLACE_IT",
 		ClusterName:       "REPLACE_IT",
