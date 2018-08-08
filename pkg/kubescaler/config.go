@@ -23,7 +23,7 @@ type Config struct {
 	ProviderName      string            `json:"providerName"`
 	Provider          map[string]string `json:"provider"`
 
-	Stopped                 bool          `json:"stopped"`
+	Paused                  *bool         `json:"paused,omitempty"`
 	NodesCountMin           int           `json:"nodesCountMin"`
 	NodesCountMax           int           `json:"nodesCountMax"`
 	MachineTypes            []string      `json:"machineTypes"`
@@ -32,6 +32,8 @@ type Config struct {
 
 func (c *Config) Merge(in *Config) {
 	switch {
+	case in.Paused != nil:
+		c.Paused = in.Paused
 	case in.NodesCountMin != 0:
 		c.NodesCountMin = in.NodesCountMin
 	case in.NodesCountMax != 0:
