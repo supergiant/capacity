@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 
 	_ "github.com/supergiant/capacity/pkg/capacityserver/handlers/swagger" // for swagger generation
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers/v1"
@@ -26,8 +27,8 @@ func Handler(ks *capacity.Kubescaler) (http.Handler, error) {
 
 	apiv1 := r.PathPrefix("/api/v1").Subrouter()
 	handlerV1.RegisterTo(apiv1)
-
-	return r, nil
+	
+	return cors.AllowAll().Handler(r), nil
 }
 
 func setContentType(next http.Handler) http.Handler {
