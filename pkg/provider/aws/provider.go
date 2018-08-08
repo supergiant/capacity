@@ -3,12 +3,13 @@ package aws
 import (
 	"context"
 	"encoding/base64"
-	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/saheienko/supergiant/pkg/clouds/aws"
 	"k8s.io/apimachinery/pkg/api/resource"
+
+	"github.com/pkg/errors"
 
 	"github.com/supergiant/capacity/pkg/provider"
 )
@@ -98,21 +99,23 @@ func (p *AWSProvider) MachineTypes(ctx context.Context) ([]*provider.MachineType
 		return nil, err
 	}
 
-	mTypes := make([]*provider.MachineType, len(instTypes))
+	mTypes := make([]*provider.MachineType, 0, len(instTypes))
 	for i := range instTypes {
 		mem, err := parseMemory(instTypes[i].Attributes.Memory)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "memory: parse %s", instTypes[i].Attributes.Memory)
 		}
-		cpu, err := parseVCPU(instTypes[i].Attributes.Memory)
+		cpu, err := parseVCPU(instTypes[i].Attributes.VCPU)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "vcpu: parse %s", instTypes[i].Attributes.VCPU)
 		}
-		mTypes[i] = &provider.MachineType{
-			Name:   instTypes[i].Attributes.InstanceType,
-			Memory: mem,
-			CPU:    cpu,
-		}
+		mTypes = append(mTypes, &provider.MachineType{
+			Name:           instTypes[i].Attributes.InstanceType,
+			Memory:         instTypes[i].Attributes.Memory,
+			CPU:            instTypes[i].Attributes.VCPU,
+			MemoryResource: mem,
+			CPUResource:    cpu,
+		})
 	}
 
 	return mTypes, nil
@@ -171,7 +174,12 @@ func (p *AWSProvider) DeleteMachine(ctx context.Context, id string) (*provider.M
 
 func normalizeMemory(memory string) string {
 	// "1 GiB" --> "1Gi"
-	return strings.Trim(memory, " B")
+	fixed := strings.Trim(strings.Replace(memory, " ", "", -1), "B")
+
+	// Some inst types uses comma for float types - x1.32xlarge: 1,952 GiB
+	fixed = strings.Replace(fixed, ",", ".", -1)
+
+	return fixed
 }
 
 func parseMemory(memory string) (resource.Quantity, error) {
@@ -196,10 +204,6 @@ func toString(state *ec2.InstanceState) string {
 		return ""
 	}
 	return *state.Name
-}
-
-func parseVolSize(size string) (int64, error) {
-	return strconv.ParseInt(size, 10, 64)
 }
 
 func machineFrom(inst *ec2.Instance) *provider.Machine {

@@ -40,13 +40,16 @@ func New(kubeConfig, kubescalerConfig string) (*Kubescaler, error) {
 	if err != nil {
 		return nil, err
 	}
+	cfg := conf.GetConfig()
 
-	var wm workers.WInterface
-	// TODO: add a fake worker manager for testing; remove or use a factory in future
+	var ks *Kubescaler
 	if conf.GetConfig().ProviderName == "fake" {
-		wm = fake.NewManager()
+		ks = &Kubescaler{
+			PersistentConfig: conf,
+			WInterface:       fake.NewManager(),
+		}
 	} else {
-		kclient, err := config.GetKubernetesClientSet("", kubeConfig)
+		kclient, err := config.GetKubernetesClientSetBasicAuth(cfg.KubeAPIHost, cfg.KubeAPIPort, cfg.KubeAPIUser, cfg.KubeAPIPassword)
 		if err != nil {
 			return nil, err
 		}
@@ -56,7 +59,6 @@ func New(kubeConfig, kubescalerConfig string) (*Kubescaler, error) {
 			return nil, err
 		}
 
-		cfg := conf.GetConfig()
 		vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)
 		if err != nil {
 			return nil, err
@@ -70,16 +72,19 @@ func New(kubeConfig, kubescalerConfig string) (*Kubescaler, error) {
 			ProviderName:      cfg.ProviderName,
 			SSHPubKey:         cfg.SSHPubKey,
 		}
-		wm, err = workers.NewManager(cfg.ClusterName, kclient.CoreV1().Nodes(), vmProvider, workersConf)
+		wm, err := workers.NewManager(cfg.ClusterName, kclient.CoreV1().Nodes(), vmProvider, workersConf)
 		if err != nil {
 			return nil, err
 		}
+
+		ks = &Kubescaler{
+			PersistentConfig: conf,
+			WInterface:       wm,
+			listerRegistry:   kubeutil.NewListerRegistryWithDefaultListers(kclient, nil),
+		}
 	}
 
-	return &Kubescaler{
-		PersistentConfig: conf,
-		WInterface:       wm,
-	}, nil
+	return ks, nil
 }
 
 func (s *Kubescaler) RunOnce(ctx context.Context, currentTime time.Time) error {

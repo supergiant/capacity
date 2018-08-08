@@ -55,7 +55,7 @@ func filterIgnoringPods(pods []*corev1.Pod, readyNodes []*corev1.Node, allowedMa
 
 func hasMachineFor(cpu, mem resource.Quantity, machineTypes []*provider.MachineType) bool {
 	for _, m := range machineTypes {
-		if m.CPU.Cmp(cpu) >= 0 && m.Memory.Cmp(mem) == 1 {
+		if m.CPUResource.Cmp(cpu) >= 0 && m.MemoryResource.Cmp(mem) == 1 {
 			return true
 		}
 	}
@@ -67,7 +67,7 @@ func bestMachineFor(cpu, mem resource.Quantity, machineTypes []*provider.Machine
 		return provider.MachineType{}, ErrNoAllowedMachined
 	}
 	for _, m := range machineTypes {
-		if m.CPU.Cmp(cpu) >= 0 && m.Memory.Cmp(mem) == 1 {
+		if m.CPUResource.Cmp(cpu) >= 0 && m.MemoryResource.Cmp(mem) == 1 {
 			return *m, nil
 		}
 	}
