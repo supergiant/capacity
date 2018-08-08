@@ -30,10 +30,9 @@ type Kubescaler struct {
 	*PersistentConfig
 	workers.WInterface
 
-	provider              provider.Provider
-	kclient               kubernetes.Clientset
-	listerRegistry        kubeutil.ListerRegistry
-	availableMachineTypes map[string]provider.MachineType
+	provider       provider.Provider
+	kclient        kubernetes.Clientset
+	listerRegistry kubeutil.ListerRegistry
 }
 
 func New(kubeConfig, kubescalerConfig string) (*Kubescaler, error) {
@@ -181,14 +180,28 @@ func (s *Kubescaler) removeFailedMachines(ctx context.Context, rss *resources, c
 	return fixed, nil
 }
 
-func (s *Kubescaler) machineTypes(types []string) []*provider.MachineType {
-	out := make([]*provider.MachineType, 0, len(types))
-	for _, t := range types {
-		if mt, ok := s.availableMachineTypes[t]; ok {
-			out = append(out, &mt)
+func (s *Kubescaler) machineTypes(permitted []string) []*provider.MachineType {
+	if len(permitted) == 0 {
+		return s.WInterface.MachineTypes()
+	}
+	out := make([]*provider.MachineType, 0, len(permitted))
+	for _, name := range permitted {
+		if mt := findMachine(name, s.WInterface.MachineTypes()); mt != nil {
+			out = append(out, mt)
 		}
 	}
+
 	return out
+
+}
+
+func findMachine(name string, machineTypes []*provider.MachineType) *provider.MachineType {
+	for i := range machineTypes {
+		if name == machineTypes[i].Name {
+			return machineTypes[i]
+		}
+	}
+	return nil
 }
 
 func provisioningMachines(readyNodes []*corev1.Node, machines []*provider.Machine) []*provider.Machine {

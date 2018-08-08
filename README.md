@@ -78,6 +78,23 @@ Update a kubescaler config:
 }
 ```
 
+List all supported machine types:
+```
+curl -s localhost:8081/api/v1/machinetypes | jq
+[
+  {
+    "name": "m4.large",
+    "cpu": "8Gi",
+    "memory": "2"
+  },
+  {
+    "name": "m4.xlarge",
+    "cpu": "16Gi",
+    "memory": "4"
+  }
+]
+```
+
 Create a kubescaler worker:
 ```
 ➜ $ curl -s -XPOST -d'{"machineType":"m4.large"}' localhost:8081/api/v1/workers | jq

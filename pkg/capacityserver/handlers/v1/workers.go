@@ -26,6 +26,24 @@ func newWorkersHandler(wiface workers.WInterface) (*workersHandler, error) {
 	return &workersHandler{wiface}, nil
 }
 
+func (h *workersHandler) listMachineTypes(w http.ResponseWriter, r *http.Request) {
+	// swagger:route GET /api/v1/machinetypes workers listMachineTypes
+	//
+	// Lists all provider's machine types.
+	//
+	// This will show all provider's machine types.
+	//
+	//     Produces:
+	//     - application/json
+	//
+	//     Responses:
+	//     200: machineTypesListResponse
+
+	if err := json.NewEncoder(w).Encode(h.m.MachineTypes()); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
 func (h *workersHandler) createWorker(w http.ResponseWriter, r *http.Request) {
 	// swagger:route POST /api/v1/workers workers createWorker
 	//
@@ -43,12 +61,13 @@ func (h *workersHandler) createWorker(w http.ResponseWriter, r *http.Request) {
 	//
 	//     Responses:
 	//     201: workerResponse
+	//     400:
 
 	var err error
 	worker := &workers.Worker{}
 	if err = json.NewDecoder(r.Body).Decode(worker); err != nil {
 		log.Errorf("handler: kubescaler: create worker: decode: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -104,11 +123,12 @@ func (h *workersHandler) deleteWorker(w http.ResponseWriter, r *http.Request) {
 	//
 	//     Responses:
 	//     200: workerResponse
+	//     400:
 
 	vars := mux.Vars(r)
 	if vars == nil {
 		log.Errorf("handler: kubescaler: delete worker: vars wasn't found")
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 

@@ -41,6 +41,8 @@ func (h *HandlerV1) RegisterTo(r *mux.Router) {
 	r.Path("/config").Methods(http.MethodGet).HandlerFunc(h.config.getConfig)
 	r.Path("/config").Methods(http.MethodPatch).HandlerFunc(h.config.patchConfig)
 
+	r.Path("/machinetypes").HandlerFunc(h.workers.listMachineTypes).Methods(http.MethodGet)
+
 	r.Path("/workers").Methods(http.MethodPost).HandlerFunc(h.workers.createWorker)
 	r.Path("/workers").Methods(http.MethodGet).HandlerFunc(h.workers.listWorkers)
 	r.Path("/workers/{machineID}").Methods(http.MethodDelete).HandlerFunc(h.workers.deleteWorker)

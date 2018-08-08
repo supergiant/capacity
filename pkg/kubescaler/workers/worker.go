@@ -29,6 +29,7 @@ const (
 var _ WInterface = &Manager{}
 
 type WInterface interface {
+	MachineTypes() []*provider.MachineType
 	CreateWorker(ctx context.Context, mtype string) (*Worker, error)
 	ListWorkers(ctx context.Context) (*WorkerList, error)
 	DeleteWorker(ctx context.Context, nodeName, id string) (*Worker, error)
@@ -85,13 +86,19 @@ func IsReserved(node *corev1.Node) bool {
 }
 
 type Manager struct {
-	clusterName string
-	userData    string
-	nodesClient v1.NodeInterface
-	provider    provider.Provider
+	clusterName  string
+	userData     string
+	nodesClient  v1.NodeInterface
+	provider     provider.Provider
+	machineTypes []*provider.MachineType
 }
 
 func NewManager(clusterName string, nodesClient v1.NodeInterface, provider provider.Provider, conf Config) (*Manager, error) {
+	mtypes, err := provider.MachineTypes(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
 	t, err := template.New("userData").Parse(userDataTpl)
 	if err != nil {
 		return nil, err
@@ -105,10 +112,11 @@ func NewManager(clusterName string, nodesClient v1.NodeInterface, provider provi
 	log.Infof("worker manager: generated usedData: \n%s", buff.String())
 
 	return &Manager{
-		clusterName: clusterName,
-		userData:    buff.String(),
-		nodesClient: nodesClient,
-		provider:    provider,
+		clusterName:  clusterName,
+		userData:     buff.String(),
+		nodesClient:  nodesClient,
+		provider:     provider,
+		machineTypes: mtypes,
 	}, nil
 }
 
@@ -118,6 +126,10 @@ func (m *Manager) CreateWorker(ctx context.Context, mtype string) (*Worker, erro
 		return nil, err
 	}
 	return m.workerFrom(machine, nil), nil
+}
+
+func (m *Manager) MachineTypes() []*provider.MachineType {
+	return m.machineTypes
 }
 
 func (m *Manager) ListWorkers(ctx context.Context) (*WorkerList, error) {

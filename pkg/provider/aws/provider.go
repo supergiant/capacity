@@ -91,21 +91,8 @@ func (p *AWSProvider) Name() string {
 	return "aws"
 }
 
-func (p *AWSProvider) Machines(ctx context.Context) ([]*provider.Machine, error) {
-	insts, err := p.client.ListRegionInstances(ctx, p.region, nil)
-	if err != nil {
-		return nil, nil
-	}
-
-	machines := make([]*provider.Machine, len(insts))
-	for i := range insts {
-		machines[i] = machineFrom(insts[i])
-	}
-
-	return machines, nil
-}
-
-func (p *AWSProvider) AvailableMachineTypes(ctx context.Context) ([]*provider.MachineType, error) {
+func (p *AWSProvider) MachineTypes(ctx context.Context) ([]*provider.MachineType, error) {
+	// TODO: for each region aws supports different machine types (get just region ones)
 	instTypes, err := p.client.AvailableInstanceTypes(ctx)
 	if err != nil {
 		return nil, err
@@ -129,6 +116,20 @@ func (p *AWSProvider) AvailableMachineTypes(ctx context.Context) ([]*provider.Ma
 	}
 
 	return mTypes, nil
+}
+
+func (p *AWSProvider) Machines(ctx context.Context) ([]*provider.Machine, error) {
+	insts, err := p.client.ListRegionInstances(ctx, p.region, nil)
+	if err != nil {
+		return nil, nil
+	}
+
+	machines := make([]*provider.Machine, len(insts))
+	for i := range insts {
+		machines[i] = machineFrom(insts[i])
+	}
+
+	return machines, nil
 }
 
 func (p *AWSProvider) CreateMachine(ctx context.Context, name, mtype, clusterRole, userData string, config provider.Config) (*provider.Machine, error) {

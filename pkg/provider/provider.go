@@ -21,25 +21,25 @@ const (
 )
 
 type Machine struct {
-	ID                string
-	Name              string
-	Type              string
-	CreationTimestamp time.Time
-	State             string
+	ID                string    `json:"id"`
+	Name              string    `json:"name"`
+	Type              string    `json:"type"`
+	CreationTimestamp time.Time `json:"creationTimestamp"`
+	State             string    `json:"state"`
 }
 
 type MachineType struct {
-	Name   string
-	CPU    resource.Quantity
-	Memory resource.Quantity
+	Name   string            `json:"name"`
+	CPU    resource.Quantity `json:"cpu"`
+	Memory resource.Quantity `json:"memory"`
 }
 
 type Config map[string]string
 
 type Provider interface {
 	Name() string
+	MachineTypes(ctx context.Context) ([]*MachineType, error)
 	Machines(ctx context.Context) ([]*Machine, error)
-	AvailableMachineTypes(ctx context.Context) ([]*MachineType, error)
 	CreateMachine(ctx context.Context, name, mtype, clusterRole, userData string, config Config) (*Machine, error)
 	DeleteMachine(ctx context.Context, id string) (*Machine, error)
 }

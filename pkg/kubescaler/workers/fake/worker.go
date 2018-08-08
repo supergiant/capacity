@@ -4,7 +4,10 @@ import (
 	"context"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
+	"github.com/supergiant/capacity/pkg/provider"
 )
 
 var _ workers.WInterface = &Manager{}
@@ -16,6 +19,21 @@ type Manager struct {
 func NewManager() *Manager {
 	return &Manager{
 		clusterName: "fake",
+	}
+}
+
+func (m *Manager) MachineTypes() []*provider.MachineType {
+	return []*provider.MachineType{
+		{
+			Name:   "m4.large",
+			CPU:    resource.MustParse("8Gi"),
+			Memory: resource.MustParse("2"),
+		},
+		{
+			Name:   "m4.xlarge",
+			CPU:    resource.MustParse("16Gi"),
+			Memory: resource.MustParse("4"),
+		},
 	}
 }
 
