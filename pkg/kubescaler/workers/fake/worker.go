@@ -25,18 +25,18 @@ func NewManager() *Manager {
 func (m *Manager) MachineTypes() []*provider.MachineType {
 	return []*provider.MachineType{
 		{
-			Name:   "m4.large",
-			CPUResource: resource.MustParse("2"),
-			MemoryResource:    resource.MustParse("8Gi"),
-			CPU: "2",
-			Memory: "8 GiB",
+			Name:           "m4.large",
+			CPUResource:    resource.MustParse("2"),
+			MemoryResource: resource.MustParse("8Gi"),
+			CPU:            "2",
+			Memory:         "8 GiB",
 		},
 		{
-			Name:   "m4.xlarge",
-			CPUResource: resource.MustParse("4"),
-			MemoryResource:    resource.MustParse("16Gi"),
-			CPU: "2",
-			Memory: "16 GiB",
+			Name:           "m4.xlarge",
+			CPUResource:    resource.MustParse("4"),
+			MemoryResource: resource.MustParse("16Gi"),
+			CPU:            "2",
+			Memory:         "16 GiB",
 		},
 	}
 }
