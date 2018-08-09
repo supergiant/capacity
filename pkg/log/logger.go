@@ -7,6 +7,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func init() {
+	New()
+}
+
 var (
 	logger *logrus.Entry
 )

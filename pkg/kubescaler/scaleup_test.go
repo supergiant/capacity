@@ -2,14 +2,17 @@ package capacity
 
 import (
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/supergiant/capacity/pkg/kubescaler/workers/fake"
 	"github.com/supergiant/capacity/pkg/provider"
 )
 
@@ -25,8 +28,8 @@ var (
 	resource42   = resource.MustParse("42")
 	resource42Mi = resource.MustParse("42Mi")
 
-	machineType13 = provider.MachineType{"13", resource13, resource13Mi}
-	machineType42 = provider.MachineType{"42", resource42, resource42Mi}
+	machineType13 = provider.MachineType{Name: "13", CPUResource: resource13, MemoryResource: resource13Mi}
+	machineType42 = provider.MachineType{Name: "42", CPUResource: resource42, MemoryResource: resource42Mi}
 
 	resourceList13CPU13Mi = corev1.ResourceList{
 		"cpu":    resource13,
@@ -47,7 +50,7 @@ var (
 )
 
 var (
-	allowedMachine = provider.MachineType{"42cpu42Mi", resource42, resource42Mi}
+	allowedMachine = provider.MachineType{Name: "42cpu42Mi", CPUResource: resource42, MemoryResource: resource42Mi}
 
 	NodeReadyName = "nodeReady"
 	nodeReady     = corev1.Node{
@@ -176,41 +179,42 @@ func TestKubescalerScaleUp(t *testing.T) {
 	tcs := []struct {
 		pods            []*corev1.Pod
 		nodes           []*corev1.Node
-		allowedMachines []provider.MachineType
+		allowedMachines []string
 		providerErr     error
 		expectedErr     error
 	}{
 		{
 			nodes:           []*corev1.Node{&nodeReady},
-			allowedMachines: []provider.MachineType{allowedMachine},
+			allowedMachines: []string{allowedMachine.Name},
 		},
 		{
 			pods:            []*corev1.Pod{&podNew, &podStandAlone, &podWithRequests},
 			nodes:           []*corev1.Node{&nodeReady},
-			allowedMachines: []provider.MachineType{allowedMachine},
+			allowedMachines: []string{allowedMachine.Name},
 		},
 		{
 			pods:            []*corev1.Pod{&podNew, &podStandAlone, &podWithLimits},
 			nodes:           []*corev1.Node{&nodeReady},
-			allowedMachines: []provider.MachineType{allowedMachine},
+			allowedMachines: []string{allowedMachine.Name},
 			providerErr:     fakeErr,
 			expectedErr:     fakeErr,
 		},
 	}
 
+	allowedMachines := []*provider.MachineType{&allowedMachine}
 	for i, tc := range tcs {
 		ks := &Kubescaler{
-			config: Config{
-				MachineTypes: tc.allowedMachines,
-			},
-			workerManager: &WorkerManager{
-				provider: &fakeProvider{
-					err: tc.providerErr,
+			PersistentConfig: &PersistentConfig{
+				filepath: "/tmp/" + uuid.New(),
+				mu:       sync.RWMutex{},
+				conf: &Config{
+					MachineTypes: tc.allowedMachines,
 				},
 			},
+			WInterface: fake.NewManager(),
 		}
 
-		err := ks.scaleUp(tc.pods, tc.nodes, currentTime)
+		_, err := ks.scaleUp(tc.pods, allowedMachines, currentTime)
 		require.Equalf(t, tc.expectedErr, err, "TC#%d", i+1)
 	}
 
@@ -225,36 +229,35 @@ func TestFilterIgnoringPos(t *testing.T) {
 		&podWithLimits,
 		&podWithHugeLimits,
 	}
-	readyNodes := []*corev1.Node{&nodeReady}
-	allowedMachines := []provider.MachineType{allowedMachine}
+	allowedMachines := []*provider.MachineType{&allowedMachine}
 	expectedRes := []*corev1.Pod{&podWithLimits}
 
-	res := filterIgnoringPods(pods, readyNodes, allowedMachines, currentTime)
+	res := filterIgnoringPods(pods, allowedMachines, currentTime)
 	require.Equal(t, expectedRes, res)
 }
 
 func TestHasMachineFor(t *testing.T) {
 	tcs := []struct {
-		cpu, mem     resource.Quantity
-		machineTypes []provider.MachineType
+		pod          *corev1.Pod
+		machineTypes []*provider.MachineType
 		expectedRes  bool
 	}{
 		{
-			cpu:          resource.MustParse("43"),
-			machineTypes: []provider.MachineType{machineType42},
+			pod:          &podWithLimits,
+			machineTypes: []*provider.MachineType{&machineType42},
 		},
 		{
-			mem:          resource.MustParse("43Mi"),
-			machineTypes: []provider.MachineType{machineType42},
+			pod:          &podWithRequests,
+			machineTypes: []*provider.MachineType{&machineType42},
 		},
 		{
-			machineTypes: []provider.MachineType{machineType42},
+			machineTypes: []*provider.MachineType{&machineType42},
 			expectedRes:  true,
 		},
 	}
 
 	for i, tc := range tcs {
-		res := hasMachineFor(tc.cpu, tc.mem, tc.machineTypes)
+		res := hasMachineFor(tc.machineTypes, tc.pod)
 		require.Equalf(t, tc.expectedRes, res, "TC#%d", i+1)
 	}
 }
@@ -262,7 +265,7 @@ func TestHasMachineFor(t *testing.T) {
 func TestBestMachineFor(t *testing.T) {
 	tcs := []struct {
 		cpu, mem     resource.Quantity
-		machineTypes []provider.MachineType
+		machineTypes []*provider.MachineType
 		expectedRes  provider.MachineType
 		expectedErr  error
 	}{
@@ -270,37 +273,37 @@ func TestBestMachineFor(t *testing.T) {
 			expectedErr: ErrNoAllowedMachined,
 		},
 		{
-			machineTypes: []provider.MachineType{machineType13, machineType42},
+			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType13,
 		},
 		{
 			cpu:          resource.MustParse("1"),
 			mem:          resource.MustParse("1Mi"),
-			machineTypes: []provider.MachineType{machineType13, machineType42},
+			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType13,
 		},
 		{
 			cpu:          resource.MustParse("13"),
 			mem:          resource.MustParse("12Mi"),
-			machineTypes: []provider.MachineType{machineType13, machineType42},
+			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType13,
 		},
 		{
 			cpu:          resource.MustParse("13"),
 			mem:          resource.MustParse("13Mi"),
-			machineTypes: []provider.MachineType{machineType13, machineType42},
+			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType42,
 		},
 		{
 			cpu:          resource.MustParse("35"),
 			mem:          resource.MustParse("45Mi"),
-			machineTypes: []provider.MachineType{machineType13, machineType42},
+			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType42,
 		},
 		{
 			cpu:          resource.MustParse("64"),
 			mem:          resource.MustParse("64Mi"),
-			machineTypes: []provider.MachineType{machineType13, machineType42},
+			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType42,
 		},
 	}

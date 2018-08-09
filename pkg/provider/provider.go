@@ -41,6 +41,7 @@ type Config map[string]string
 
 type Provider interface {
 	Name() string
+	GetMachineID(providerID string) (string, error)
 	MachineTypes(ctx context.Context) ([]*MachineType, error)
 	Machines(ctx context.Context) ([]*Machine, error)
 	CreateMachine(ctx context.Context, name, mtype, clusterRole, userData string, config Config) (*Machine, error)

@@ -61,7 +61,6 @@ func (h *workersHandler) createWorker(w http.ResponseWriter, r *http.Request) {
 	//
 	//     Responses:
 	//     201: workerResponse
-	//     400:
 
 	var err error
 	worker := &workers.Worker{}
@@ -111,6 +110,47 @@ func (h *workersHandler) listWorkers(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *workersHandler) updateWorker(w http.ResponseWriter, r *http.Request) {
+	// swagger:route PATCH /api/v1/workers/{machineID} workers updateWorker
+	//
+	// Update a worker.
+	//
+	// This will update a worker.
+	//
+	//     Consumes:
+	//     - application/json
+	//
+	//     Produces:
+	//     - application/json
+	//
+	//     Responses:
+	//     200: workerResponse
+
+	vars := mux.Vars(r)
+	if vars == nil {
+		log.Errorf("handler: kubescaler: delete worker: vars wasn't found")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var err error
+	worker := &workers.Worker{}
+	if err := json.NewDecoder(r.Body).Decode(&worker); err != nil {
+		log.Errorf("handler: kubescaler: patch worker: decode: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	// TODO: add method to reserve a node
+	// just to mock it..
+	worker.MachineID = vars["machineID"]
+
+	if err = json.NewEncoder(w).Encode(worker); err != nil {
+		log.Errorf("handler: kubescaler: delete %s worker: failed to write response: %v", worker.MachineID, err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
 func (h *workersHandler) deleteWorker(w http.ResponseWriter, r *http.Request) {
 	// swagger:route DELETE /api/v1/workers/{machineID} workers deleteWorker
 	//
@@ -123,7 +163,6 @@ func (h *workersHandler) deleteWorker(w http.ResponseWriter, r *http.Request) {
 	//
 	//     Responses:
 	//     200: workerResponse
-	//     400:
 
 	vars := mux.Vars(r)
 	if vars == nil {

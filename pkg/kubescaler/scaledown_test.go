@@ -3,42 +3,62 @@ package capacity
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
-	"github.com/supergiant/capacity/pkg/provider"
+	"github.com/supergiant/capacity/pkg/kubescaler/workers/fake"
 )
 
 func TestKubescalerScaleDown(t *testing.T) {
 	tcs := []struct {
 		pods            []*corev1.Pod
-		nodes           []*corev1.Node
-		allowedMachines []provider.MachineType
+		workerList      *workers.WorkerList
+		allowedMachines []string
 		providerErr     error
 		expectedErr     error
 	}{
 		{
-			pods:            []*corev1.Pod{&podNew, &podStandAlone, &podWithRequests},
-			nodes:           []*corev1.Node{&nodeReady},
-			allowedMachines: []provider.MachineType{allowedMachine},
+			pods: []*corev1.Pod{&podNew, &podStandAlone, &podWithRequests},
+			workerList: &workers.WorkerList{
+				Items: []*workers.Worker{
+					{NodeName: NodeReadyName},
+				},
+			},
+			allowedMachines: []string{allowedMachine.Name},
 		},
 		{
-			pods:            []*corev1.Pod{&podWithHugeLimits, &podStandAlone},
-			nodes:           []*corev1.Node{&nodeReady, &NodeScaleDown},
-			allowedMachines: []provider.MachineType{allowedMachine},
+			pods: []*corev1.Pod{&podWithHugeLimits, &podStandAlone},
+			workerList: &workers.WorkerList{
+				Items: []*workers.Worker{
+					{NodeName: NodeReadyName},
+					{NodeName: NodeScaleDownName},
+				},
+			},
+			allowedMachines: []string{allowedMachine.Name},
 		},
 		{
-			pods:            []*corev1.Pod{&podWithHugeLimits, &podWithRequests},
-			nodes:           []*corev1.Node{&nodeReady, &NodeScaleDown},
-			allowedMachines: []provider.MachineType{allowedMachine},
+			pods: []*corev1.Pod{&podWithHugeLimits, &podWithRequests},
+			workerList: &workers.WorkerList{
+				Items: []*workers.Worker{
+					{NodeName: NodeReadyName},
+					{NodeName: NodeScaleDownName},
+				},
+			},
+			allowedMachines: []string{allowedMachine.Name},
 		},
 		{
-			pods:            []*corev1.Pod{&podWithHugeLimits, &podWithRequests},
-			nodes:           []*corev1.Node{&nodeReady, &NodeScaleDown},
-			allowedMachines: []provider.MachineType{allowedMachine},
+			pods: []*corev1.Pod{&podWithHugeLimits, &podWithRequests},
+			workerList: &workers.WorkerList{
+				Items: []*workers.Worker{
+					{NodeName: NodeReadyName},
+					{NodeName: NodeScaleDownName},
+				},
+			},
+			allowedMachines: []string{allowedMachine.Name},
 			providerErr:     fakeErr,
 			expectedErr:     fakeErr,
 		},
@@ -53,14 +73,10 @@ func TestKubescalerScaleDown(t *testing.T) {
 					MachineTypes: tc.allowedMachines,
 				},
 			},
-			Manager: &workers.Manager{
-				//provider: &fakeProvider{
-				//	err: tc.providerErr,
-				//},
-			},
+			WInterface: fake.NewManager(),
 		}
 
-		err := ks.scaleDown(tc.pods, tc.nodes)
+		err := ks.scaleDown(tc.pods, tc.workerList, time.Now())
 		require.Equalf(t, tc.expectedErr, err, "TC#%d", i+1)
 	}
 
@@ -68,7 +84,7 @@ func TestKubescalerScaleDown(t *testing.T) {
 
 func TestPodsPerNode(t *testing.T) {
 	pods := []*corev1.Pod{&podStandAlone, &podWithRequests}
-	require.Equal(t, map[string]int{"": 1, NodeReadyName: 1}, podsPerNode(pods))
+	require.Equal(t, map[string]int{"": 1, NodeReadyName: 1}, nodePodMap(pods))
 }
 
 func TestFilterStandalonePods(t *testing.T) {
@@ -111,30 +127,48 @@ func TestFilterDaemonSetPods(t *testing.T) {
 
 func TestNodesWithNoPods(t *testing.T) {
 	tcs := []struct {
-		nodes    []*corev1.Node
-		nodePods map[string]int
-		expected []*corev1.Node
+		workerList *workers.WorkerList
+		nodePods   map[string]int
+		expected   []*corev1.Node
 	}{
 		{
 			expected: make([]*corev1.Node, 0),
 		},
 		{
-			nodes:    []*corev1.Node{&nodeReady},
+			workerList: &workers.WorkerList{
+				Items: []*workers.Worker{
+					{
+						NodeName: NodeReadyName,
+					},
+				},
+			},
 			expected: make([]*corev1.Node, 0),
 		},
 		{
-			nodes:    []*corev1.Node{&nodeReady},
+			workerList: &workers.WorkerList{
+				Items: []*workers.Worker{
+					{
+						NodeName: NodeReadyName,
+					},
+				},
+			},
 			nodePods: map[string]int{"": 42},
 			expected: make([]*corev1.Node, 0),
 		},
 		{
-			nodes:    []*corev1.Node{&nodeReady},
+			workerList: &workers.WorkerList{
+				Items: []*workers.Worker{
+					{
+						NodeName: NodeReadyName,
+					},
+				},
+			},
 			nodePods: map[string]int{"nodeReady": 42},
 			expected: []*corev1.Node{&nodeReady},
 		},
 	}
 
 	for i, tc := range tcs {
-		require.Equalf(t, tc.expected, nodesWithNoPods(tc.nodes, tc.nodePods), "TC#%d", i+1)
+		require.Equalf(t, tc.expected, getEmpty(tc.workerList, tc.nodePods), "TC#%d", i+1)
 	}
 }

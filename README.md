@@ -147,6 +147,21 @@ List kubescaler workers:
     ]
 ```
 
+Make a worker reserved:
+```
+curl -s -XPATCH -d'{"reserved":true}' localhost:8081/api/v1/workers/mocked-worker | jq
+{
+  "clusterName": "",
+  "machineID": "mocked-worker",
+  "machineName": "",
+  "machineType": "",
+  "machineState": "",
+  "creationTimestamp": "0001-01-01T00:00:00Z",
+  "nodeName": "",
+  "reserved": true
+}
+```
+
 Delete a kubescaler worker:
 ```
 ➜ curl -s -XDELETE localhost:8081/api/v1/workers/i-01e9c47fede75cb9a | jq
