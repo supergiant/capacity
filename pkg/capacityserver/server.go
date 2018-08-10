@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/rs/cors"
 
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers"
 	kubescaler "github.com/supergiant/capacity/pkg/kubescaler"
@@ -40,7 +39,7 @@ func New(conf Config) (*API, error) {
 		ks: ks,
 		srv: http.Server{
 			Addr:         conf.ListenAddr,
-			Handler:      cors.Default().Handler(h),
+			Handler:      h,
 			ReadTimeout:  30 * time.Second,
 			WriteTimeout: 30 * time.Second,
 			IdleTimeout:  120 * time.Second,
