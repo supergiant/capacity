@@ -14,17 +14,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/typed/core/v1"
 
-	"github.com/supergiant/capacity/pkg/log"
 	"github.com/supergiant/capacity/pkg/provider"
 )
 
 const (
 	LabelReserved = "capacity.supergiant.io/reserved"
 
-	LabelValueTrue  = "true"
-	LabelValueFalse = "false"
+	ValTrue  = "true"
+	ValFalse = "false"
 
 	ClusterRole = "worker"
+
+	MinWorkerLifespan = time.Minute * 20
 )
 
 var _ WInterface = &Manager{}
@@ -71,7 +72,7 @@ type WorkerList struct {
 
 func NewWorker(node *corev1.Node) *Worker {
 	return &Worker{
-		MachineID: node.Spec.ProviderID,
+		MachineID: node.Spec.ExternalID,
 		NodeName:  node.Name,
 		Reserved:  IsReserved(node),
 	}
@@ -79,7 +80,7 @@ func NewWorker(node *corev1.Node) *Worker {
 
 func IsReserved(node *corev1.Node) bool {
 	if v, ok := node.Labels[LabelReserved]; ok {
-		if strings.ToLower(v) == LabelValueTrue {
+		if strings.ToLower(v) == ValTrue {
 			return true
 		}
 	}
@@ -110,7 +111,7 @@ func NewManager(clusterName string, nodesClient v1.NodeInterface, provider provi
 		return nil, err
 	}
 
-	log.Infof("worker manager: generated usedData: \n%s", buff.String())
+	//log.Debugf("worker manager: generated usedData: \n%s", buff.String())
 
 	return &Manager{
 		clusterName:  clusterName,
@@ -126,7 +127,7 @@ func (m *Manager) CreateWorker(ctx context.Context, mtype string) (*Worker, erro
 	if err != nil {
 		return nil, err
 	}
-	return m.workerFrom(machine, nil), nil
+	return m.workerFrom(machine, corev1.Node{}), nil
 }
 
 func (m *Manager) MachineTypes() []*provider.MachineType {
@@ -138,14 +139,14 @@ func (m *Manager) ListWorkers(ctx context.Context) (*WorkerList, error) {
 	if err != nil {
 		return nil, err
 	}
-	nodeProviderMap, err := m.nodesMap()
+	nodesMap, err := m.nodesMap()
 	if err != nil {
 		return nil, err
 	}
 
 	workers := make([]*Worker, len(machines))
 	for i := range machines {
-		workers[i] = m.workerFrom(machines[i], nodeProviderMap[machines[i].ID])
+		workers[i] = m.workerFrom(machines[i], nodesMap[machines[i].ID])
 	}
 
 	return &WorkerList{
@@ -165,20 +166,21 @@ func (m *Manager) DeleteWorker(ctx context.Context, nodeName, id string) (*Worke
 		return nil, err
 	}
 
-	return m.workerFrom(machine, nil), nil
+	return m.workerFrom(machine, corev1.Node{}), nil
 }
 
-func (m *Manager) nodesMap() (map[string]*corev1.Node, error) {
+func (m *Manager) nodesMap() (map[string]corev1.Node, error) {
 	nodeList, err := m.nodesClient.List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
-	nodeMap := make(map[string]*corev1.Node)
+	nodeMap := make(map[string]corev1.Node)
 	for _, node := range nodeList.Items {
-		// TODO: use ProviderID instead
-		if node.Spec.ExternalID != "" {
-			nodeMap[node.Spec.ExternalID] = &node
+		machineID, err := m.provider.GetMachineID(node.Spec.ProviderID)
+		if err != nil {
+			return nil, errors.Wrap(err, "parse node.Spec.ProviderID")
 		}
+		nodeMap[machineID] = node
 	}
 	return nodeMap, nil
 }
@@ -187,12 +189,7 @@ func (m *Manager) workerName() string {
 	return fmt.Sprintf("%s-%s-%s", m.clusterName, "worker", uuid.NewUUID().String())
 }
 
-func (m *Manager) workerFrom(machine *provider.Machine, node *corev1.Node) *Worker {
-	nodeName, reserved := "", false
-	if node != nil {
-		nodeName, reserved = node.Name, IsReserved(node)
-	}
-
+func (m *Manager) workerFrom(machine *provider.Machine, node corev1.Node) *Worker {
 	return &Worker{
 		ClusterName:       m.clusterName,
 		MachineID:         machine.ID,
@@ -200,7 +197,7 @@ func (m *Manager) workerFrom(machine *provider.Machine, node *corev1.Node) *Work
 		MachineType:       machine.Type,
 		MachineState:      machine.State,
 		CreationTimestamp: machine.CreationTimestamp,
-		NodeName:          nodeName,
-		Reserved:          reserved,
+		NodeName:          node.Name,
+		Reserved:          IsReserved(&node),
 	}
 }

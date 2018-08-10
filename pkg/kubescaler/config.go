@@ -6,41 +6,53 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/aws"
 )
 
 type Config struct {
-	SSHPubKey         string            `json:"sshPubKey"`
-	ClusterName       string            `json:"clusterName"`
-	MasterPrivateAddr string            `json:"masterPrivateAddr"`
-	KubeAPIHost       string            `json:"kubeAPIHost"`
-	KubeAPIPort       string            `json:"kubeAPIPort"`
-	KubeAPIUser       string            `json:"kubeAPIUser"`
-	KubeAPIPassword   string            `json:"kubeAPIPassword"`
-	ProviderName      string            `json:"providerName"`
-	Provider          map[string]string `json:"provider"`
+	SSHPubKey               string            `json:"sshPubKey"`
+	ClusterName             string            `json:"clusterName"`
+	MasterPrivateAddr       string            `json:"masterPrivateAddr"`
+	KubeAPIHost             string            `json:"kubeAPIHost"`
+	KubeAPIPort             string            `json:"kubeAPIPort"`
+	KubeAPIUser             string            `json:"kubeAPIUser"`
+	KubeAPIPassword         string            `json:"kubeAPIPassword"`
+	ProviderName            string            `json:"providerName"`
+	Provider                map[string]string `json:"provider"`
+	ScanInterval            string            `json:"scanInterval"`
+	MaxMachineProvisionTime string            `json:"maxMachineProvisionTime"`
 
-	Paused                  *bool         `json:"paused,omitempty"`
-	NodesCountMin           int           `json:"nodesCountMin"`
-	NodesCountMax           int           `json:"nodesCountMax"`
-	MachineTypes            []string      `json:"machineTypes"`
-	MaxMachineProvisionTime time.Duration `json:"maxMachineProvisionTime"`
+	Paused          *bool    `json:"paused,omitempty"`
+	WorkersCountMin int      `json:"workersCountMin"`
+	WorkersCountMax int      `json:"workersCountMax"`
+	MachineTypes    []string `json:"machineTypes"`
 }
 
-func (c *Config) Merge(in *Config) {
-	switch {
-	case in.Paused != nil:
+func (c *Config) Merge(in *Config) error {
+	if in.Paused != nil {
 		c.Paused = in.Paused
-	case in.NodesCountMin != 0:
-		c.NodesCountMin = in.NodesCountMin
-	case in.NodesCountMax != 0:
-		c.NodesCountMax = in.NodesCountMax
-	case in.MachineTypes != nil:
+	}
+	if in.WorkersCountMin != 0 {
+		if in.WorkersCountMin < 0 {
+			return errors.New("WorkersCountMin can't be negative")
+		}
+		c.WorkersCountMin = in.WorkersCountMin
+	}
+	if in.WorkersCountMax != 0 {
+		if in.WorkersCountMax < 0 {
+			return errors.New("WorkersCountMax can't be negative")
+		}
+		c.WorkersCountMax = in.WorkersCountMax
+	}
+	if len(in.MachineTypes) != 0 {
 		c.MachineTypes = in.MachineTypes
 	}
+
+	return nil
 }
 
 type PersistentConfig struct {
@@ -57,9 +69,7 @@ func NewPersistentConfig(filepath string) (*PersistentConfig, error) {
 			if err = writeExampleConfig(filepath); err != nil {
 				return nil, err
 			}
-			if rc, err = fileReadCloser(filepath); err != nil {
-				return nil, err
-			}
+			return nil, errors.New("example config has generated on " + filepath + ". Please, go through REPLACE_IT fields")
 		} else {
 			return nil, err
 		}
@@ -106,7 +116,10 @@ func (m *PersistentConfig) PatchConfig(in *Config) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.conf.Merge(in)
+	if err = m.conf.Merge(in); err != nil {
+		return err
+	}
+
 	return json.NewEncoder(wc).Encode(m.conf)
 }
 
@@ -131,7 +144,9 @@ func writeExampleConfig(filepath string) error {
 		SSHPubKey:         "REPLACE_IT",
 		ClusterName:       "REPLACE_IT",
 		MasterPrivateAddr: "REPLACE_IT",
+		KubeAPIHost:       "REPLACE_IT",
 		KubeAPIPort:       "REPLACE_IT",
+		KubeAPIUser:       "REPLACE_IT",
 		KubeAPIPassword:   "REPLACE_IT",
 		ProviderName:      "REPLACE_IT",
 		Provider: map[string]string{
@@ -146,7 +161,10 @@ func writeExampleConfig(filepath string) error {
 			aws.VolType:        "gp2",
 			aws.VolSize:        "100",
 		},
-		MachineTypes: make([]string, 0),
+		MachineTypes:    []string{"m4.large"},
+		WorkersCountMax: 3,
+		WorkersCountMin: 1,
+		Paused:          BoolPtr(true),
 	}
 
 	fw, err := fileWriteCloser(filepath)
@@ -156,4 +174,8 @@ func writeExampleConfig(filepath string) error {
 	defer fw.Close()
 
 	return json.NewEncoder(fw).Encode(conf)
+}
+
+func BoolPtr(in bool) *bool {
+	return &in
 }

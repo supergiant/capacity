@@ -30,7 +30,6 @@ func main() {
 	arg.MustParse(args)
 
 	// setup logger
-	log.New()
 	log.SetOutput(os.Stdout)
 	log.SetLevel(args.LogLevel)
 

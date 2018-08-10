@@ -4,8 +4,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers"
-	"github.com/supergiant/capacity/pkg/kubescaler"
+	kubescaler "github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/log"
 )
 
@@ -16,19 +18,21 @@ type Config struct {
 }
 
 type API struct {
-	ks  *capacity.Kubescaler
+	ks  *kubescaler.Kubescaler
 	srv http.Server
 }
 
 func New(conf Config) (*API, error) {
-	ks, err := capacity.New(conf.KubeConfig, conf.KubescalerConfig)
+	log.Infof("setup kubescaler...")
+
+	ks, err := kubescaler.New(conf.KubeConfig, conf.KubescalerConfig)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "setup kubescaler")
 	}
 
 	h, err := handlers.Handler(ks)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "setup handlers")
 	}
 
 	return &API{
@@ -44,6 +48,8 @@ func New(conf Config) (*API, error) {
 }
 
 func (a *API) Start(stopCh <-chan struct{}) error {
+	a.ks.Run(stopCh)
+
 	log.Infof("capacityservice: listen on %q", a.srv.Addr)
 	return a.srv.ListenAndServe()
 }

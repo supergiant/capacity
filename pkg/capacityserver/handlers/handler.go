@@ -27,7 +27,7 @@ func Handler(ks *capacity.Kubescaler) (http.Handler, error) {
 
 	apiv1 := r.PathPrefix("/api/v1").Subrouter()
 	handlerV1.RegisterTo(apiv1)
-	
+
 	return cors.AllowAll().Handler(r), nil
 }
 

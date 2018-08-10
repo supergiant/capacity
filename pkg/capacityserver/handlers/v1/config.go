@@ -63,7 +63,6 @@ func (h *configHandler) patchConfig(w http.ResponseWriter, r *http.Request) {
 	//
 	//     Responses:
 	//     200: configResponse
-	//     400:
 
 	patch := capacity.Config{}
 	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {

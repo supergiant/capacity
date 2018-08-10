@@ -2,17 +2,19 @@ package capacity
 
 import (
 	"context"
-	"errors"
+	"fmt"
+	"strings"
 	"time"
 
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	kubeutil "k8s.io/autoscaler/cluster-autoscaler/utils/kubernetes"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/supergiant/capacity/pkg/kubernetes/config"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers/fake"
+	"github.com/supergiant/capacity/pkg/log"
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/factory"
 )
@@ -20,25 +22,35 @@ import (
 const (
 	// How old the oldest unschedulable pod should be before starting scale up.
 	unschedulablePodTimeBuffer = 2 * time.Second
+
+	newNodeTimeBuffer = 3 * time.Minute
 )
 
 var (
 	ErrNoAllowedMachined = errors.New("no allowed machines were provided")
+
+	DefaultScanInterval            = time.Second * 20
+	DefaultMaxMachineProvisionTime = time.Minute * 10
 )
+
+type ListerRegistry interface {
+	ReadyNodeLister() kubeutil.NodeLister
+	ScheduledPodLister() kubeutil.PodLister
+	UnschedulablePodLister() kubeutil.PodLister
+}
 
 type Kubescaler struct {
 	*PersistentConfig
 	workers.WInterface
 
-	provider       provider.Provider
 	kclient        kubernetes.Clientset
-	listerRegistry kubeutil.ListerRegistry
+	listerRegistry ListerRegistry
 }
 
 func New(kubeConfig, kubescalerConfig string) (*Kubescaler, error) {
 	conf, err := NewPersistentConfig(kubescalerConfig)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "build config")
 	}
 	cfg := conf.GetConfig()
 
@@ -80,86 +92,141 @@ func New(kubeConfig, kubescalerConfig string) (*Kubescaler, error) {
 		ks = &Kubescaler{
 			PersistentConfig: conf,
 			WInterface:       wm,
-			listerRegistry:   kubeutil.NewListerRegistryWithDefaultListers(kclient, nil),
+			// TODO: implement a cached lister registry
+			listerRegistry: kubeutil.NewListerRegistry(
+				nil,
+				kubeutil.NewReadyNodeLister(kclient, nil),
+				kubeutil.NewScheduledPodLister(kclient, nil),
+				kubeutil.NewUnschedulablePodLister(kclient, nil),
+				nil,
+				nil,
+			),
 		}
 	}
 
 	return ks, nil
 }
 
-func (s *Kubescaler) RunOnce(ctx context.Context, currentTime time.Time) error {
+func (s *Kubescaler) Run(stop <-chan struct{}) {
+	log.Info("starting kubescaler...")
+
+	go func() {
+		for {
+			select {
+			case <-time.After(DefaultScanInterval):
+				{
+					if err := s.RunOnce(time.Now()); err != nil {
+						log.Errorf("kubescaler: %v", err)
+					}
+				}
+			case <-stop:
+				return
+			}
+		}
+	}()
+}
+
+func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 	config := s.GetConfig()
 	// TODO: turn on after e2e testing
-	//if *config.Paused {
-	if true {
+	if config.Paused != nil && *config.Paused {
+		//if true {
 		return nil
 	}
 
-	rss, err := s.getResources(ctx)
+	allowedMachineTypes := s.machineTypes(config.MachineTypes)
+	if len(allowedMachineTypes) == 0 {
+		log.Error("kubescaler: node available machine types we found; please, check the configuration")
+		return nil
+	}
+
+	rss, err := s.getResources()
 	if err != nil {
 		return err
 	}
 
-	// remove machines that are provisioning for a long time
-	removed, err := s.removeFailedMachines(ctx, rss, currentTime)
-	if err != nil {
-		return err
-	}
-	if removed {
-		return nil
-	}
+	log.Debugf("kubescaler: rss: nodes=%v unscheduledPods=%v", workerNodeNames(rss.workerList.Items), podNames(rss.unscheduledPods))
 
-	if len(provisioningMachines(rss.readyNodes, rss.machines)) != 0 {
+	failed, provisioning := s.checkWorkers(rss.workerList, currentTime)
+	if len(failed) > 0 {
+		// remove machines that are provisioning for a long time
+		log.Debugf("kubescaler: removing %s failed machines", failed)
+		return s.removeFailedMachines(failed)
+	}
+	if len(provisioning) > 0 {
 		// some machines are provisioning now, wait for them to be ready
 		// skip scale up/down until all of them are ready
+		log.Debugf("kubescaler: %v machines are provisioning now", provisioning)
 		return nil
 	}
 
-	if config.NodesCountMax >= len(rss.readyNodes) {
-		// try to scale up the cluster. In case of success no need to scale down
-		if err = s.scaleUp(ctx, rss.unschedulablePods, rss.readyNodes, s.machineTypes(config.MachineTypes), currentTime); err != nil {
-			return err
+	if len(rss.unscheduledPods) > 0 {
+		// TODO: worker manager uses kube client, readyNodes - nodeLister...
+		if len(workerNodeNames(rss.workerList.Items)) != len(rss.readyNodes) {
+			log.Debugf("kubescaler: scale up: workerNodes(%d) != readyNodes(%d)",
+				len(workerNodeNames(rss.workerList.Items)), len(rss.readyNodes))
+			return nil
+		}
+		// TODO: node has created, but controller doesn't assign a pod to it yet
+		log.Debugf("kubescaler: scale up: nodepods %#v, ready nodes %v", nodePodMap(rss.scheduledPods), nodeNames(rss.readyNodes))
+		if len(rss.readyNodes) != len(nodePodMap(rss.scheduledPods)) {
+			log.Debugf("kubescaler: scale up: there are empty nodes in cluster")
+			return nil
+		}
+
+		// TODO: use workers instead of nodes (workerList may contain 'terminating' machines)
+		if config.WorkersCountMax >= len(rss.readyNodes) {
+			// try to scale up the cluster. In case of success no need to scale down
+			scaled, err := s.scaleUp(rss.unscheduledPods, allowedMachineTypes, currentTime)
+			if err != nil {
+				return errors.Wrap(err, "scale up")
+			}
+			if scaled {
+				return nil
+			}
+		} else {
+			log.Debugf("kubescaler: scaleup: workersCountMax(%d) >= number of workers(%d), skipping..",
+				config.WorkersCountMax, len(rss.readyNodes))
 		}
 	}
 
-	if config.NodesCountMin < len(rss.readyNodes) {
-		if err = s.scaleDown(ctx, rss.scheduledPods, rss.readyNodes); err != nil {
-			return err
+	// TODO: workerList may contain 'terminating' machines.
+	if config.WorkersCountMin < len(rss.readyNodes) {
+		if err = s.scaleDown(rss.scheduledPods, rss.workerList, currentTime); err != nil {
+			return errors.Wrap(err, "scale down")
 		}
+	} else {
+		log.Debugf("kubescaler: scaledown: workersCountMin(%d) < number of workers(%d), skipping..",
+			config.WorkersCountMin, len(rss.readyNodes))
 	}
 
 	return nil
 }
 
 type resources struct {
-	scheduledPods     []*corev1.Pod
-	unschedulablePods []*corev1.Pod
-	nodes             []*corev1.Node
-	readyNodes        []*corev1.Node
-	machines          []*provider.Machine
+	readyNodes      []*corev1.Node
+	scheduledPods   []*corev1.Pod
+	unscheduledPods []*corev1.Pod
+	workerList      *workers.WorkerList
 }
 
-func (s *Kubescaler) getResources(ctx context.Context) (*resources, error) {
+func (s *Kubescaler) getResources() (*resources, error) {
 	var rss resources
 	var err error
 
-	rss.scheduledPods, err = s.listerRegistry.ScheduledPodLister().List()
-	if err != nil {
-		return nil, err
-	}
-	rss.unschedulablePods, err = s.listerRegistry.UnschedulablePodLister().List()
-	if err != nil {
-		return nil, err
-	}
-	rss.nodes, err = s.listerRegistry.AllNodeLister().List()
-	if err != nil {
-		return nil, err
-	}
 	rss.readyNodes, err = s.listerRegistry.ReadyNodeLister().List()
 	if err != nil {
 		return nil, err
 	}
-	rss.machines, err = s.provider.Machines(ctx)
+	rss.scheduledPods, err = s.listerRegistry.ScheduledPodLister().List()
+	if err != nil {
+		return nil, err
+	}
+	rss.unscheduledPods, err = s.listerRegistry.UnschedulablePodLister().List()
+	if err != nil {
+		return nil, err
+	}
+	rss.workerList, err = s.ListWorkers(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -167,28 +234,48 @@ func (s *Kubescaler) getResources(ctx context.Context) (*resources, error) {
 	return &rss, nil
 }
 
-func (s *Kubescaler) removeFailedMachines(ctx context.Context, rss *resources, currentTime time.Time) (bool, error) {
-	var fixed bool
-	if len(rss.machines) == len(rss.readyNodes) {
-		return fixed, nil
-	}
+func (s *Kubescaler) checkWorkers(workerList *workers.WorkerList, currentTime time.Time) ([]string, []string) {
+	//failedMachines:
+	//	- state == 'running'
+	//	- running >= maxProvisionTime
+	//	- have no registered node, skip master
+	failed := make([]string, 0)
 
-	for _, m := range rss.machines {
-		if m.CreationTimestamp.Add(s.GetConfig().MaxMachineProvisionTime).Before(currentTime) {
-			if _, err := s.provider.DeleteMachine(ctx, m.ID); err != nil {
-				return fixed, err
-			}
-			fixed = true
+	//	provisioning machines:
+	//	- state == 'pending' || 'running', https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-lifecycle.html
+	//	- running <= maxProvisionTime
+	//	- have no registered node, skip master
+	provisioning := make([]string, 0)
+
+	for _, worker := range workerList.Items {
+		ignored := !(worker.MachineState == "pending" || worker.MachineState == "running") ||
+			worker.NodeName != "" ||
+			isMaster(worker)
+		if ignored {
+			continue
+		}
+
+		if worker.CreationTimestamp.Add(DefaultMaxMachineProvisionTime).Before(currentTime) {
+			failed = append(failed, worker.MachineID)
+		} else {
+			provisioning = append(provisioning, worker.MachineID)
 		}
 	}
 
-	return fixed, nil
+	return failed, provisioning
+}
+
+func (s *Kubescaler) removeFailedMachines(ids []string) error {
+	for _, id := range ids {
+		if _, err := s.DeleteWorker(context.Background(), "", id); err != nil {
+			return err
+		}
+
+	}
+	return nil
 }
 
 func (s *Kubescaler) machineTypes(permitted []string) []*provider.MachineType {
-	if len(permitted) == 0 {
-		return s.WInterface.MachineTypes()
-	}
 	out := make([]*provider.MachineType, 0, len(permitted))
 	for _, name := range permitted {
 		if mt := findMachine(name, s.WInterface.MachineTypes()); mt != nil {
@@ -209,16 +296,26 @@ func findMachine(name string, machineTypes []*provider.MachineType) *provider.Ma
 	return nil
 }
 
-func provisioningMachines(readyNodes []*corev1.Node, machines []*provider.Machine) []*provider.Machine {
-	registered := sets.NewString()
-	for _, node := range readyNodes {
-		registered.Insert(node.Spec.ProviderID)
-	}
-	unregistered := make([]*provider.Machine, 0)
-	for _, machine := range machines {
-		if !registered.Has(machine.ID) {
-			unregistered = append(unregistered, machine)
+func isMaster(w *workers.Worker) bool {
+	// TODO: use role tags for it in SG2.0
+	return strings.Contains(strings.ToLower(w.MachineName), "master")
+}
+
+// don't work if server time isn't synced
+func getNewNodes(nodes []*corev1.Node, currentTime time.Time) []string {
+	newNodes := make([]string, 0)
+	for _, node := range nodes {
+		if node.CreationTimestamp.Add(newNodeTimeBuffer).After(currentTime) {
+			newNodes = append(newNodes, fmt.Sprintf("%s(%s)", node.Name, currentTime.Sub(node.CreationTimestamp.Time)))
 		}
 	}
-	return unregistered
+	return newNodes
+}
+
+func nodeNames(nodes []*corev1.Node) []string {
+	list := make([]string, len(nodes))
+	for i := range nodes {
+		list[i] = nodes[i].Name
+	}
+	return list
 }
