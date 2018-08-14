@@ -4,14 +4,13 @@
 
 Copy configuration files and update them:
 ```
-cp config/kube.conf.example config/kube.conf
 cp config/kubescaler.conf.example config/kubescaler.conf
 ```
 
 Run an application:
 ```
 
-go run ./cmd/capacity-service/main.go  --kubescaler-config config/kubescaler.conf --kube-config config/kube.conf
+go run ./cmd/capacity-service/main.go  --kubescaler-config config/kubescaler.conf
 ```
 
 ## Demo

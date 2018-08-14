@@ -148,7 +148,7 @@ func writeExampleConfig(filepath string) error {
 		KubeAPIPort:       "REPLACE_IT",
 		KubeAPIUser:       "REPLACE_IT",
 		KubeAPIPassword:   "REPLACE_IT",
-		ProviderName:      "REPLACE_IT",
+		ProviderName:      "aws",
 		Provider: map[string]string{
 			aws.KeyID:          "REPLACE_IT",
 			aws.SecretKey:      "REPLACE_IT",
