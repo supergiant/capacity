@@ -59,8 +59,8 @@ func TestKubescalerScaleDown(t *testing.T) {
 				},
 			},
 			allowedMachines: []string{allowedMachine.Name},
-			providerErr:     fakeErr,
-			expectedErr:     fakeErr,
+			providerErr:     errFake,
+			expectedErr:     errFake,
 		},
 	}
 

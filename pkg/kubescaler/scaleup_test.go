@@ -19,7 +19,7 @@ import (
 var (
 	currentTime = time.Now()
 	trueVar     = true
-	fakeErr     = errors.New("fake error")
+	errFake     = errors.New("fake error")
 
 	resource13   = resource.MustParse("13")
 	resource13Mi = resource.MustParse("13Mi")
@@ -74,19 +74,19 @@ var (
 	podNew = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "podNew",
-			CreationTimestamp: metav1.Time{currentTime.Add(time.Hour)},
+			CreationTimestamp: metav1.Time{Time: currentTime.Add(time.Hour)},
 		},
 	}
 	podStandAlone = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "podStandAlone",
-			CreationTimestamp: metav1.Time{currentTime.Add(-time.Hour)},
+			CreationTimestamp: metav1.Time{Time: currentTime.Add(-time.Hour)},
 		},
 	}
 	podDaemonSet = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "podDaemonSet",
-			CreationTimestamp: metav1.Time{currentTime.Add(-time.Hour)},
+			CreationTimestamp: metav1.Time{Time: currentTime.Add(-time.Hour)},
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					Kind:       "DaemonSet",
@@ -98,7 +98,7 @@ var (
 	podWithRequests = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "podWithRequests",
-			CreationTimestamp: metav1.Time{currentTime.Add(-time.Hour)},
+			CreationTimestamp: metav1.Time{Time: currentTime.Add(-time.Hour)},
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					Kind:       "Deployment",
@@ -120,7 +120,7 @@ var (
 	podWithLimits = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "podWithLimits",
-			CreationTimestamp: metav1.Time{currentTime.Add(-time.Hour)},
+			CreationTimestamp: metav1.Time{Time: currentTime.Add(-time.Hour)},
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					Kind:       "Deployment",
@@ -142,7 +142,7 @@ var (
 	podWithHugeLimits = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "podWithHugeLimits",
-			CreationTimestamp: metav1.Time{currentTime.Add(-time.Hour)},
+			CreationTimestamp: metav1.Time{Time: currentTime.Add(-time.Hour)},
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					Kind:       "Deployment",
@@ -196,8 +196,8 @@ func TestKubescalerScaleUp(t *testing.T) {
 			pods:            []*corev1.Pod{&podNew, &podStandAlone, &podWithLimits},
 			nodes:           []*corev1.Node{&nodeReady},
 			allowedMachines: []string{allowedMachine.Name},
-			providerErr:     fakeErr,
-			expectedErr:     fakeErr,
+			providerErr:     errFake,
+			expectedErr:     errFake,
 		},
 	}
 

@@ -47,14 +47,14 @@ type Config struct {
 	Tags           map[string]string
 }
 
-type AWSProvider struct {
+type Provider struct {
 	clusterName string
 	region      string
 	instConf    Config
 	client      *aws.Client
 }
 
-func New(clusterName string, config provider.Config) (*AWSProvider, error) {
+func New(clusterName string, config provider.Config) (*Provider, error) {
 	// TODO: parse and validate config
 	key, secret, region := config[KeyID], config[SecretKey], config[Region]
 
@@ -70,7 +70,7 @@ func New(clusterName string, config provider.Config) (*AWSProvider, error) {
 		return nil, err
 	}
 
-	return &AWSProvider{
+	return &Provider{
 		clusterName: clusterName,
 		region:      region,
 		instConf: Config{
@@ -87,11 +87,11 @@ func New(clusterName string, config provider.Config) (*AWSProvider, error) {
 	}, nil
 }
 
-func (p *AWSProvider) Name() string {
+func (p *Provider) Name() string {
 	return "aws"
 }
 
-func (p *AWSProvider) MachineTypes(ctx context.Context) ([]*provider.MachineType, error) {
+func (p *Provider) MachineTypes(ctx context.Context) ([]*provider.MachineType, error) {
 	// TODO: for each region aws supports different machine types (get just region ones)
 	instTypes, err := p.client.AvailableInstanceTypes(ctx)
 	if err != nil {
@@ -120,7 +120,7 @@ func (p *AWSProvider) MachineTypes(ctx context.Context) ([]*provider.MachineType
 	return mTypes, nil
 }
 
-func (p *AWSProvider) Machines(ctx context.Context) ([]*provider.Machine, error) {
+func (p *Provider) Machines(ctx context.Context) ([]*provider.Machine, error) {
 	insts, err := p.client.ListRegionInstances(ctx, p.region, nil)
 	if err != nil {
 		return nil, nil
@@ -134,7 +134,7 @@ func (p *AWSProvider) Machines(ctx context.Context) ([]*provider.Machine, error)
 	return machines, nil
 }
 
-func (p *AWSProvider) CreateMachine(ctx context.Context, name, mtype, clusterRole, userData string, config provider.Config) (*provider.Machine, error) {
+func (p *Provider) CreateMachine(ctx context.Context, name, mtype, clusterRole, userData string, config provider.Config) (*provider.Machine, error) {
 	// TODO: merge and validate config parameters
 
 	inst, err := p.client.CreateInstance(ctx, aws.InstanceConfig{
@@ -160,7 +160,7 @@ func (p *AWSProvider) CreateMachine(ctx context.Context, name, mtype, clusterRol
 	return machineFrom(inst), nil
 }
 
-func (p *AWSProvider) DeleteMachine(ctx context.Context, id string) (*provider.Machine, error) {
+func (p *Provider) DeleteMachine(ctx context.Context, id string) (*provider.Machine, error) {
 	instState, err := p.client.DeleteInstance(ctx, p.region, id)
 	if err != nil {
 		return nil, err
