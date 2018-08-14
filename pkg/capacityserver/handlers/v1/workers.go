@@ -135,7 +135,7 @@ func (h *workersHandler) updateWorker(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 	worker := &workers.Worker{}
-	if err := json.NewDecoder(r.Body).Decode(&worker); err != nil {
+	if err = json.NewDecoder(r.Body).Decode(&worker); err != nil {
 		log.Errorf("handler: kubescaler: patch worker: decode: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return

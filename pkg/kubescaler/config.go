@@ -70,9 +70,8 @@ func NewPersistentConfig(filepath string) (*PersistentConfig, error) {
 				return nil, err
 			}
 			return nil, errors.New("example config has generated on " + filepath + ". Please, go through REPLACE_IT fields")
-		} else {
-			return nil, err
 		}
+		return nil, err
 	}
 	defer rc.Close()
 

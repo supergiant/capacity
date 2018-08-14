@@ -2,7 +2,6 @@ package capacity
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -22,8 +21,6 @@ import (
 const (
 	// How old the oldest unschedulable pod should be before starting scale up.
 	unschedulablePodTimeBuffer = 2 * time.Second
-
-	newNodeTimeBuffer = 3 * time.Minute
 )
 
 var (
@@ -299,17 +296,6 @@ func findMachine(name string, machineTypes []*provider.MachineType) *provider.Ma
 func isMaster(w *workers.Worker) bool {
 	// TODO: use role tags for it in SG2.0
 	return strings.Contains(strings.ToLower(w.MachineName), "master")
-}
-
-// don't work if server time isn't synced
-func getNewNodes(nodes []*corev1.Node, currentTime time.Time) []string {
-	newNodes := make([]string, 0)
-	for _, node := range nodes {
-		if node.CreationTimestamp.Add(newNodeTimeBuffer).After(currentTime) {
-			newNodes = append(newNodes, fmt.Sprintf("%s(%s)", node.Name, currentTime.Sub(node.CreationTimestamp.Time)))
-		}
-	}
-	return newNodes
 }
 
 func nodeNames(nodes []*corev1.Node) []string {

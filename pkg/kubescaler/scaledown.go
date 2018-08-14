@@ -28,7 +28,12 @@ func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, workerList *workers.
 	removed := make([]string, 0)
 	ignored := make([]string, 0)
 	defer func() {
-		log.Infof("kubescaler: run: scale down: has deleted %v nodes, %v ignored", removed, ignored)
+		if len(ignored) != 0 {
+			log.Infof("kubescaler: run: scale down: ignored nodes %v", ignored)
+		}
+		if len(removed) != 0 {
+			log.Infof("kubescaler: run: scale down: deleted nodes %v", removed)
+		}
 	}()
 
 	for _, worker := range emptyWorkers {

@@ -22,14 +22,14 @@ func (s *Kubescaler) scaleUp(unscheduledPods []*corev1.Pod, machineTypes []*prov
 	log.Debugf("kubescaler: run: scale up: unscheduled pods: %v", podNames(podsToScale))
 
 	// get required cpu/mem for unscheduled pods and pick up a machine type
-	podsCpu, podsMem := totalCPUMem(podsToScale)
-	mtype, err := bestMachineFor(podsCpu, podsMem, machineTypes)
+	podsCPU, podsMem := totalCPUMem(podsToScale)
+	mtype, err := bestMachineFor(podsCPU, podsMem, machineTypes)
 	if err != nil {
 		return false, errors.Wrap(err, "find an appropriate machine type")
 	}
 
 	log.Debugf("kubescaler: run: scale up: unscheduled pods needs cpu=%s, mem=%s: a the %s machine (cpu=%s, mem=%s)",
-		podsCpu.String(), podsMem.String(), mtype.Name, mtype.CPU, mtype.Memory)
+		podsCPU.String(), podsMem.String(), mtype.Name, mtype.CPU, mtype.Memory)
 
 	worker, err := s.CreateWorker(context.Background(), mtype.Name)
 	if err != nil {
