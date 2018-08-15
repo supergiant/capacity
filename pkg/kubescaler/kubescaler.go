@@ -173,8 +173,9 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 
 		// TODO: use workers instead of nodes (workerList may contain 'terminating' machines)
 		if config.WorkersCountMax >= len(rss.readyNodes) {
+			var scaled bool
 			// try to scale up the cluster. In case of success no need to scale down
-			scaled, err := s.scaleUp(rss.unscheduledPods, allowedMachineTypes, currentTime)
+			scaled, err = s.scaleUp(rss.unscheduledPods, allowedMachineTypes, currentTime)
 			if err != nil {
 				return errors.Wrap(err, "scale up")
 			}
@@ -189,7 +190,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 
 	// TODO: workerList may contain 'terminating' machines.
 	if config.WorkersCountMin < len(rss.readyNodes) {
-		if err = s.scaleDown(rss.scheduledPods, rss.workerList, currentTime); err != nil {
+		if err = s.scaleDown(rss.scheduledPods, rss.workerList, config.IgnoredNodeLabels, currentTime); err != nil {
 			return errors.Wrap(err, "scale down")
 		}
 	} else {
