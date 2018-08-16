@@ -46,6 +46,8 @@ type Config struct {
 	ProviderName      string
 }
 
+// Worker is an abstraction used by kubescaler to manage cluster capacity.
+// It contains data from a (virtual) machine and a kubernetes node running on it.
 type Worker struct {
 	// ClusterName is a kubernetes cluster name.
 	ClusterName string `json:"clusterName"`
@@ -58,12 +60,14 @@ type Worker struct {
 	MachineType string `json:"machineType"`
 	// MachineState represent a virtual machine state.
 	MachineState string `json:"machineState"`
-	// CreationTimestamp is a timestamp representing the server time when this object was created.
+	// CreationTimestamp is a timestamp representing a time when this machine was created.
 	CreationTimestamp time.Time `json:"creationTimestamp"`
-	// NodeName represents a name of the kubernetes node that runs on top of that machine.
-	NodeName string `json:"nodeName"`
 	// Reserved is a parameter that is used to prevent downscaling of the worker.
 	Reserved bool `json:"reserved"`
+	// NodeName represents a name of the kubernetes node that runs on top of that machine.
+	NodeName string `json:"nodeName"`
+	// NodeLabels represents a labels of the kubernetes node that runs on top of that machine.
+	NodeLabels map[string]string `json:"nodeLabels,omitempty"`
 }
 
 type WorkerList struct {
@@ -197,7 +201,8 @@ func (m *Manager) workerFrom(machine *provider.Machine, node corev1.Node) *Worke
 		MachineType:       machine.Type,
 		MachineState:      machine.State,
 		CreationTimestamp: machine.CreationTimestamp,
-		NodeName:          node.Name,
 		Reserved:          IsReserved(&node),
+		NodeName:          node.Name,
+		NodeLabels:        node.Labels,
 	}
 }

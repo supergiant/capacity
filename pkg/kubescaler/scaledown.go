@@ -14,7 +14,8 @@ import (
 )
 
 // TODO: use workers here
-func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, workerList *workers.WorkerList, currentTime time.Time) error {
+func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, workerList *workers.WorkerList, ignoreLabels map[string]string, currentTime time.Time) error {
+	// TODO: don't skip failed stateful pods?
 	scheduledPods = filterDaemonSetPods(filterStandalonePods(scheduledPods))
 	nodePodsMap := nodePodMap(scheduledPods)
 
@@ -22,33 +23,45 @@ func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, workerList *workers.
 	if len(emptyWorkers) == 0 {
 		return nil
 	}
-	log.Debugf("kubescaler: run: scaledown: nodepods %#v", nodePodsMap)
-	log.Debugf("kubescaler: run: scale down: nodes to delete: %v", workerNodeNames(emptyWorkers))
+	log.Debugf("kubescaler: scale down: nodepods %#v", nodePodsMap)
+	log.Debugf("kubescaler: scale down: nodes to delete: %v", workerNodeNames(emptyWorkers))
 
 	removed := make([]string, 0)
 	ignored := make([]string, 0)
 	defer func() {
 		if len(ignored) != 0 {
-			log.Infof("kubescaler: run: scale down: ignored nodes %v", ignored)
+			log.Debugf("kubescaler: scale down: ignored nodes %v", ignored)
 		}
 		if len(removed) != 0 {
-			log.Infof("kubescaler: run: scale down: deleted nodes %v", removed)
+			log.Infof("kubescaler: scale down: deleted nodes %v", removed)
 		}
 	}()
 
-	for _, worker := range emptyWorkers {
-		if worker.Reserved || isNewWorker(worker, currentTime) {
-			ignored = append(ignored, fmt.Sprintf("%s(%s,reserved=%t,lifespan=%s)", worker.NodeName, worker.MachineID,
-				worker.Reserved, currentTime.Sub(worker.CreationTimestamp)))
+	for _, w := range emptyWorkers {
+		if reason := ignoreReason(w, ignoreLabels, currentTime); reason != "" {
+			ignored = append(ignored, fmt.Sprintf("%s(%s,%s)", w.NodeName, w.MachineID, reason))
 			continue
 		}
-		if _, err := s.DeleteWorker(context.Background(), worker.NodeName, worker.MachineID); err != nil {
+
+		if _, err := s.DeleteWorker(context.Background(), w.NodeName, w.MachineID); err != nil {
 			return err
 		}
-		removed = append(removed, fmt.Sprintf("%s(%s)", worker.NodeName, worker.MachineID))
+		removed = append(removed, fmt.Sprintf("%s(%s)", w.NodeName, w.MachineID))
 	}
 
 	return nil
+}
+
+func ignoreReason(w *workers.Worker, ignoreLabels map[string]string, currentTime time.Time) string {
+	switch {
+	case w.Reserved:
+		return "reserved=true"
+	case hasIgnoredLabel(w, ignoreLabels):
+		return "ignoredLabel=true"
+	case isNewWorker(w, currentTime):
+		return "lifespan=" + currentTime.Sub(w.CreationTimestamp).String()
+	}
+	return ""
 }
 
 func nodePodMap(pods []*corev1.Pod) map[string]int {
@@ -109,4 +122,19 @@ func workerNodeNames(wkrs []*workers.Worker) []string {
 
 func isNewWorker(worker *workers.Worker, currentTime time.Time) bool {
 	return worker.CreationTimestamp.Add(workers.MinWorkerLifespan).After(currentTime)
+}
+
+func hasIgnoredLabel(worker *workers.Worker, ignored map[string]string) bool {
+	if ignored != nil {
+		for ignoredK, ignoredV := range ignored {
+			val, ok := worker.NodeLabels[ignoredK]
+			if !ok {
+				continue
+			}
+			if val == ignoredV {
+				return true
+			}
+		}
+	}
+	return false
 }
