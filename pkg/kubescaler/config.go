@@ -26,10 +26,11 @@ type Config struct {
 	ScanInterval            string            `json:"scanInterval"`
 	MaxMachineProvisionTime string            `json:"maxMachineProvisionTime"`
 
-	Paused          *bool    `json:"paused,omitempty"`
-	WorkersCountMin int      `json:"workersCountMin"`
-	WorkersCountMax int      `json:"workersCountMax"`
-	MachineTypes    []string `json:"machineTypes"`
+	Paused            *bool             `json:"paused,omitempty"`
+	WorkersCountMin   int               `json:"workersCountMin"`
+	WorkersCountMax   int               `json:"workersCountMax"`
+	MachineTypes      []string          `json:"machineTypes"`
+	IgnoredNodeLabels map[string]string `json:"ignoredNodeLabels"`
 }
 
 func (c *Config) Merge(in *Config) error {
@@ -51,6 +52,9 @@ func (c *Config) Merge(in *Config) error {
 	if len(in.MachineTypes) != 0 {
 		c.MachineTypes = in.MachineTypes
 	}
+	if len(in.IgnoredNodeLabels) != 0 {
+		c.IgnoredNodeLabels = in.IgnoredNodeLabels
+	}
 
 	return nil
 }
@@ -69,7 +73,7 @@ func NewPersistentConfig(filepath string) (*PersistentConfig, error) {
 			if err = writeExampleConfig(filepath); err != nil {
 				return nil, err
 			}
-			return nil, errors.New("example config has generated on " + filepath + ". Please, go through REPLACE_IT fields")
+			return nil, errors.New("example config has generated to " + filepath + ". Please, go through REPLACE_IT fields")
 		}
 		return nil, err
 	}
