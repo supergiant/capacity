@@ -1,0 +1,14 @@
+p {
+  font-family: "Roboto", sans-serif;
+}
+
+.checkboxes-wrapper {
+  display: flex;
+  justify-content: space-between;
+  flex-flow: row wrap;
+
+  .mat-checkbox {
+    margin-top: 10px;
+    width: 150px;
+  }
+}

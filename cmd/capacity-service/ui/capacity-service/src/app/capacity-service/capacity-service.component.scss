@@ -1,0 +1,417 @@
+@import url('https://fonts.googleapis.com/css?family=Roboto:300,400,500,700');
+@import url('https://fonts.googleapis.com/css?family=Montserrat:200,300');
+
+/************************
+    STARS BG
+************************/
+
+.stars, .twinkling, .liquid-sky {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.stars {
+  background: #000 url(../../assets/img/stars.png) repeat top center;
+  z-index: 0;
+}
+
+.twinkling{
+  background: rgba(0,0,0,0) url(../../assets/img/twinkling.png) repeat top center;
+  z-index: 1;
+
+  -moz-animation: move-twink-back 500s linear infinite;
+  -ms-animation: move-twink-back 500s linear infinite;
+  -o-animation: move-twink-back 500s linear infinite;
+  -webkit-animation: move-twink-back 500s linear infinite;
+  animation: move-twink-back 500s linear infinite;
+}
+
+@keyframes move-twink-back {
+  from {background-position:0 0;}
+  to {background-position:-10000px 5000px;}
+}
+@-webkit-keyframes move-twink-back {
+  from {background-position:0 0;}
+  to {background-position:-10000px 5000px;}
+}
+@-moz-keyframes move-twink-back {
+  from {background-position:0 0;}
+  to {background-position:-10000px 5000px;}
+}
+@-ms-keyframes move-twink-back {
+  from {background-position:0 0;}
+  to {background-position:-10000px 5000px;}
+}
+
+.liquid-sky {
+  // background: #000 url(../../assets/img/liquid-sky.png) repeat top center;
+  background: #000 url(../../assets/img/sg_bg_01.jpg) repeat top center;
+  background-size: cover;
+  z-index: 3;
+  opacity: 0.5;
+
+  // img {
+  //   height: 100%;
+  //   width: 100%;
+  // }
+}
+
+/************************
+    PAGE STYLES
+************************/
+
+.cs-body {
+  color: #fff;
+  z-index: 4;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  .header {
+    display: flex;
+
+    .logo {
+      margin: 32px auto 29px 48px;
+      height: 41px;
+      width: 180px;
+
+      svg {
+        height: 100%;
+        width: 100%;
+      }
+    }
+  }
+
+  .headline {
+    color: rgba(209, 0, 136, 1);
+    font-family: "Montserrat", sans-serif;
+    font-size: 48px;
+    font-weight: 200;
+    letter-spacing: 3px;
+    margin: 0 0 28px 48px;
+  }
+
+  .cluster-controls {
+    display: flex;
+    font-family: "Roboto", sans-serif;
+    justify-content: space-around;
+    margin: 0 auto;
+    width: 95%;
+
+    button {
+      border-radius: 32px;
+
+      // https://github.com/angular/material2/issues/9416
+      .mat-button-ripple, .mat-button-focus-overlay {
+        border-radius: inherit;
+      }
+    }
+
+    .node-list {
+      background-color: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 21px 24px 5px 24px;
+      height: min-content;
+      width: 564px;
+
+      .node-list-headline-wrapper {
+        margin-bottom: 21px;
+
+        .node-list-headline {
+          color: rgba(209, 0, 136, 1);
+          font-size: 14px;
+          font-weight: 500;
+          letter-spacing: 2px;
+        }
+      }
+
+      .node-table {
+        background-color: rgba(0,0,0,0);
+        max-height: 355px;
+        overflow: auto;
+
+        .mat-header-row {
+          background-color: rgba(255, 0, 166, 0.25);
+          border: none;
+          min-height: 45px;
+
+          .mat-header-cell {
+            color: #fff;
+            font-family: "Roboto", sans-serif;
+            font-weight: 300;
+            font-size: 14px;
+          }
+        }
+
+        .mat-row {
+          background-color: rgba(255, 255, 255, 0.1);
+          border: none;
+          margin: 2px 0px;
+          // min-height: 45px;
+          // padding-right: 0px;
+
+          .mat-cell {
+            color: #fff;
+            font-family: "Roboto", sans-serif;
+            font-weight: 300;
+            font-size: 12px;
+            overflow: unset;
+            padding: 12px 0px;
+
+            .mat-checkbox .mat-checkbox-frame {
+              border-color: #d10088 !important;
+            }
+
+            .mat-checkbox-inner-container {
+              height: 16px !important;
+              width: 16px !important;
+            }
+
+            .delete {
+              cursor: pointer;
+
+              &:active {
+                transform: scale(0.85, 0.85);
+              }
+            }
+          }
+        }
+
+        .mat-column-reserved,
+        .mat-column-delete {
+          max-width: 60px;
+          text-align: right;
+        }
+
+        .small-header {
+          transform: translateX(35px);
+        }
+      }
+
+      mat-paginator {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      .node-actions {
+        margin: 8px auto auto 24px;
+
+        .new-node-field {
+          font-size: 14px;
+          margin-right: 27px;
+          width: 379px;
+        }
+      }
+    }
+
+    .power {
+      justify-content: space-around;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      width: 30%;
+
+      .orb {
+        background: linear-gradient(315deg, #8721ff, #8b22fb 18%, #ff457e);
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+      }
+
+      .power-switch {
+        // can't animate gradients...
+        transition: transform 0.25s ease;
+        height: 186px;
+        width: 186px;
+
+        p {
+          margin: 0;
+        }
+
+        .text {
+          font-family: "Montserrat", sans-serif;
+          font-size: 32px;
+        }
+
+        .status {
+          color: rgba(255, 255, 255, 0.5);
+          font-size: 12px;
+          text-align: center;
+        }
+
+        &.active {
+          animation: pulse 2.5s infinite;
+
+          &:hover {
+            background: linear-gradient(135deg, #8821fe 0%, #e63d98 100%);
+            transform: scale(1.05, 1.05);
+          }
+        }
+
+        &.inactive {
+          // background: linear-gradient(135deg, #e63d98 0%, #8821fe 100%);
+          opacity: 0.7;
+
+          &:hover {
+            opacity: 1;
+            transform: scale(1.05, 1.05);
+          }
+        }
+
+        @keyframes pulse {
+          0% {
+            box-shadow: 0 0 20px 0 #e63d98;
+          }
+
+          50% {
+            box-shadow: 0 0 150px 0 #e63d98;
+          }
+
+          100% {
+            box-shadow: 0 0 20px 0 #e63d98;
+          }
+        }
+      }
+
+      .min-max-wrapper {
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+
+        .count-control {
+          display: flex;
+          justify-content: space-around;
+          margin: 24px auto 0px;
+          width: 100%;
+
+          .count-control-group {
+            text-align: center;
+
+            .count-label {
+              color: rgba(209, 0, 136, 1);
+              font-size: 14px;
+              font-weight: 500;
+              letter-spacing: 2px;
+            }
+
+            .counter {
+              align-items: center;
+              display: flex;
+
+              .operator {
+                fill: #fff;
+
+                &:hover {
+                  cursor: default;
+                }
+
+                &:active {
+                  transform: scale(0.95, 0.95);
+                }
+
+                &.disable {
+                  fill: rgba(255, 255, 255, 0.5);
+                  user-select: none;
+
+                  &:active {
+                    transform: none;
+                  }
+                }
+              }
+
+              .count {
+                margin: 12px;
+                height: 51px;
+                width: 51px;
+
+                &:hover {
+                  cursor: default;
+                }
+
+                span {
+                  font-family: "Montserrat", sans-serif;
+                  font-size: 32px;
+                }
+              }
+            }
+          }
+        }
+
+        mat-error {
+          font-size: 14px;
+          margin-bottom: 10px;
+        }
+      }
+    }
+
+    .node-types {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      // width: 25%;
+
+      .available-node-types-wrapper {
+        width: 345px;
+
+        .node-types-headline {
+          color: rgba(209, 0, 136, 1);
+          font-size: 14px;
+          font-weight: 500;
+          letter-spacing: 2px;
+          margin-bottom: 23px;
+        }
+
+        .available-nodes-list {
+          display: flex;
+          flex-flow: row wrap;
+          justify-content: flex-start;
+          margin-bottom: 7px;
+          max-height: 442px;
+          overflow: scroll;
+
+          .node-card {
+            background: none;
+            border: 1px solid #fff;
+            border-radius: 50px;
+            font-size: 12px;
+            padding: 12px 24px;
+            margin: 0 16px 16px 0;
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
