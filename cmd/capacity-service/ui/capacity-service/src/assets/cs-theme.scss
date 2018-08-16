@@ -1,0 +1,88 @@
+@import '../node_modules/@angular/material/theming';
+@include mat-core();
+
+$sg-primary: (
+  50: #f9e0f1,
+  100: #f1b3db,
+  200: #e880c4,
+  300: #df4dac,
+  400: #d8269a,
+  500: #d10088,
+  600: #cc0080,
+  700: #c60075,
+  800: #c0006b,
+  900: #b50058,
+  A100: #ffdeec,
+  A200: #ffabce,
+  A400: #ff78b1,
+  A700: #ff5ea2,
+  contrast: (
+      50: #000000,
+      100: #000000,
+      200: #000000,
+      300: #000000,
+      400: #ffffff,
+      500: #ffffff,
+      600: #ffffff,
+      700: #ffffff,
+      800: #ffffff,
+      900: #ffffff,
+      A100: #000000,
+      A200: #000000,
+      A400: #000000,
+      A700: #000000,
+  )
+);
+
+$sg-accent: (
+  50: #ede0f8,
+  100: #d1b3ed,
+  200: #b380e2,
+  300: #944dd6,
+  400: #7d26cd,
+  500: #6600c4,
+  600: #5e00be,
+  700: #5300b6,
+  800: #4900af,
+  900: #3800a2,
+  A100: #daccff,
+  A200: #b499ff,
+  A400: #8f66ff,
+  A700: #7c4dff,
+  contrast: (
+    50: #000000,
+    100: #000000,
+    200: #000000,
+    300: #ffffff,
+    400: #ffffff,
+    500: #ffffff,
+    600: #ffffff,
+    700: #ffffff,
+    800: #ffffff,
+    900: #ffffff,
+    A100: #000000,
+    A200: #000000,
+    A400: #000000,
+    A700: #ffffff,
+  )
+);
+
+$primary: mat-palette($sg-primary, 500, 300, 900);
+
+$accent: mat-palette($sg-accent, 500, 300, 900);
+
+$warn: mat-palette($mat-red);
+
+$theme: mat-dark-theme($primary, $accent, $warn);
+
+@include angular-material-theme($theme)
+
+// CUSTOM ADJUSTMENTS
+// .mat-checkbox .mat-checkbox-frame {
+//   border-color: #d10088 !important;
+// }
+
+// .mat-checkbox-inner-container {
+//   height: 16px !important;
+//   width: 16px !important;
+// }

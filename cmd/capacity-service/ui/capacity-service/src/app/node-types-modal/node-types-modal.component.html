@@ -1,0 +1,18 @@
+<h1 mat-dialog-title>Available Node Types</h1>
+<div mat-dialog-content>
+  <p>Choose the node types the Capacity Service can use:</p>
+  <mat-checkbox [checked]="allOptionsSelected(allowed, options)" (change)="toggleSelectAll($event)">Select All</mat-checkbox>
+  <div class="checkboxes-wrapper">
+  	<mat-checkbox *ngFor="let option of options"
+      color="primary"
+      [name]="option"
+  		[checked]="allowed.has(option)"
+  		(change)="toggleOption($event)">
+  		{{ option }}
+  	</mat-checkbox>
+  </div>
+</div>
+<div mat-dialog-actions>
+  <button mat-button (click)="onNoClick()">Cancel</button>
+  <button mat-button [mat-dialog-close]="allowed" cdkFocusInitial>Ok</button>
+</div>
