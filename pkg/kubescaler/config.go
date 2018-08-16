@@ -3,6 +3,7 @@ package capacity
 import (
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
@@ -11,6 +12,10 @@ import (
 
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/aws"
+)
+
+const (
+	EnvPrevix = "CAPACITY"
 )
 
 type Config struct {
@@ -66,26 +71,32 @@ type PersistentConfig struct {
 	conf *Config
 }
 
-func NewPersistentConfig(filepath string) (*PersistentConfig, error) {
-	rc, err := fileReadCloser(filepath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			if err = writeExampleConfig(filepath); err != nil {
-				return nil, err
-			}
-			return nil, errors.New("example config has generated to " + filepath + ". Please, go through REPLACE_IT fields")
+func NewPersistentConfig(fullpath string) (*PersistentConfig, error) {
+	_, err := os.Stat(fullpath)
+	if os.IsNotExist(err) {
+		if err = writeExampleConfig(fullpath); err != nil {
+			return nil, errors.Wrap(err, "write the example config")
 		}
+		return nil, errors.New("example config has generated on " + fullpath + ". Please, go through REPLACE_IT fields")
+	}
+
+	conf, err := readFileEnv(fullpath)
+	if err != nil {
+		return nil, errors.Wrap(err, "from file/env")
+	}
+
+	// update a persistent config
+	wc, err := fileWriteCloser(fullpath)
+	if err != nil {
 		return nil, err
 	}
-	defer rc.Close()
-
-	conf := &Config{}
-	if err = json.NewDecoder(rc).Decode(conf); err != nil {
+	defer wc.Close()
+	if err = json.NewEncoder(wc).Encode(conf); err != nil {
 		return nil, err
 	}
 
 	return &PersistentConfig{
-		filepath: filepath,
+		filepath: fullpath,
 		mu:       sync.RWMutex{},
 		conf:     conf,
 	}, nil
@@ -133,9 +144,38 @@ func (m *PersistentConfig) GetConfig() Config {
 	return *m.conf
 }
 
-func fileReadCloser(filepath string) (io.ReadCloser, error) {
-	return os.OpenFile(filepath, os.O_RDONLY, 0644)
+func readFileEnv(fullpath string) (*Config, error) {
+	data, err := ioutil.ReadFile(fullpath)
+	if err != nil {
+		return nil, err
+	}
 
+	conf := &Config{}
+	if err = json.Unmarshal(data, conf); err != nil {
+		return nil, errors.Wrap(err, "decode")
+	}
+	if err := applyEnv(conf); err != nil {
+		return nil, errors.Wrap(err, "applyEnv")
+	}
+
+	return conf, nil
+}
+
+// TODO: just a hack, use viper in the future
+func applyEnv(conf *Config) error {
+	envMap := map[string]string{
+		aws.KeyID:     EnvPrevix + "_PROVIDER_AWS_KEYID",
+		aws.SecretKey: EnvPrevix + "_PROVIDER_AWS_SECRETKEY",
+	}
+
+	for key, env := range envMap {
+		val := os.Getenv(env)
+		if val != "" {
+			conf.Provider[key] = val
+		}
+	}
+
+	return nil
 }
 
 func fileWriteCloser(filepath string) (io.WriteCloser, error) {
