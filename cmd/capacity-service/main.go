@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strings"
 
 	"github.com/alexflint/go-arg"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
@@ -15,6 +16,7 @@ type args struct {
 	KubeConfig       string `arg:"--kube-config"       env:"CAPACITY_KUBE_CONFIG"       help:"path to a kubeconfig file"`
 	ListenAddr       string `arg:"--listen-addr"       env:"CAPACITY_LISTEN_ADDR"       help:"address to listen on, pass as a addr:port"`
 	LogLevel         string `arg:"--verbosity"         env:"CAPACITY_LOG_LEVEL"         help:"logging verbosity"`
+	LogHooks         string `arg:"--log-hooks"         env:"CAPACITY_LOG_HOOKS"         help:"list of comma-separated log providers (syslog)"`
 }
 
 func (args) Version() string {
@@ -32,6 +34,11 @@ func main() {
 	// setup logger
 	log.SetOutput(os.Stdout)
 	log.SetLevel(args.LogLevel)
+	for _, hook := range strings.Split(args.LogHooks, ",") {
+		if err := log.AddHook(hook); err != nil {
+			log.Errorf("capacityserver: logger: add %s hook: %v", err)
+		}
+	}
 
 	srv, err := capacityserver.New(capacityserver.Config{
 		KubescalerConfig: args.KubescalerConfig,

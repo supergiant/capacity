@@ -2,9 +2,11 @@ package log
 
 import (
 	"io"
+	"log/syslog"
 	"os"
 
 	"github.com/sirupsen/logrus"
+	lsyslog "github.com/sirupsen/logrus/hooks/syslog"
 )
 
 func init() {
@@ -37,6 +39,18 @@ func SetLevel(level string) {
 		l = logrus.InfoLevel
 	}
 	logrus.SetLevel(l)
+}
+
+func AddHook(name string) error {
+	switch name {
+	case "syslog":
+		hook, err := lsyslog.NewSyslogHook("", "", syslog.LOG_INFO, "")
+		if err != nil {
+			return err
+		}
+		logrus.AddHook(hook)
+	}
+	return nil
 }
 
 // Debug logs a message at level Debug on the standard logger.

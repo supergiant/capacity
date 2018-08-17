@@ -154,6 +154,9 @@ func readFileEnv(fullpath string) (*Config, error) {
 	if err = json.Unmarshal(data, conf); err != nil {
 		return nil, errors.Wrap(err, "decode")
 	}
+	if conf.Provider == nil {
+		conf.Provider = make(map[string]string)
+	}
 	if err := applyEnv(conf); err != nil {
 		return nil, errors.Wrap(err, "applyEnv")
 	}
