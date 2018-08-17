@@ -183,7 +183,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 				return nil
 			}
 		} else {
-			log.Debugf("kubescaler: scaleup: workersCountMax(%d) >= number of workers(%d), skipping..",
+			log.Debugf("kubescaler: scaleup: workersCountMax(%d) >= number of ready nodes(%d), skipping..",
 				config.WorkersCountMax, len(rss.readyNodes))
 		}
 	}
@@ -194,7 +194,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 			return errors.Wrap(err, "scale down")
 		}
 	} else {
-		log.Debugf("kubescaler: scaledown: workersCountMin(%d) < number of workers(%d), skipping..",
+		log.Debugf("kubescaler: scaledown: workersCountMin(%d) < number of ready nodes(%d), skipping..",
 			config.WorkersCountMin, len(rss.readyNodes))
 	}
 

@@ -262,9 +262,12 @@
   revision = "c46340d9eff65ff7ff4d54dd5564c6141055b774"
 
 [[projects]]
-  digest = "1:d867dfa6751c8d7a435821ad3b736310c2ed68945d05b50fb9d23aee0540c8cc"
+  digest = "1:606e395bc6f4011ae992e7ae0c613839d20ea097b8a9468e1683b22cefd8fd77"
   name = "github.com/sirupsen/logrus"
-  packages = ["."]
+  packages = [
+    ".",
+    "hooks/syslog",
+  ]
   pruneopts = "UT"
   revision = "3e01752db0189b9157070a0e1668a620f9a85da2"
   version = "v1.0.6"
@@ -646,6 +649,7 @@
     "github.com/rs/cors",
     "github.com/saheienko/supergiant/pkg/clouds/aws",
     "github.com/sirupsen/logrus",
+    "github.com/sirupsen/logrus/hooks/syslog",
     "github.com/stretchr/testify/require",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/api/resource",
