@@ -17,7 +17,8 @@ import (
 func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, workerList *workers.WorkerList, ignoreLabels map[string]string, currentTime time.Time) error {
 	// TODO: don't skip failed stateful pods?
 	scheduledPods = filterDaemonSetPods(filterStandalonePods(scheduledPods))
-	nodePodsMap := nodePodMap(scheduledPods)
+	//We are passing nil for masterNodes
+	nodePodsMap := nodePodMap(scheduledPods, nil)
 
 	emptyWorkers := getEmpty(workerList, nodePodsMap)
 	if len(emptyWorkers) == 0 {
@@ -64,9 +65,16 @@ func ignoreReason(w *workers.Worker, ignoreLabels map[string]string, currentTime
 	return ""
 }
 
-func nodePodMap(pods []*corev1.Pod) map[string]int {
+func nodePodMap(pods []*corev1.Pod, masters []*corev1.Node) map[string]int {
 	m := make(map[string]int)
+pods:
 	for _, pod := range pods {
+		//This loop excludes any pods that are running on masters.
+		for _, m := range masters {
+			if m.Name == pod.Spec.NodeName {
+				continue pods
+			}
+		}
 		m[pod.Spec.NodeName]++
 	}
 	return m
