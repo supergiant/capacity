@@ -84,7 +84,7 @@ func TestKubescalerScaleDown(t *testing.T) {
 
 func TestPodsPerNode(t *testing.T) {
 	pods := []*corev1.Pod{&podStandAlone, &podWithRequests}
-	require.Equal(t, map[string]int{"": 1, NodeReadyName: 1}, nodePodMap(pods))
+	require.Equal(t, map[string]int{"": 1, NodeReadyName: 1}, nodePodMap(pods, nil))
 }
 
 func TestFilterStandalonePods(t *testing.T) {

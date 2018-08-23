@@ -166,8 +166,8 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 			return nil
 		}
 		// TODO: node has created, but controller doesn't assign a pod to it yet
-		log.Debugf("kubescaler: scale up: nodepods %#v, ready nodes %v", nodePodMap(rss.scheduledPods), nodeNames(rss.readyNodes))
-		if len(rss.readyNodes) != len(nodePodMap(rss.scheduledPods)) {
+		log.Debugf("kubescaler: scale up: nodepods %#v, ready nodes %v", nodePodMap(rss.scheduledPods, rss.masterNodes), nodeNames(rss.readyNodes))
+		if len(rss.readyNodes) != len(nodePodMap(rss.scheduledPods, rss.masterNodes)) {
 			log.Debugf("kubescaler: scale up: there are empty nodes in cluster")
 			return nil
 		}
@@ -203,20 +203,44 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 }
 
 type resources struct {
+	masterNodes     []*corev1.Node
 	readyNodes      []*corev1.Node
 	scheduledPods   []*corev1.Pod
 	unscheduledPods []*corev1.Pod
 	workerList      *workers.WorkerList
 }
 
+func filterNodes(allNodes []*corev1.Node) (masterNodes []*corev1.Node, readyNodes []*corev1.Node) {
+	//we need to loop over all the Nodes
+	for _, node := range allNodes {
+		labels := node.Labels
+		//In the loop we need to check if the map contains kubernetes.io/role:master
+		value, ok := labels["kubernetes.io/role"]
+		if ok && value == "master" {
+			//	If this is true, append that node to masterNodes
+			masterNodes = append(masterNodes, node)
+		} else {
+			//	else append the node to readyNodes
+			readyNodes = append(readyNodes, node)
+		}
+	}
+	return
+}
+
 func (s *Kubescaler) getResources() (*resources, error) {
 	var rss resources
 	var err error
 
-	rss.readyNodes, err = s.listerRegistry.ReadyNodeLister().List()
+	//We get all nodes first and filter out masterNodes and readyNodes
+	//readyNodes are nodes that are not a master and are also ready
+	allNodes, err := s.listerRegistry.ReadyNodeLister().List()
 	if err != nil {
 		return nil, err
 	}
+
+	//Filtering all nodes to filter out masters
+	rss.masterNodes, rss.readyNodes = filterNodes(allNodes)
+
 	rss.scheduledPods, err = s.listerRegistry.ScheduledPodLister().List()
 	if err != nil {
 		return nil, err
