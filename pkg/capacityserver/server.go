@@ -15,6 +15,7 @@ type Config struct {
 	KubescalerConfig string
 	KubeConfig       string
 	ListenAddr       string
+	UserDataFile     string
 }
 
 type API struct {
@@ -25,7 +26,7 @@ type API struct {
 func New(conf Config) (*API, error) {
 	log.Infof("setup kubescaler...")
 
-	ks, err := kubescaler.New(conf.KubeConfig, conf.KubescalerConfig)
+	ks, err := kubescaler.New(conf.KubeConfig, conf.KubescalerConfig, conf.UserDataFile)
 	if err != nil {
 		return nil, errors.Wrap(err, "setup kubescaler")
 	}

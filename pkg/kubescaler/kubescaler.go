@@ -44,7 +44,7 @@ type Kubescaler struct {
 	listerRegistry ListerRegistry
 }
 
-func New(kubeConfig, kubescalerConfig string) (*Kubescaler, error) {
+func New(kubeConfig, kubescalerConfig, userDataFile string) (*Kubescaler, error) {
 	conf, err := NewPersistentConfig(kubescalerConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "build config")
@@ -80,6 +80,7 @@ func New(kubeConfig, kubescalerConfig string) (*Kubescaler, error) {
 			KubeAPIPassword:   cfg.KubeAPIPassword,
 			ProviderName:      cfg.ProviderName,
 			SSHPubKey:         cfg.SSHPubKey,
+			UserDataFile:      userDataFile,
 		}
 		wm, err := workers.NewManager(cfg.ClusterName, kclient.CoreV1().Nodes(), vmProvider, workersConf)
 		if err != nil {

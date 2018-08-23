@@ -13,6 +13,12 @@ Run an application:
 go run ./cmd/capacity-service/main.go  --kubescaler-config config/kubescaler.conf
 ```
 
+Run with a custom UserData:
+```
+
+go run ./cmd/capacity-service/main.go  --kubescaler-config config/kubescaler.conf --user-data /userdata.txt
+```
+
 ## Demo
 
 Get a kubescaler config:
