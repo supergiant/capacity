@@ -17,6 +17,7 @@ type args struct {
 	ListenAddr       string `arg:"--listen-addr"       env:"CAPACITY_LISTEN_ADDR"       help:"address to listen on, pass as a addr:port"`
 	LogLevel         string `arg:"--verbosity"         env:"CAPACITY_LOG_LEVEL"         help:"logging verbosity"`
 	LogHooks         string `arg:"--log-hooks"         env:"CAPACITY_LOG_HOOKS"         help:"list of comma-separated log providers (syslog)"`
+	UserDataFile     string `arg:"--user-data"         env:"CAPACITY_USER_DATA"         help:"path to a userdata file"`
 }
 
 func (args) Version() string {
@@ -44,6 +45,7 @@ func main() {
 		KubescalerConfig: args.KubescalerConfig,
 		KubeConfig:       args.KubeConfig,
 		ListenAddr:       args.ListenAddr,
+		UserDataFile:     args.UserDataFile,
 	})
 	if err != nil {
 		log.Fatalf("capacityserver: %v\n", err)

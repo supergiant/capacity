@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"strings"
 	"text/template"
 	"time"
@@ -44,6 +45,7 @@ type Config struct {
 	KubeAPIPort       string
 	KubeAPIPassword   string
 	ProviderName      string
+	UserDataFile      string
 }
 
 // Worker is an abstraction used by kubescaler to manage cluster capacity.
@@ -105,7 +107,20 @@ func NewManager(clusterName string, nodesClient v1.NodeInterface, provider provi
 		return nil, errors.Wrap(err, "get machine types")
 	}
 
-	t, err := template.New("userData").Parse(userDataTpl)
+	var templ []byte
+	//if userdata was provided
+	if conf.UserDataFile != "" {
+		//read userdata file
+		templ, err = ioutil.ReadFile(conf.UserDataFile)
+		if err != nil {
+			return nil, err
+		}
+	} else { //If no userdata was provided
+		//use the default userdata
+		templ = []byte(userDataTpl)
+	}
+
+	t, err := template.New("userData").Parse(string(templ))
 	if err != nil {
 		return nil, err
 	}
