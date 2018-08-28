@@ -225,7 +225,6 @@ func TestFilterIgnoringPos(t *testing.T) {
 		&podNew,
 		&podStandAlone,
 		&podDaemonSet,
-		&podWithRequests,
 		&podWithLimits,
 		&podWithHugeLimits,
 	}
@@ -244,13 +243,10 @@ func TestHasMachineFor(t *testing.T) {
 	}{
 		{
 			pod:          &podWithLimits,
-			machineTypes: []*provider.MachineType{&machineType42},
+			machineTypes: []*provider.MachineType{},
 		},
 		{
 			pod:          &podWithRequests,
-			machineTypes: []*provider.MachineType{&machineType42},
-		},
-		{
 			machineTypes: []*provider.MachineType{&machineType42},
 			expectedRes:  true,
 		},
@@ -269,51 +265,51 @@ func TestBestMachineFor(t *testing.T) {
 		expectedRes  provider.MachineType
 		expectedErr  error
 	}{
-		{
+		{ // TC#1
 			cpu:         resource.MustParse("1"),
 			mem:         resource.MustParse("1Mi"),
 			expectedErr: ErrNoAllowedMachines,
 		},
-		{
+		{ // TC#2
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedErr:  ErrEmptyCPUValue,
 		},
-		{
+		{ // TC#3
 			cpu:          resource.MustParse("1"),
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedErr:  ErrEmptyMemoryValue,
 		},
-		{
+		{ // TC#4
 			cpu:          resource.MustParse("1"),
 			mem:          resource.MustParse("1Mi"),
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType13,
 		},
-		{
+		{ // TC#5
 			cpu:          resource.MustParse("13"),
 			mem:          resource.MustParse("12Mi"),
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType13,
 		},
-		{
+		{ // TC#6
 			cpu:          resource.MustParse("13"),
 			mem:          resource.MustParse("13Mi"),
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType42,
 		},
-		{
+		{ // TC#7
 			cpu:          resource.MustParse("35"),
 			mem:          resource.MustParse("45Mi"),
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType42,
 		},
-		{
+		{ // TC#8
 			cpu:          resource.MustParse("64"),
 			mem:          resource.MustParse("64Mi"),
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType42,
 		},
-		{
+		{ // TC#9
 			cpu:          resource.MustParse("64"),
 			mem:          resource.MustParse("64Mi"),
 			machineTypes: []*provider.MachineType{&machineType42, &machineType13},

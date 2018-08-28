@@ -7,7 +7,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
 	"github.com/supergiant/capacity/pkg/log"
@@ -97,19 +96,19 @@ func filterOutDaemonSetPods(pods []*corev1.Pod) []*corev1.Pod {
 }
 
 func getEmpty(workerList *workers.WorkerList, nodePods map[string][]string) []*workers.Worker {
-	if workerList == nil {
+	if workerList == nil || len(workerList.Items) == 0 {
 		return nil
 	}
-
-	nonEmptyNodes := sets.NewString()
-	for nodeName := range nodePods {
-		nonEmptyNodes.Insert(nodeName)
+	if len(nodePods) == 0 {
+		return workerList.Items
 	}
+
 	emptyWorkers := make([]*workers.Worker, 0)
 	for _, worker := range workerList.Items {
-		if worker.NodeName != "" && !nonEmptyNodes.Has(worker.NodeName) {
-			emptyWorkers = append(emptyWorkers, worker)
+		if worker.NodeName == "" || len(nodePods[worker.NodeName]) > 0 {
+			continue
 		}
+		emptyWorkers = append(emptyWorkers, worker)
 	}
 	return emptyWorkers
 }
