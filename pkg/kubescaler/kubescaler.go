@@ -188,7 +188,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 		}
 
 		// TODO: use workers instead of nodes (workerList may contain 'terminating' machines)
-		if config.WorkersCountMax >= len(rss.readyNodes) {
+		if config.WorkersCountMax > len(rss.readyNodes) {
 			var scaled bool
 			// try to scale up the cluster. In case of success no need to scale down
 			scaled, err = s.scaleUp(rss.unscheduledPods, allowedMachineTypes, currentTime)
