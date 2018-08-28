@@ -32,6 +32,7 @@ type Config struct {
 	MaxMachineProvisionTime string            `json:"maxMachineProvisionTime"`
 
 	Paused            *bool             `json:"paused,omitempty"`
+	PauseLock         bool              `json:"pauseLock"`
 	WorkersCountMin   int               `json:"workersCountMin"`
 	WorkersCountMax   int               `json:"workersCountMax"`
 	MachineTypes      []string          `json:"machineTypes"`

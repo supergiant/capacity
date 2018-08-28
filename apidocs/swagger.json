@@ -235,6 +235,10 @@
           "type": "boolean",
           "x-go-name": "Paused"
         },
+        "pauseLock": {
+          "type": "boolean",
+          "x-go-name": "PauseLock"
+        },
         "provider": {
           "type": "object",
           "additionalProperties": {

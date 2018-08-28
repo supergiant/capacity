@@ -107,6 +107,14 @@ func New(kubeConfig, kubescalerConfig, userDataFile string) (*Kubescaler, error)
 
 func (s *Kubescaler) Run(stop <-chan struct{}) {
 	log.Info("starting kubescaler...")
+	pauseLockCheck := s.GetConfig()
+	//checking to see if pauselock is engaged.
+	//We do this check here so the Warn will not eat up logs in the RunOnce func.
+	if pauseLockCheck.PauseLock == true {
+		log.Warn("Pause Lock engaged. Automatic Capacity will not occur.")
+	} else {
+		log.Info("Automatic Capacity will occur unless paused in the UI.")
+	}
 
 	go func() {
 		for {
@@ -127,8 +135,15 @@ func (s *Kubescaler) Run(stop <-chan struct{}) {
 func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 	config := s.GetConfig()
 	// TODO: turn on after e2e testing
-	if config.Paused != nil && *config.Paused {
-		//if true {
+	//Paused defaults to false if omitted.
+	paused := config.Paused != nil && *(config.Paused)
+	pauseLocked := config.PauseLock
+	if paused && !pauseLocked {
+		log.Info("Service is paused in the UI.")
+	}
+
+	if paused || pauseLocked {
+		//dont do auto scaling
 		return nil
 	}
 
