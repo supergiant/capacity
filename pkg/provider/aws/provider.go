@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"encoding/base64"
+	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -23,9 +24,6 @@ const (
 	KeyID          = "awsKeyID"
 	SecretKey      = "awsSecretKey"
 	Region         = "awsRegion"
-	InstanceID     = "awsInstanceID"
-	InstanceName   = "awsInstanceName"
-	InstanceType   = "awsInstanceType"
 	KeyName        = "awsKeyName"
 	ImageID        = "awsImageID"
 	IAMRole        = "awsIAMRole"
@@ -33,6 +31,7 @@ const (
 	SubnetID       = "awsSubnetID"
 	VolType        = "awsVolType"
 	VolSize        = "awsVolSize"
+	EBSOptimized   = "ebsOptimized"
 	Tags           = "awsTags"
 )
 
@@ -44,6 +43,7 @@ type Config struct {
 	SubnetID       string
 	VolType        string
 	VolSize        int64
+	EBSOptimized   *bool
 	Tags           map[string]string
 }
 
@@ -81,6 +81,7 @@ func New(clusterName string, config provider.Config) (*Provider, error) {
 			SubnetID:       config[SubnetID],
 			VolType:        config[VolType],
 			VolSize:        int64(100),
+			EBSOptimized:   parseBool(config[EBSOptimized]),
 			Tags:           tags,
 		},
 		client: client,
@@ -150,6 +151,7 @@ func (p *Provider) CreateMachine(ctx context.Context, name, mtype, clusterRole, 
 		SubnetID:       p.instConf.SubnetID,
 		VolumeType:     p.instConf.VolType,
 		VolumeSize:     p.instConf.VolSize,
+		EBSOptimized:   p.instConf.EBSOptimized,
 		Tags:           p.instConf.Tags,
 		UsedData:       base64.StdEncoding.EncodeToString([]byte(userData)),
 	})
@@ -213,4 +215,12 @@ func machineFrom(inst *ec2.Instance) *provider.Machine {
 		CreationTimestamp: *inst.LaunchTime,
 		State:             toString(inst.State),
 	}
+}
+
+func parseBool(s string) *bool {
+	b, err := strconv.ParseBool(s)
+	if err != nil {
+		return nil
+	}
+	return &b
 }

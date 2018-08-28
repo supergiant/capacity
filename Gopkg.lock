@@ -255,11 +255,11 @@
 
 [[projects]]
   branch = "extend_aws_provider"
-  digest = "1:5f77afc72ef81a4a33c99c548d5c5deabfa2c408131789deb6c944977a328af4"
+  digest = "1:1d84a8d4ab60f3cb90aaa36301d95f7d18bdbd68db75e3b93bf4ec9de1f63f12"
   name = "github.com/saheienko/supergiant"
   packages = ["pkg/clouds/aws"]
   pruneopts = "UT"
-  revision = "c46340d9eff65ff7ff4d54dd5564c6141055b774"
+  revision = "9ffa568f82a8bc2db2f4de8009f60608d2369654"
 
 [[projects]]
   digest = "1:606e395bc6f4011ae992e7ae0c613839d20ea097b8a9468e1683b22cefd8fd77"
