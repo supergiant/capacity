@@ -5,6 +5,7 @@ import (
 	"log/syslog"
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	lsyslog "github.com/sirupsen/logrus/hooks/syslog"
 )
@@ -49,6 +50,8 @@ func AddHook(name string) error {
 			return err
 		}
 		logrus.AddHook(hook)
+	default:
+		errors.New("unknown log hook: " + name)
 	}
 	return nil
 }
