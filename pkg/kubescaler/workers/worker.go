@@ -107,7 +107,7 @@ func NewManager(clusterName string, nodesClient v1.NodeInterface, provider provi
 		return nil, errors.Wrap(err, "get machine types")
 	}
 
-	var templ []byte
+	templ := []byte(userDataTpl)
 	//if userdata was provided
 	if conf.UserDataFile != "" {
 		//read userdata file
@@ -115,9 +115,6 @@ func NewManager(clusterName string, nodesClient v1.NodeInterface, provider provi
 		if err != nil {
 			return nil, err
 		}
-	} else { //If no userdata was provided
-		//use the default userdata
-		templ = []byte(userDataTpl)
 	}
 
 	t, err := template.New("userData").Parse(string(templ))

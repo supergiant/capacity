@@ -7,10 +7,13 @@ import (
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeutil "k8s.io/autoscaler/cluster-autoscaler/utils/kubernetes"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/supergiant/capacity/pkg/kubernetes/config"
+	"github.com/supergiant/capacity/pkg/kubernetes/filters"
+	"github.com/supergiant/capacity/pkg/kubernetes/listers"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers/fake"
 	"github.com/supergiant/capacity/pkg/log"
@@ -24,7 +27,7 @@ const (
 )
 
 var (
-	ErrNoAllowedMachined = errors.New("no allowed machines were provided")
+	ErrNoAllowedMachines = errors.New("no allowed machines were provided")
 
 	DefaultScanInterval            = time.Second * 20
 	DefaultMaxMachineProvisionTime = time.Minute * 10
@@ -41,7 +44,7 @@ type Kubescaler struct {
 	workers.WInterface
 
 	kclient        kubernetes.Clientset
-	listerRegistry ListerRegistry
+	listerRegistry listers.Registry
 }
 
 func New(kubeConfig, kubescalerConfig, userDataFile string) (*Kubescaler, error) {
@@ -51,58 +54,48 @@ func New(kubeConfig, kubescalerConfig, userDataFile string) (*Kubescaler, error)
 	}
 	cfg := conf.GetConfig()
 
-	var ks *Kubescaler
+	// use a fake kubescaler for testing
 	if conf.GetConfig().ProviderName == "fake" {
-		ks = &Kubescaler{
+		return &Kubescaler{
 			PersistentConfig: conf,
 			WInterface:       fake.NewManager(),
-		}
-	} else {
-		kclient, err := config.GetKubernetesClientSetBasicAuth(cfg.KubeAPIHost, cfg.KubeAPIPort, cfg.KubeAPIUser, cfg.KubeAPIPassword)
-		if err != nil {
-			return nil, err
-		}
-
-		v, err := kclient.ServerVersion()
-		if err != nil {
-			return nil, err
-		}
-
-		vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)
-		if err != nil {
-			return nil, err
-		}
-
-		workersConf := workers.Config{
-			KubeVersion:       v.String(),
-			MasterPrivateAddr: cfg.MasterPrivateAddr,
-			KubeAPIPort:       cfg.KubeAPIPort,
-			KubeAPIPassword:   cfg.KubeAPIPassword,
-			ProviderName:      cfg.ProviderName,
-			SSHPubKey:         cfg.SSHPubKey,
-			UserDataFile:      userDataFile,
-		}
-		wm, err := workers.NewManager(cfg.ClusterName, kclient.CoreV1().Nodes(), vmProvider, workersConf)
-		if err != nil {
-			return nil, err
-		}
-
-		ks = &Kubescaler{
-			PersistentConfig: conf,
-			WInterface:       wm,
-			// TODO: implement a cached lister registry
-			listerRegistry: kubeutil.NewListerRegistry(
-				nil,
-				kubeutil.NewReadyNodeLister(kclient, nil),
-				kubeutil.NewScheduledPodLister(kclient, nil),
-				kubeutil.NewUnschedulablePodLister(kclient, nil),
-				nil,
-				nil,
-			),
-		}
+		}, nil
 	}
 
-	return ks, nil
+	kclient, err := config.GetKubernetesClientSetBasicAuth(cfg.KubeAPIHost, cfg.KubeAPIPort, cfg.KubeAPIUser, cfg.KubeAPIPassword)
+	if err != nil {
+		return nil, err
+	}
+
+	v, err := kclient.ServerVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)
+	if err != nil {
+		return nil, err
+	}
+
+	workersConf := workers.Config{
+		KubeVersion:       v.String(),
+		MasterPrivateAddr: cfg.MasterPrivateAddr,
+		KubeAPIPort:       cfg.KubeAPIPort,
+		KubeAPIPassword:   cfg.KubeAPIPassword,
+		ProviderName:      cfg.ProviderName,
+		SSHPubKey:         cfg.SSHPubKey,
+		UserDataFile:      userDataFile,
+	}
+	wm, err := workers.NewManager(cfg.ClusterName, kclient.CoreV1().Nodes(), vmProvider, workersConf)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Kubescaler{
+		PersistentConfig: conf,
+		WInterface:       wm,
+		listerRegistry:   listers.NewRegistryWithDefaultListers(kclient, nil),
+	}, nil
 }
 
 func (s *Kubescaler) Run(stop <-chan struct{}) {
@@ -113,7 +106,7 @@ func (s *Kubescaler) Run(stop <-chan struct{}) {
 	if pauseLockCheck.PauseLock == true {
 		log.Warn("Pause Lock engaged. Automatic Capacity will not occur.")
 	} else {
-		log.Info("Automatic Capacity will occur unless paused in the UI.")
+		log.Info("Automatic Capacity will occur unless paused.")
 	}
 
 	go func() {
@@ -134,7 +127,7 @@ func (s *Kubescaler) Run(stop <-chan struct{}) {
 
 func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 	config := s.GetConfig()
-	// TODO: turn on after e2e testing
+
 	//Paused defaults to false if omitted.
 	paused := config.Paused != nil && *(config.Paused)
 	pauseLocked := config.PauseLock
@@ -174,21 +167,20 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 	}
 
 	if len(rss.unscheduledPods) > 0 {
-		// TODO: worker manager uses kube client, readyNodes - nodeLister...
-		if len(workerNodeNames(rss.workerList.Items)) != len(rss.readyNodes) {
-			log.Debugf("kubescaler: scale up: workerNodes(%d) != readyNodes(%d)",
-				len(workerNodeNames(rss.workerList.Items)), len(rss.readyNodes))
+		nodePods := nodePodsMap(rss.scheduledPods)
+		log.Debugf("kubescaler: scale up: nodepods %v, ready nodes %v", nodePods, nodeNames(rss.readyNodes))
+		if len(rss.readyNodes) < len(nodePods) {
+			// have some scheduled pods (pending|ready) that have been already scheduled on nodes (not ready yet).
 			return nil
 		}
-		// TODO: node has created, but controller doesn't assign a pod to it yet
-		log.Debugf("kubescaler: scale up: nodepods %#v, ready nodes %v", nodePodMap(rss.scheduledPods, rss.masterNodes), nodeNames(rss.readyNodes))
-		if len(rss.readyNodes) != len(nodePodMap(rss.scheduledPods, rss.masterNodes)) {
-			log.Debugf("kubescaler: scale up: there are empty nodes in cluster")
+
+		if emptyNodes := getEmptyNodes(rss.readyNodes, rss.allPods); len(emptyNodes) > 0 {
+			log.Debugf("kubescaler: scale up: there are %v ready empty nodes in the cluster", nodeNames(emptyNodes))
 			return nil
 		}
 
 		// TODO: use workers instead of nodes (workerList may contain 'terminating' machines)
-		if config.WorkersCountMax > len(rss.readyNodes) {
+		if config.WorkersCountMax > 0 && config.WorkersCountMax > len(rss.readyNodes) {
 			var scaled bool
 			// try to scale up the cluster. In case of success no need to scale down
 			scaled, err = s.scaleUp(rss.unscheduledPods, allowedMachineTypes, currentTime)
@@ -205,7 +197,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 	}
 
 	// TODO: workerList may contain 'terminating' machines.
-	if config.WorkersCountMin < len(rss.readyNodes) {
+	if config.WorkersCountMin > 0 && config.WorkersCountMin < len(rss.readyNodes) {
 		if err = s.scaleDown(rss.scheduledPods, rss.workerList, config.IgnoredNodeLabels, currentTime); err != nil {
 			return errors.Wrap(err, "scale down")
 		}
@@ -218,58 +210,38 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 }
 
 type resources struct {
-	masterNodes     []*corev1.Node
+	allNodes        []*corev1.Node
 	readyNodes      []*corev1.Node
+	allPods         []*corev1.Pod
 	scheduledPods   []*corev1.Pod
 	unscheduledPods []*corev1.Pod
 	workerList      *workers.WorkerList
 }
 
-func filterNodes(allNodes []*corev1.Node) (masterNodes []*corev1.Node, readyNodes []*corev1.Node) {
-	//we need to loop over all the Nodes
-	for _, node := range allNodes {
-		labels := node.Labels
-		//In the loop we need to check if the map contains kubernetes.io/role:master
-		value, ok := labels["kubernetes.io/role"]
-		if ok && value == "master" {
-			//	If this is true, append that node to masterNodes
-			masterNodes = append(masterNodes, node)
-		} else {
-			//	else append the node to readyNodes
-			readyNodes = append(readyNodes, node)
-		}
-	}
-	return
-}
-
 func (s *Kubescaler) getResources() (*resources, error) {
-	var rss resources
-	var err error
-
-	//We get all nodes first and filter out masterNodes and readyNodes
-	//readyNodes are nodes that are not a master and are also ready
-	allNodes, err := s.listerRegistry.ReadyNodeLister().List()
+	allNodes, err := s.listerRegistry.AllNodeLister().List()
 	if err != nil {
 		return nil, err
 	}
 
-	//Filtering all nodes to filter out masters
-	rss.masterNodes, rss.readyNodes = filterNodes(allNodes)
-
-	rss.scheduledPods, err = s.listerRegistry.ScheduledPodLister().List()
-	if err != nil {
-		return nil, err
-	}
-	rss.unscheduledPods, err = s.listerRegistry.UnschedulablePodLister().List()
-	if err != nil {
-		return nil, err
-	}
-	rss.workerList, err = s.ListWorkers(context.Background())
+	allPods, err := s.listerRegistry.AllPodLister().List()
 	if err != nil {
 		return nil, err
 	}
 
-	return &rss, nil
+	workers, err := s.ListWorkers(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	return &resources{
+		allNodes:        allNodes,
+		readyNodes:      filters.GetReadyNodes(allNodes),
+		allPods:         allPods,
+		scheduledPods:   filters.GetScheduledPods(allPods),
+		unscheduledPods: filters.GetUnschedulablePods(allPods),
+		workerList:      workers,
+	}, nil
 }
 
 func (s *Kubescaler) checkWorkers(workerList *workers.WorkerList, currentTime time.Time) ([]string, []string) {
@@ -345,4 +317,40 @@ func nodeNames(nodes []*corev1.Node) []string {
 		list[i] = nodes[i].Name
 	}
 	return list
+}
+
+const (
+	nodeLabelRole   = "kubernetes.io/role"
+	nodeLabelMaster = "master"
+)
+
+func filterOutMasters(nodes []*corev1.Node, pods []*corev1.Pod) []*corev1.Node {
+	masters := make(map[string]bool)
+	for _, pod := range pods {
+		if pod.Namespace == metav1.NamespaceSystem && pod.Labels[nodeLabelRole] == nodeLabelMaster {
+			masters[pod.Spec.NodeName] = true
+		}
+	}
+
+	// if masters aren't on the list of nodes, capacity will be increased on overflowing append
+	others := make([]*corev1.Node, 0, len(nodes)-len(masters))
+	for _, node := range nodes {
+		if !masters[node.Name] {
+			others = append(others, node)
+		}
+	}
+
+	return others
+}
+
+// getEmptyNodes filter out nodes that have at least one pod scheduled on it (node.name == pod.spec.nodeName).
+func getEmptyNodes(nodes []*corev1.Node, pods []*corev1.Pod) []*corev1.Node {
+	nodePods := nodePodsMap(pods)
+	emptyNodes := make([]*corev1.Node, 0)
+	for _, node := range nodes {
+		if len(nodePods[node.Name]) == 0 {
+			emptyNodes = append(emptyNodes, node)
+		}
+	}
+	return emptyNodes
 }
