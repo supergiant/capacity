@@ -18,6 +18,7 @@ var (
 	logger *logrus.Entry
 )
 
+// New creates a new logger with a stdout output.
 func New() {
 	logger = logrus.StandardLogger().WithFields(logrus.Fields{})
 	logrus.SetOutput(os.Stdout)

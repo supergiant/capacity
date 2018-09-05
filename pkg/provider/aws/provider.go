@@ -35,6 +35,8 @@ const (
 	Tags           = "awsTags"
 )
 
+// Config handles information used to create instances that become
+// nodes of the kube.
 type Config struct {
 	KeyName        string
 	ImageID        string
@@ -47,6 +49,8 @@ type Config struct {
 	Tags           map[string]string
 }
 
+// Provider add metadata to a Config and is used to inform various
+// operations.
 type Provider struct {
 	clusterName string
 	region      string
@@ -54,6 +58,9 @@ type Provider struct {
 	client      *aws.Client
 }
 
+// New creates a new AWSProvider which can be used to create
+// instances and perform other operations such as listing instances,
+// instance types, deleting nodes, etc.
 func New(clusterName string, config provider.Config) (*Provider, error) {
 	// TODO: parse and validate config
 	key, secret, region := config[KeyID], config[SecretKey], config[Region]
@@ -88,10 +95,14 @@ func New(clusterName string, config provider.Config) (*Provider, error) {
 	}, nil
 }
 
+// Name returns the name of the provider.
 func (p *Provider) Name() string {
 	return "aws"
 }
 
+// MachineTypes contacts AWS to ask what EC2 instance types
+// are allowed to be created. It returns a slice of objects with the
+// name (e.g. "m4.large", RAM, and CPU of each type).
 func (p *Provider) MachineTypes(ctx context.Context) ([]*provider.MachineType, error) {
 	// TODO: for each region aws supports different machine types (get just region ones)
 	instTypes, err := p.client.AvailableInstanceTypes(ctx)
@@ -121,6 +132,8 @@ func (p *Provider) MachineTypes(ctx context.Context) ([]*provider.MachineType, e
 	return mTypes, nil
 }
 
+// Machines contacts the AWS API to get a list of the current
+// instances present in the region.
 func (p *Provider) Machines(ctx context.Context) ([]*provider.Machine, error) {
 	insts, err := p.client.ListRegionInstances(ctx, p.region, nil)
 	if err != nil {
@@ -135,6 +148,10 @@ func (p *Provider) Machines(ctx context.Context) ([]*provider.Machine, error) {
 	return machines, nil
 }
 
+// CreateMachine takes a whole bunch of information, including a
+// machine config, and attempts to create an instance using the AWS
+// account it has access to. If successful, the machine information
+// is returned.
 func (p *Provider) CreateMachine(ctx context.Context, name, mtype, clusterRole, userData string, config provider.Config) (*provider.Machine, error) {
 	// TODO: merge and validate config parameters
 
@@ -162,6 +179,8 @@ func (p *Provider) CreateMachine(ctx context.Context, name, mtype, clusterRole, 
 	return machineFrom(inst), nil
 }
 
+// DeleteMachine sends a request to AWS to delete the instance passed
+// and returns the instance's id and state (if successful).
 func (p *Provider) DeleteMachine(ctx context.Context, id string) (*provider.Machine, error) {
 	instState, err := p.client.DeleteInstance(ctx, p.region, id)
 	if err != nil {
@@ -173,6 +192,7 @@ func (p *Provider) DeleteMachine(ctx context.Context, id string) (*provider.Mach
 	}, nil
 }
 
+// normalizeMemory removes the "B" from the memory string passed.
 func normalizeMemory(memory string) string {
 	// "1 GiB" --> "1Gi"
 	fixed := strings.Trim(strings.Replace(memory, " ", "", -1), "B")
@@ -183,14 +203,20 @@ func normalizeMemory(memory string) string {
 	return fixed
 }
 
+// parseMemory converts a string denoting memory capacity into a
+// resource type containing the converted information.
 func parseMemory(memory string) (resource.Quantity, error) {
 	return resource.ParseQuantity(normalizeMemory(memory))
 }
 
+// parseVCPU receives a string indicating vCPUs and returns a resource
+// type containing the converted information.
 func parseVCPU(vcpu string) (resource.Quantity, error) {
 	return resource.ParseQuantity(vcpu)
 }
 
+// getName receives an EC2 instance tag array and returns a string
+// value.
 func getName(tags []*ec2.Tag) string {
 	for _, tag := range tags {
 		if *tag.Key == "Name" {
@@ -200,6 +226,9 @@ func getName(tags []*ec2.Tag) string {
 	return ""
 }
 
+// toString receives an EC2 instance's state, which is an integer, and returns
+// a string value corresponding to the state while discarding other
+// data (e.g. if provided with 16 it returns "running").
 func toString(state *ec2.InstanceState) string {
 	if state == nil {
 		return ""
@@ -207,6 +236,8 @@ func toString(state *ec2.InstanceState) string {
 	return *state.Name
 }
 
+// machineFrom receives metadata from an EC2 instance and puts it into
+// fields in an object that are needed for the capacity service.
 func machineFrom(inst *ec2.Instance) *provider.Machine {
 	return &provider.Machine{
 		ID:                *inst.InstanceId,

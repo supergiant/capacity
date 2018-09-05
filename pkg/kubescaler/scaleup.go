@@ -40,6 +40,7 @@ func (s *Kubescaler) scaleUp(unscheduledPods []*corev1.Pod, machineTypes []*prov
 	return true, err
 }
 
+// filterIgnoringPods
 func filterIgnoringPods(pods []*corev1.Pod, allowedMachines []*provider.MachineType, currentTime time.Time) []*corev1.Pod {
 	filtered := make([]*corev1.Pod, 0)
 	for _, pod := range pods {
@@ -61,6 +62,8 @@ func filterIgnoringPods(pods []*corev1.Pod, allowedMachines []*provider.MachineT
 	return filtered
 }
 
+// hasMachineFor returns a true or false for whether or not there is
+// a machine that suits the resource requirements of the Pod sent.
 func hasMachineFor(machineTypes []*provider.MachineType, pod *corev1.Pod) bool {
 	cpu, mem := getCPUMem(pod)
 	for _, m := range machineTypes {
@@ -71,6 +74,8 @@ func hasMachineFor(machineTypes []*provider.MachineType, pod *corev1.Pod) bool {
 	return false
 }
 
+// bestMachineFor returns a MachineType that best suits the CPU and
+// RAM requirements passed to it.
 func bestMachineFor(cpu, mem resource.Quantity, machineTypes []*provider.MachineType) (provider.MachineType, error) {
 	if len(machineTypes) == 0 {
 		return provider.MachineType{}, ErrNoAllowedMachines
@@ -83,24 +88,34 @@ func bestMachineFor(cpu, mem resource.Quantity, machineTypes []*provider.Machine
 	return *machineTypes[len(machineTypes)-1], nil
 }
 
+// hasCPUMemoryContstraints returns a true or false for whether or
+// not the Pod passed to it has resource limits or requests.
 func hasCPUMemoryContstraints(pod *corev1.Pod) bool {
 	cpu, mem := getCPUMem(pod)
 	return cpu.Value() != 0 && mem.Value() != 0
 }
 
+// hasController returns a true or false for whether or not the Pod
+// passed to it has a controller (like a DaemonSet).
 func hasController(pod *corev1.Pod) bool {
 	return metav1.GetControllerOf(pod) != nil
 }
 
+// isNewPod returns a true or false for whether or not the Pod passed
+// to it is too new to reschedule.
 func isNewPod(pod *corev1.Pod, currentTime time.Time) bool {
 	// time should be synced for kubescaler & pod
 	return pod.CreationTimestamp.Add(unschedulablePodTimeBuffer).After(currentTime)
 }
 
+// hasDaemonSetController returns a true or false for whether or not
+// the Pod passed belongs to a DaemonSet.
 func hasDaemonSetController(pod *corev1.Pod) bool {
 	return metav1.GetControllerOf(pod) != nil && metav1.GetControllerOf(pod).Kind == "DaemonSet"
 }
 
+// getCPUMem returns the CPU and RAM for the Containers in the Pods
+// passed to it.
 func getCPUMem(pod *corev1.Pod) (resource.Quantity, resource.Quantity) {
 	var cpu, mem resource.Quantity
 	for _, c := range pod.Spec.Containers {
@@ -119,6 +134,8 @@ func getCPUMem(pod *corev1.Pod) (resource.Quantity, resource.Quantity) {
 	return cpu, mem
 }
 
+// getCPUMemTo adds up the CPU and RAM resources of the Containers in
+// the Pods passed using the resource quantities passed.
 func getCPUMemTo(cpu, mem *resource.Quantity, pod *corev1.Pod) {
 	for _, c := range pod.Spec.Containers {
 		if !c.Resources.Limits.Cpu().IsZero() {
@@ -135,6 +152,8 @@ func getCPUMemTo(cpu, mem *resource.Quantity, pod *corev1.Pod) {
 	}
 }
 
+// totalCPUMem looks at all of the Pods sent to it and returns
+// resource quantities for all of them.
 func totalCPUMem(pods []*corev1.Pod) (resource.Quantity, resource.Quantity) {
 	var cpu, mem resource.Quantity
 	for _, pod := range pods {
@@ -143,6 +162,8 @@ func totalCPUMem(pods []*corev1.Pod) (resource.Quantity, resource.Quantity) {
 	return cpu, mem
 }
 
+// podNames takes a slice of Pods and returns a slice of only the
+// pods' names.
 func podNames(pods []*corev1.Pod) []string {
 	list := make([]string, len(pods))
 	for i := range pods {
