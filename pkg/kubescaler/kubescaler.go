@@ -24,6 +24,8 @@ import (
 const (
 	// How old the oldest unschedulable pod should be before starting scale up.
 	unschedulablePodTimeBuffer = 2 * time.Second
+
+	newNodeTimeBuffer = 10 * time.Second
 )
 
 var (
@@ -167,6 +169,11 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 	}
 
 	if len(rss.unscheduledPods) > 0 {
+		if newNodes := getNewNodes(rss.allNodes, currentTime); len(newNodes) != 0 {
+			log.Debugf("kubescaler: scale up: newNodes=%v, skipping", newNodes)
+			return nil
+		}
+
 		nodePods := nodePodsMap(rss.scheduledPods)
 		log.Debugf("kubescaler: scale up: nodepods %v, ready nodes %v", nodePods, nodeNames(rss.readyNodes))
 		if len(rss.readyNodes) < len(nodePods) {
@@ -353,4 +360,18 @@ func getEmptyNodes(nodes []*corev1.Node, pods []*corev1.Pod) []*corev1.Node {
 		}
 	}
 	return emptyNodes
+}
+
+func getNewNodes(nodes []*corev1.Node, currentTime time.Time) []*corev1.Node {
+	newNodes := make([]*corev1.Node, 0)
+	for _, node := range nodes {
+		if isNewNode(node, currentTime) {
+			newNodes = append(newNodes, node)
+		}
+	}
+	return newNodes
+}
+
+func isNewNode(node *corev1.Node, currentTime time.Time) bool {
+	return node.CreationTimestamp.Add(newNodeTimeBuffer).After(currentTime)
 }
