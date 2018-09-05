@@ -270,11 +270,18 @@ func TestBestMachineFor(t *testing.T) {
 		expectedErr  error
 	}{
 		{
-			expectedErr: ErrNoAllowedMachined,
+			cpu:         resource.MustParse("1"),
+			mem:         resource.MustParse("1Mi"),
+			expectedErr: ErrNoAllowedMachines,
 		},
 		{
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
-			expectedRes:  machineType13,
+			expectedErr:  ErrEmptyCPUValue,
+		},
+		{
+			cpu:          resource.MustParse("1"),
+			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
+			expectedErr:  ErrEmptyMemoryValue,
 		},
 		{
 			cpu:          resource.MustParse("1"),
@@ -306,12 +313,18 @@ func TestBestMachineFor(t *testing.T) {
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType42,
 		},
+		{
+			cpu:          resource.MustParse("64"),
+			mem:          resource.MustParse("64Mi"),
+			machineTypes: []*provider.MachineType{&machineType42, &machineType13},
+			expectedRes:  machineType42,
+		},
 	}
 
 	for i, tc := range tcs {
 		res, err := bestMachineFor(tc.cpu, tc.mem, tc.machineTypes)
 		require.Equalf(t, tc.expectedErr, err, "TC#%d", i+1)
-		if err != nil {
+		if err == nil {
 			require.Equalf(t, tc.expectedRes, res, "TC#%d", i+1)
 		}
 	}

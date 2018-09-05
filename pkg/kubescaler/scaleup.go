@@ -73,7 +73,7 @@ func hasMachineFor(machineTypes []*provider.MachineType, pod *corev1.Pod) bool {
 
 func bestMachineFor(cpu, mem resource.Quantity, machineTypes []*provider.MachineType) (provider.MachineType, error) {
 	if len(machineTypes) == 0 {
-		return provider.MachineType{}, ErrNoAllowedMachined
+		return provider.MachineType{}, ErrNoAllowedMachines
 	}
 	for _, m := range machineTypes {
 		if m.CPUResource.Cmp(cpu) >= 0 && m.MemoryResource.Cmp(mem) == 1 {

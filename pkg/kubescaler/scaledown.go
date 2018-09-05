@@ -16,15 +16,14 @@ import (
 // TODO: use workers here
 func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, workerList *workers.WorkerList, ignoreLabels map[string]string, currentTime time.Time) error {
 	// TODO: don't skip failed stateful pods?
-	scheduledPods = filterDaemonSetPods(filterStandalonePods(scheduledPods))
-	//We are passing nil for masterNodes
-	nodePodsMap := nodePodMap(scheduledPods, nil)
+	scheduledPods = filterOutDaemonSetPods(filterOutStandalonePods(scheduledPods))
+	nodePodsMap := nodePodsMap(scheduledPods)
 
 	emptyWorkers := getEmpty(workerList, nodePodsMap)
 	if len(emptyWorkers) == 0 {
 		return nil
 	}
-	log.Debugf("kubescaler: scale down: nodepods %#v", nodePodsMap)
+	log.Debugf("kubescaler: scale down: nodepods %v", nodePodsMap)
 	log.Debugf("kubescaler: scale down: nodes to delete: %v", workerNodeNames(emptyWorkers))
 
 	removed := make([]string, 0)
@@ -65,22 +64,19 @@ func ignoreReason(w *workers.Worker, ignoreLabels map[string]string, currentTime
 	return ""
 }
 
-func nodePodMap(pods []*corev1.Pod, masters []*corev1.Node) map[string]int {
-	m := make(map[string]int)
-pods:
+func nodePodsMap(pods []*corev1.Pod) map[string][]string {
+	m := make(map[string][]string)
 	for _, pod := range pods {
-		//This loop excludes any pods that are running on masters.
-		for _, m := range masters {
-			if m.Name == pod.Spec.NodeName {
-				continue pods
-			}
+		if m[pod.Spec.NodeName] == nil {
+			m[pod.Spec.NodeName] = []string{pod.Name}
+			continue
 		}
-		m[pod.Spec.NodeName]++
+		m[pod.Spec.NodeName] = append(m[pod.Spec.NodeName], pod.Name)
 	}
 	return m
 }
 
-func filterStandalonePods(pods []*corev1.Pod) []*corev1.Pod {
+func filterOutStandalonePods(pods []*corev1.Pod) []*corev1.Pod {
 	filtered := make([]*corev1.Pod, 0)
 	for _, pod := range pods {
 		if metav1.GetControllerOf(pod) != nil {
@@ -90,7 +86,7 @@ func filterStandalonePods(pods []*corev1.Pod) []*corev1.Pod {
 	return filtered
 }
 
-func filterDaemonSetPods(pods []*corev1.Pod) []*corev1.Pod {
+func filterOutDaemonSetPods(pods []*corev1.Pod) []*corev1.Pod {
 	filtered := make([]*corev1.Pod, 0)
 	for _, pod := range pods {
 		if !hasDaemonSetController(pod) {
@@ -100,7 +96,7 @@ func filterDaemonSetPods(pods []*corev1.Pod) []*corev1.Pod {
 	return filtered
 }
 
-func getEmpty(workerList *workers.WorkerList, nodePods map[string]int) []*workers.Worker {
+func getEmpty(workerList *workers.WorkerList, nodePods map[string][]string) []*workers.Worker {
 	if workerList == nil {
 		return nil
 	}
