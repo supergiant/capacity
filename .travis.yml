@@ -1,0 +1,27 @@
+services:
+- docker
+
+cache:
+  directories:
+  - /tmp/cache
+
+env:
+  global:
+  - secure: zlSORuoVHI2SoMcmnY1BLyp6HjkP/endf4TaPBoKizKCrft7Wa8BoDmMXyYBEeh8PZyT6/CTDHhooNhHDeAsGkCxBt77tprTbf5Q06t1Faatqs8x3Vz0/xP/EchH0GsFIpPq/SBEf3uKpvy59wZGf7FjSB4yDYe3IyhxPI7DYQ4VK5Xn06Vm6OWTFuLovG3nzjWLEy6YS+OzEHyJGDvAyKvU8H9BdYeiXSOSGWISrbn2EbiywXsKBPqZi2nMZ4Kia7Z+VMVMkzED2YtX95QyJe2tjt0RBbKJ2TbyCOchmL4/gALeCMDPPH4zbSgegj99DHe1UjUdYhAvtn4KiDv9snUSVToUHBL3mw1JKwtaSQDRn3hYlsEEAais/jUaUjfX7V5le8hZPiAOouiAFBOjNnKVnVWmKEhUE1xsiEJPuS6/TABRyhZyn6N6l5YWINYQOsFJU8/TcmlIYyI0wCUeM31TKcor2i9iLLZDKVWTnFg3tvBj2t65kVFxjSskkad3AlWH6Zy12bafbg32cxlWse2TgKJbxHHDJZdufCm8Y/4rOQcO4WZIF7yGW4anXrUjdUz9PnGUZJ8uIEqBiGudXBKV1ZmofOklblTdec1HzpbHj48Oq4fhgjPySdaJiLbHwHOu3axiAtFrf1E1ZL5km9rCVOaMMNyv3xAOQhDfyz0=
+  - secure: zCfTGPRDd1GHYJoWD2whfY37MktVLTkFUXGWKk4XhMmz1mkoCcMn1etf4u44n6yLuXo+ZDEAIYsyTYTasVzcNgGkTEcsFpSnVdcBeyhHIzV3bCFzorTSzCR7Sznw0F/Ak1TVV/4AXtJTe+5ubS2gFUzk1ve8QJRTU+oxzjO0zAfhjcdQvVsWD87Foub6B1GWTILpLrv0HtFiUV9V5dRmREM2QIVLzW5O6mPSMwdgCK9Jal3BSUiZ1ZchNE4uEIvNzwEnZ6buoWXT8iTdBGyjMpqVH9mmRcRdhlNvBnp+KT896cc7qh+0Km86Jymx7/RhbXdeyGUao/mO+1675w4PDTQOeBIOprt5QuHgWFdwFevMKd2XUVfWnaCg0y1KSOABI0EJiu6uzMO6pTCzx+Qc8u55L7avEwwnEZnGA38WQE3m0C76J/BHQhgp1YdG5lm4bcGRAZctzJ4RKutS0K2BkK6hGGqV3Poo7RODO1TOtMpgL/PZRa16bABpchAC2YAP0JBAr3futtLT6bEJQrPdD/jZZwAS2TPACX2ADvjFNu7TIrRDuG52ptyC+kbILwKXtqe7SIOcMNjr1KnHqeyfhsnVYQNAAdjwotptpssxwVvIFOmZFKPOTVF3STUmA7C4QMBeOTX+aMe1GUMjx5g+/ZBUm022nNKYGsOJEaVybvE=
+
+before_script:
+- TEMP='^release-(.*)$'
+- '[[ "$TRAVIS_BRANCH" =~ $TEMP ]] ||:'
+- '[ -f /tmp/cache/docker-images.tar.gz ] && (gunzip </tmp/cache/docker-images.tar.gz | docker load) ||:'
+
+script:
+- travis_wait docker build --tag supergiant/capacity:v${BASH_REMATCH[1]} .
+
+before_cache:
+- mkdir -p /tmp/cache
+  docker save $(docker images -q) | gzip >/tmp/cache/docker-images.tar.gz
+
+after_success:
+- if [[ "$TRAVIS_BRANCH" =~ $TEMP ]]; then docker login -u $DOCKER_USERNAME -p
+  $DOCKER_PASSWORD ; docker push supergiant/capacity:v${BASH_REMATCH[1]}; fi

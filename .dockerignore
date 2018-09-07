@@ -1,0 +1,4 @@
+.git
+.dockerignore
+Dockerfile
+cmd/capacity-service/capacity-service
