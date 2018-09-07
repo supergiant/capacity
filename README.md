@@ -32,7 +32,7 @@ Supergiant: Capacity Service
 
 # Community and Contributing
 
-Contributions come in a vast variety, whether docs edits, pull requests--even social media engagement--and we're thankful for community support! We only ask that users keep in mind the [Community and Contribution Guidelines](https://dash.readme.io/project/supergiant/v2.0.0/docs/guidelines), as there may be rare occasions in which we need to take action. In addtion to this, code contributions do have [a few important rules](https://supergiant.readme.io/v2.0.0/docs/guidelines#section-code-contributions) (we aren't allowed to accept code without adherence to them).
+Contributions come in a vast variety, whether docs edits, pull requests--even social media engagement--and we're thankful for community support! We only ask that users keep in mind the [Community and Contribution Guidelines](https://supergiant.readme.io/v2.0.0/docs/guidelines), as there may be rare occasions in which we need to take action. In addtion to this, code contributions do have [a few important rules](https://supergiant.readme.io/v2.0.0/docs/guidelines#section-code-contributions) (we aren't allowed to accept code without adherence to them).
 
 ## Development
 
