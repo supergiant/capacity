@@ -42,9 +42,13 @@ func SortedMachineTypes(mtypes []*MachineType) []*MachineType {
 	sorted := make([]*MachineType, len(mtypes))
 	copy(sorted, mtypes)
 	sort.SliceStable(sorted, func(i, j int) bool {
-		byCPU := sorted[j].CPUResource.Cmp(sorted[i].CPUResource) > -1
-		byMemory := sorted[j].MemoryResource.Cmp(sorted[i].MemoryResource) > -1
-		return byCPU && byMemory
+		lessCPU := sorted[i].CPUResource.Cmp(sorted[j].CPUResource) == -1
+		equalCPU := sorted[i].CPUResource.Cmp(sorted[j].CPUResource) == 0
+		lessMemory := sorted[i].MemoryResource.Cmp(sorted[j].MemoryResource) == -1
+		if equalCPU {
+			return lessMemory
+		}
+		return lessCPU
 	})
 	return sorted
 }
