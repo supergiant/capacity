@@ -20,7 +20,7 @@ script:
 
 before_cache:
 - mkdir -p /tmp/cache
-  docker save $(docker images -q) | gzip >/tmp/cache/docker-images.tar.gz
+- docker save $(docker images -q) | gzip >/tmp/cache/docker-images.tar.gz
 
 after_success:
 - if [[ "$TRAVIS_BRANCH" =~ $TEMP ]]; then docker login -u $DOCKER_USERNAME -p
