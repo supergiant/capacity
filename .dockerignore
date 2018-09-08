@@ -2,3 +2,4 @@
 .dockerignore
 Dockerfile
 cmd/capacity-service/capacity-service
+.travis.yml
