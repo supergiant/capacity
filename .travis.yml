@@ -13,13 +13,16 @@ env:
 before_script:
 - TEMP='^release-(.*)$'
 - '[[ "$TRAVIS_BRANCH" =~ $TEMP ]] ||:'
+- sudo service docker stop
 - 'sudo tar -C /var/lib/docker -xzf /tmp/cache/docker.tar.gz ||:'
+- sudo service docker start
 
 script:
 - travis_wait docker build --tag supergiant/capacity:v${BASH_REMATCH[1]} .
 
 before_cache:
 - mkdir -p /tmp/cache
+- sudo service docker stop
 - sudo tar -C /var/lib/docker -cf - /var/lib/docker | gzip --fast >/tmp/cache/docker.tar.gz
 
 after_success:
