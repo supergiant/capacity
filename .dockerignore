@@ -1,5 +1,5 @@
 .git
 .dockerignore
 Dockerfile
-cmd/capacity-service/capacity-service
 .travis.yml
+cmd/capacity-service/capacity-service
