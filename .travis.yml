@@ -20,7 +20,7 @@ script:
 - travis_wait docker build --tag supergiant/capacity:v${BASH_REMATCH[1]} .
 
 before_cache:
-- rm -R /tmp/cache
+- 'sudo rm -R /tmp/cache ||:'
 - mkdir -p /tmp/cache
 - docker save -o /tmp/cache/docker.tar build supergiant/capacity:v${BASH_REMATCH[1]}
 
