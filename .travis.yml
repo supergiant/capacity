@@ -20,7 +20,7 @@ script:
 
 before_cache:
 - mkdir -p /tmp/cache
-- sudo tar -C /var/lib/docker -cf - /var/lib/docker | gzip --fast >/tmp/cache/docker.tar.gz
+- sudo tar -C /var/lib/docker -cvf - /var/lib/docker | gzip --fast >/tmp/cache/docker.tar.gz
 
 after_success:
 - if [[ "$TRAVIS_BRANCH" =~ $TEMP ]]; then docker login -u $DOCKER_USERNAME -p
