@@ -13,17 +13,18 @@ env:
 before_script:
 - branchRegEx='^release-(.*)$'
 - '[[ "$TRAVIS_BRANCH" =~ $branchRegEx ]] ||:'
+- export RELEASE_NAME="v${BASH_REMATCH[1]}"
 - 'docker load -i /tmp/cache/docker.tar ||:'
 
 script:
 - travis_wait docker build --tag build --target build .
-- travis_wait docker build --tag supergiant/capacity:v${BASH_REMATCH[1]} .
+- travis_wait docker build --tag supergiant/capacity:$RELEASE_NAME .
 
 before_cache:
 - 'sudo rm -R /tmp/cache ||:'
 - mkdir -p /tmp/cache
-- docker save -o /tmp/cache/docker.tar build supergiant/capacity:v${BASH_REMATCH[1]}
+- docker save -o /tmp/cache/docker.tar build supergiant/capacity:$RELEASE_NAME
 
 after_success:
 - if [[ "$TRAVIS_BRANCH" =~ $branchRegEx ]]; then docker login -u $DOCKER_USERNAME -p
-  $DOCKER_PASSWORD ; docker push supergiant/capacity:v${BASH_REMATCH[1]}; fi
+  $DOCKER_PASSWORD ; docker push supergiant/capacity:$RELEASE_NAME; fi
