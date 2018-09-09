@@ -15,7 +15,7 @@ before_script:
 - '[[ "$TRAVIS_BRANCH" =~ $branchRegEx ]] ||:'
 - export RELEASE_NAME="v${BASH_REMATCH[1]}"
 - 'docker load -i /tmp/cache/docker.tar ||:'
-- find -exec touch -r {} -d @0 {} \;
+- rm -Rf .git
 
 script:
 - travis_wait docker build --tag build --target build .
