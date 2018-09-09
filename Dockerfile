@@ -25,6 +25,7 @@ COPY . src/github.com/supergiant/capacity/
 WORKDIR src/github.com/supergiant/capacity/cmd/capacity-service
 RUN rm -Rf ../../vendor
 RUN go build -v -ldflags="-s -w"
+RUN mv capacity-service /tmp/bin/
 
 # add init script
 COPY docker-init /tmp/bin/init
