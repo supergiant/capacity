@@ -2,20 +2,20 @@ FROM golang AS build
 RUN apt update
 RUN apt install upx-ucl -y
 WORKDIR /go
+RUN mkdir /tmp/bin
+RUN mkdir /tmp/emptydir
+ADD https://github.com/supergiant/env2conf/releases/download/v1.0.0/env2conf /tmp/bin/
+RUN chmod +x /tmp/bin/env2conf
+ADD https://busybox.net/downloads/binaries/1.27.1-i686/busybox_ASH /tmp/bin/sh
+RUN chmod +x /tmp/bin/sh
+RUN upx --brute /tmp/bin/sh
 RUN mkdir -p src/github.com/supergiant/capacity
 COPY . src/github.com/supergiant/capacity/
 WORKDIR src/github.com/supergiant/capacity/cmd/capacity-service
 RUN CGO_ENABLED=0 go build -v -ldflags="-s -w"
 RUN ls -lh capacity-service
 #RUN upx --brute capacity-service
-RUN mkdir /tmp/bin
-RUN mkdir /tmp/emptydir
 RUN mv capacity-service /tmp/bin/
-ADD https://github.com/supergiant/env2conf/releases/download/v1.0.0/env2conf /tmp/bin/
-RUN chmod +x /tmp/bin/env2conf
-ADD https://busybox.net/downloads/binaries/1.27.1-i686/busybox_ASH /tmp/bin/sh
-RUN chmod +x /tmp/bin/sh
-RUN upx --brute /tmp/bin/sh
 ADD docker-init /tmp/bin/init
 RUN chmod +x /tmp/bin/init
 RUN ls -lh /tmp/bin
