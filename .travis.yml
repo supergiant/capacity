@@ -14,20 +14,16 @@ before_script:
 - branchRegEx='^release-(.*)$'
 - '[[ "$TRAVIS_BRANCH" =~ $branchRegEx ]] ||:'
 - export RELEASE_NAME="v${BASH_REMATCH[1]}"
-- 'for image in /tmp/cache/docker-*.tar ; do docker load -i "$image" ||: ; done'
+- 'docker load -i /tmp/cache/docker.tar ||:'
 
 script:
 - travis_wait docker build --tag build --target build .
 - travis_wait docker build --tag supergiant/capacity:$RELEASE_NAME .
 
 before_cache:
+- 'sudo rm -Rf /tmp/cache ||:'
 - mkdir -p /tmp/cache
-- "for image in
-     $(docker history -q build | tr '\n' ' ' | tr -d '<missing>')
-     $(docker history -q supergiant/capacity:$RELEASE_NAME | tr '\n' ' ' | tr -d '<missing>') ; do
-     echo \"$image\" \n
-     [ -f \"/tmp/cache/docker-${image}.tar\" ] || docker save -o \"/tmp/cache/docker-${image}.tar\" \"$image\" ||: \n
-  done"
+- "docker save -o /tmp/cache/docker.tar $(docker history -q build | tr '\n' ' ' | tr -d '<missing>')"
 
 after_success:
 - if [[ "$TRAVIS_BRANCH" =~ $branchRegEx ]]; then docker login -u $DOCKER_USERNAME -p
