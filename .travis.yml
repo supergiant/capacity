@@ -11,22 +11,23 @@ env:
   - secure: "kFyGaBpFTHX3ZXKHT3pwaLmPxKkZdtLQPXEPEkQ2pwo7gFQAcLBfey41o30uqrxZztLEMPipz08pngzA8cnRajZuFDmhD9b5UcSbI6VzxkXXcusgSmOjdV3DQ0ckRhg9KfkmIOOMkxPU5CfPAw4n/wpKQHKNSepEWE/axOwkK6mZZf92t5tpBKOyzBNgQkNOYRSNBiElosevN0K0sLd8cMfNdqwQFLHBxuJPxABhFdG/u76Js84AbHN+zjFA4mBbP+Nxh6spunk85jo8mm/C04/dgEiv6J20TofRAH7q4NncFVi0u6iWoCbjFW37ahSJ3f4XT90A4zy8sZUWA8P2nUZipSIhJl3M0DcNkFDDoCU7n/VhiBWGbEobzsSouYtIXz8QE0aaOeho2ds3ywnYc3u9jxqBzsAxdG6hw0pJTf6EbLXPGoLZVurRZlU9N4KcTzQs+qhA116zC2n/Izxi6S4KeAcB06LrOJ/j9uX7qBxC1VM55HLvMBpf/khUBRLkGeGnP/6sNO56oeEFz8TIdQ23wW2js+KTZziIHsEFnW/7BLXSgynfK1B58/wWmkWDPe5YQOXRQp1dBVUmz/6L61IZFOah/xlYqc+EbTyd+4Ipus63/hH6qJPUl9mIkEBoM7WJd/tlaMOtRjZkc5WB9B/9okcWrfQOxOo6mJGPxIY="
 
 before_script:
-- set -x
 - branchRegEx='^release-(.*)$'
 - '[[ "$TRAVIS_BRANCH" =~ $branchRegEx ]] ||:'
 - export RELEASE_NAME="v${BASH_REMATCH[1]}"
-- 'docker load -i /tmp/cache/docker.tar ||:'
+- 'for image in /tmp/cache/docker-*.tar ; do docker load -i "$image" ||: ; done'
 
 script:
 - travis_wait docker build --tag build --target build .
 - travis_wait docker build --tag supergiant/capacity:$RELEASE_NAME .
 
 before_cache:
-- 'sudo rm -R /tmp/cache ||:'
 - mkdir -p /tmp/cache
-- docker save -o /tmp/cache/docker.tar
-    $(docker history -q build | tr '\n' ' ' | tr -d '<missing>')
-    $(docker history -q supergiant/capacity:$RELEASE_NAME | tr '\n' ' ' | tr -d '<missing>')
+- "for image in
+     $(docker history -q build | tr '\n' ' ' | tr -d '<missing>')
+     $(docker history -q supergiant/capacity:$RELEASE_NAME | tr '\n' ' ' | tr -d '<missing>') ; do
+     echo \"$image\" \n
+     [ -f \"/tmp/cache/docker-${image}.tar\" ] || docker save -o \"/tmp/cache/docker-${image}.tar\" \"$image\" ||: \n
+  done"
 
 after_success:
 - if [[ "$TRAVIS_BRANCH" =~ $branchRegEx ]]; then docker login -u $DOCKER_USERNAME -p
