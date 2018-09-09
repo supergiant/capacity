@@ -23,7 +23,9 @@ script:
 before_cache:
 - 'sudo rm -R /tmp/cache ||:'
 - mkdir -p /tmp/cache
-- docker save -o /tmp/cache/docker.tar build supergiant/capacity:$RELEASE_NAME
+- docker save -o /tmp/cache/docker.tar \
+    $(docker history -q build | tr '\n' ' ' | tr -d '<missing>') \
+    $(docker history -q supergiant/capacity:$RELEASE_NAME | tr '\n' ' ' | tr -d '<missing>')
 
 after_success:
 - if [[ "$TRAVIS_BRANCH" =~ $branchRegEx ]]; then docker login -u $DOCKER_USERNAME -p

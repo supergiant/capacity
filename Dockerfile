@@ -7,7 +7,7 @@ COPY . src/github.com/supergiant/capacity/
 WORKDIR src/github.com/supergiant/capacity/cmd/capacity-service
 RUN CGO_ENABLED=0 go build -v -ldflags="-s -w"
 RUN ls -lh capacity-service
-RUN upx --brute capacity-service
+#RUN upx --brute capacity-service
 RUN mkdir /tmp/bin
 RUN mkdir /tmp/emptydir
 RUN mv capacity-service /tmp/bin/
