@@ -25,6 +25,6 @@ before_cache:
 - "docker save -o /tmp/cache/docker.tar $(docker history -q build | tr '\n' ' ' | tr -d '<missing>')"
 
 after_success:
-- if [[ "$TRAVIS_BRANCH" =~ $branchRegEx ]]; then docker login -u $DOCKER_USERNAME -p
+- if ! [[ "${TRAVIS_BRANCH,,}" =~ private ]]; then docker login -u $DOCKER_USERNAME -p
   $DOCKER_PASSWORD ; docker push supergiant/capacity:$RELEASE_NAME; fi
 
