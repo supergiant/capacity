@@ -12,12 +12,12 @@ env:
 
 before_script:
 - branchRegEx='^release-(.*)$'
-- '[[ "$TRAVIS_BRANCH" =~ $branchRegEx ]] && export BUILD_ARGS="$BUILD_ARGS --build-arg compress=true" && export RELEASE_NAME="v${BASH_REMATCH[1]}" || export RELEASE_NAME="$TRAVIS_BRANCH"'
+- '[[ "$TRAVIS_BRANCH" =~ $branchRegEx ]] && export RELEASE_NAME="v${BASH_REMATCH[1]}" || export RELEASE_NAME="$TRAVIS_BRANCH"'
 - 'docker load -i /tmp/cache/docker.tar ||:'
 
 script:
-- travis_wait docker build --tag build --target build $BUILD_ARGS .
-- travis_wait docker build --tag supergiant/capacity:$RELEASE_NAME $BUILD_ARGS .
+- docker build --tag build --target build .
+- docker build --tag supergiant/capacity:$RELEASE_NAME .
 
 before_cache:
 - 'sudo rm -Rf /tmp/cache ||:'

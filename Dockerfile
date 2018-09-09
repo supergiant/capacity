@@ -1,10 +1,7 @@
 FROM golang AS build
+
 # enable totally static binaries
 ENV CGO_ENABLED "0"
-
-# install UPX
-RUN apt update
-RUN apt install upx-ucl -y
 
 # needed so we can mkdir in the scratch container later
 RUN mkdir /tmp/emptydir
@@ -15,7 +12,6 @@ ADD https://github.com/supergiant/env2conf/releases/download/v1.0.0/env2conf /tm
 RUN chmod +x /tmp/bin/env2conf
 ADD https://busybox.net/downloads/binaries/1.27.1-i686/busybox_ASH /tmp/bin/sh
 RUN chmod +x /tmp/bin/sh
-RUN upx --ultra-brute /tmp/bin/sh
 
 
 # build vendor stuff first to exploit cache
@@ -33,11 +29,6 @@ RUN go build -v -ldflags="-s -w"
 # add init script
 COPY docker-init /tmp/bin/init
 RUN chmod +x /tmp/bin/init
-
-# optional compression
-ARG compress=false
-RUN [ $compress = true ] && upx --ultra-brute capacity-service ||:
-RUN mv capacity-service /tmp/bin/
 
 # build final container
 FROM scratch
