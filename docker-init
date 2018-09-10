@@ -9,4 +9,7 @@ if [ -f /etc/capacity-service/userdata ] ; then
 	userdataArgs="--user-data /etc/capacity-service/userdata"
 fi
 
+httpd -h /www
 capacity-service --kubescaler-config /etc/capacity-service/config.json $userdataArgs $EXTRA_ARGS
+
+

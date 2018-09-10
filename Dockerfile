@@ -1,4 +1,15 @@
-FROM golang AS build
+FROM golang:stretch AS build
+
+# build busybox
+WORKDIR ~
+RUN apt update && apt install -y build-essential
+RUN git clone git://busybox.net/busybox.git
+WORKDIR busybox
+COPY busybox-config .config
+RUN make
+RUN mkdir /tmp/bin
+RUN cp busybox /tmp/bin/sh
+RUN ln -rs /tmp/bin/sh /tmp/bin/httpd
 
 # enable totally static binaries
 ENV CGO_ENABLED "0"
@@ -6,17 +17,24 @@ ENV CGO_ENABLED "0"
 # needed so we can mkdir in the scratch container later
 RUN mkdir /tmp/emptydir
 
-# get env2conf and a shell
-RUN mkdir /tmp/bin
+# get env2conf
 ADD https://github.com/supergiant/env2conf/releases/download/v1.0.0/env2conf /tmp/bin/
 RUN chmod +x /tmp/bin/env2conf
-ADD https://busybox.net/downloads/binaries/1.27.1-i686/busybox_ASH /tmp/bin/sh
-RUN chmod +x /tmp/bin/sh
-
 
 # build vendor stuff first to exploit cache
 COPY vendor /go/src/
 RUN cd /go/src && go install -v ./...
+
+# build the UI and run it
+COPY cmd/capacity-service/ui/capacity-service ~/ui
+WORKDIR ~/ui
+RUN sed -i -e 's/stretch/buster/g' /etc/apt/sources.list
+RUN apt update
+RUN apt install npm -y
+RUN npm install
+RUN npm install -g @angular/cli
+EXPOSE 4200
+RUN ng build
 
 # do the build
 WORKDIR /go
@@ -26,7 +44,7 @@ WORKDIR src/github.com/supergiant/capacity/cmd/capacity-service
 RUN rm -Rf ../../vendor
 RUN go build -v -ldflags="-s -w"
 RUN mv capacity-service /tmp/bin/
-
+ 
 # add init script
 COPY docker-init /tmp/bin/init
 RUN chmod +x /tmp/bin/init
@@ -39,4 +57,5 @@ COPY --from=build /tmp/emptydir /etc
 COPY --from=build /tmp/emptydir /etc/capacity-service
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/
 COPY --from=build /tmp/bin /bin
+COPY --from=build ~/ui/dist /www
 CMD ["init"]
