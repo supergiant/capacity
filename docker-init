@@ -1,15 +1,12 @@
 #! /bin/sh
-capacityServiceArgs=""
-
 # use config file if it exists, else build one from env
 if ! [ -f /etc/capacity-service/config.json ] ; then
 	env2conf config. >/etc/capacity-service/config.json
 fi
-capacityServiceArgs+="--kubescaler-config /etc/capacity-service/config.json "
 
 # if userdata was supplied via a config map, use it
 if [ -f /etc/capacity-service/userdata ] ; then
-	capacityServiceArgs+="--user-data /etc/capacity-service/userdata"
+	userdataArgs="--user-data /etc/capacity-service/userdata"
 fi
 
-capacity-service $capacityServiceArgs
+capacity-service --kubescaler-config /etc/capacity-service/config.json $userdataArgs
