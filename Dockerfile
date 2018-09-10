@@ -37,7 +37,6 @@ ENV PATH "/bin"
 ENV SSL_CERT_FILE "/etc/ca-certificates.crt"
 COPY --from=build /tmp/emptydir /etc
 COPY --from=build /tmp/emptydir /etc/capacity-service
-COPY --from=build /tmp/emptydir /incoming-config
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/
 COPY --from=build /tmp/bin /bin
 CMD ["init"]
