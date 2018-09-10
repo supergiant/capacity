@@ -14,7 +14,7 @@ import (
 // awsInstanceRegMatch represents Regex Match for AWS instance.
 var awsInstanceRegMatch = regexp.MustCompile("^i-[^/]*$")
 
-// parseProviderID extracts the awsInstanceID from the providerID
+// GetMachineID extracts the awsInstanceID from the providerID
 //
 // providerID represents the id for an instance in the kubernetes API;
 // the following form
