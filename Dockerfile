@@ -26,11 +26,12 @@ COPY vendor /go/src/
 RUN cd /go/src && go install -v ./...
 
 # build the UI and run it
-COPY cmd/capacity-service/ui/capacity-service ~/ui
-WORKDIR ~/ui
+COPY cmd/capacity-service/ui/capacity-service /tmp/ui
+WORKDIR /tmp/ui
 RUN sed -i -e 's/stretch/buster/g' /etc/apt/sources.list
 RUN apt update
 RUN apt install npm -y
+RUN npm i npm@latest -g
 RUN npm install
 RUN npm install -g @angular/cli
 EXPOSE 4200
@@ -57,5 +58,5 @@ COPY --from=build /tmp/emptydir /etc
 COPY --from=build /tmp/emptydir /etc/capacity-service
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/
 COPY --from=build /tmp/bin /bin
-COPY --from=build ~/ui/dist /www
+COPY --from=build /tmp/ui/dist /www
 CMD ["init"]
