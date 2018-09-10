@@ -1,8 +1,12 @@
 FROM golang:stretch AS build
 
+# install dependencies (npm isn't avalible in stretch)
+RUN sed -i -e 's/stretch/buster/g' /etc/apt/sources.list
+RUN apt-get update && apt-get install -y npm build-essential
+RUN npm i npm@latest -g
+
 # build busybox
 WORKDIR ~
-RUN apt update && apt install -y build-essential
 RUN git clone git://busybox.net/busybox.git
 WORKDIR busybox
 COPY busybox-config .config
@@ -25,27 +29,21 @@ RUN chmod +x /tmp/bin/env2conf
 COPY vendor /go/src/
 RUN cd /go/src && go install -v ./...
 
-# build the UI and run it
+# build the UI
 COPY cmd/capacity-service/ui/capacity-service /tmp/ui
 WORKDIR /tmp/ui
-RUN sed -i -e 's/stretch/buster/g' /etc/apt/sources.list
-RUN apt update
-RUN apt install npm -y
-RUN npm i npm@latest -g
 RUN npm install
 RUN npm install -g @angular/cli
-EXPOSE 4200
 RUN ng build
 
 # do the build
-WORKDIR /go
-RUN mkdir -p src/github.com/supergiant/capacity
-COPY . src/github.com/supergiant/capacity/
-WORKDIR src/github.com/supergiant/capacity/cmd/capacity-service
+RUN mkdir -p /go/src/github.com/supergiant/capacity
+COPY . /go/src/github.com/supergiant/capacity/
+WORKDIR /go/src/github.com/supergiant/capacity/cmd/capacity-service
 RUN rm -Rf ../../vendor
 RUN go build -v -ldflags="-s -w"
 RUN mv capacity-service /tmp/bin/
- 
+
 # add init script
 COPY docker-init /tmp/bin/init
 RUN chmod +x /tmp/bin/init
