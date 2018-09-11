@@ -7,6 +7,7 @@ import (
 
 	"github.com/alexflint/go-arg"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
+	"github.com/gobuffalo/packr"
 
 	"github.com/supergiant/capacity/pkg/capacityserver"
 	"github.com/supergiant/capacity/pkg/log"
@@ -57,8 +58,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not attach UI server to mux: %v\n", err)
 	}
+	uiFiles := packr.NewBox("./ui/capacity-service/dist")
 	mux.PathPrefix("/ui/").Handler(
-		http.StripPrefix("/ui/", http.FileServer( http.Dir("/tmp") )),
+		http.StripPrefix("/ui/", http.FileServer(uiFiles)),
 	)
 
 	stopCh := signals.SetupSignalHandler()
