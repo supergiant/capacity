@@ -11,7 +11,7 @@ import (
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers/version"
 	"github.com/supergiant/capacity/pkg/kubescaler"
 )
-//import "github.com/gobuffalo/packr"
+import "github.com/gobuffalo/packr"
 import "fmt"
 
 func Handler(ks *capacity.Kubescaler) (http.Handler, error) {
@@ -33,8 +33,10 @@ func Handler(ks *capacity.Kubescaler) (http.Handler, error) {
 		cors.AllowAll().Handler,
 	)
 
-	//uiFiles := packr.NewBox("/tmp/www")
-	r.PathPrefix("/ui/").Handler(http.StripPrefix("/ui/", http.FileServer(http.Dir("/tmp"))))
+	uiFiles := packr.NewBox("/tmp/ui")
+	r.PathPrefix("/ui/").Handler(
+		http.StripPrefix("/ui/", http.FileServer(uiFiles)),
+	)
 
 	return r, nil
 }
