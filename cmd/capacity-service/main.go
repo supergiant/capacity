@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"strings"
+	"net/http"
 
 	"github.com/alexflint/go-arg"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
@@ -50,6 +51,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("capacityserver: %v\n", err)
 	}
+
+	// register UI static file server
+	mux, err := srv.Mux()
+	if err != nil {
+		log.Fatalf("Could not attach UI server to mux: %v\n", err)
+	}
+	mux.PathPrefix("/ui/").Handler(
+		http.StripPrefix("/ui/", http.FileServer( http.Dir("/tmp") )),
+	)
 
 	stopCh := signals.SetupSignalHandler()
 	if err = srv.Start(stopCh); err != nil {
