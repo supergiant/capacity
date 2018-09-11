@@ -100,24 +100,20 @@ func (h *workersHandler) getWorker(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	if vars == nil {
-		log.Errorf("handler: kubescaler: delete worker: vars wasn't found")
+		log.Errorf("handler: kubescaler: get worker: vars hasn't been found")
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	var err error
-	worker := &workers.Worker{}
-
-	worker, err = h.m.GetWorker(r.Context(), vars["machineID"])
+	worker, err := h.m.GetWorker(r.Context(), vars["machineID"])
 	if err != nil {
-		log.Errorf("handler: kubescaler: delete %s worker: %v", worker.MachineID, err)
+		log.Errorf("handler: kubescaler: get %s worker: %v", worker.MachineID, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	log.Infof("handler: kubescaler: %s worker has been deleted", worker.MachineID)
 
 	if err = json.NewEncoder(w).Encode(worker); err != nil {
-		log.Errorf("handler: kubescaler: delete %s worker: failed to write response: %v", worker.MachineID, err)
+		log.Errorf("handler: kubescaler: get %s worker: failed to write response: %v", worker.MachineID, err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
