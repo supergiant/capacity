@@ -34,14 +34,14 @@ COPY cmd/capacity-service/ui/capacity-service /tmp/ui
 WORKDIR /tmp/ui
 RUN npm install
 RUN npm install -g @angular/cli
-RUN ng build --prod
+RUN ng build --prod --base-href="/ui/www/"
 
 # do the build
 RUN mkdir -p /go/src/github.com/supergiant/capacity
 COPY . /go/src/github.com/supergiant/capacity/
 WORKDIR /go/src/github.com/supergiant/capacity/cmd/capacity-service
 RUN rm -Rf ../../vendor
-RUN go build -v -ldflags="-s -w"
+RUN packr build -v -ldflags="-s -w -X main.uiFilesPath=/tmp/ui/dist"
 RUN mv capacity-service /tmp/bin/
 
 # add init script

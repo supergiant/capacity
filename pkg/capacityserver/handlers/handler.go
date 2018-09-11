@@ -11,6 +11,8 @@ import (
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers/version"
 	"github.com/supergiant/capacity/pkg/kubescaler"
 )
+//import "github.com/gobuffalo/packr"
+import "fmt"
 
 func Handler(ks *capacity.Kubescaler) (http.Handler, error) {
 	handlerV1, err := v1.New(ks)
@@ -19,17 +21,28 @@ func Handler(ks *capacity.Kubescaler) (http.Handler, error) {
 	}
 
 	r := mux.NewRouter()
-	r.Use(
-		mux.MiddlewareFunc(setContentType),
-	)
 
 	r.Path("/version").Methods(http.MethodGet).HandlerFunc(version.Handler)
 
 	apiv1 := r.PathPrefix("/api/v1").Subrouter()
 	handlerV1.RegisterTo(apiv1)
+	apiv1.Use(
+		mux.MiddlewareFunc(setContentType),
+	)
+	r.Use(
+		cors.AllowAll().Handler,
+	)
 
-	return cors.AllowAll().Handler(r), nil
+	//uiFiles := packr.NewBox("/tmp/www")
+	r.PathPrefix("/ui/").Handler(http.StripPrefix("/ui/", http.FileServer(http.Dir("/tmp"))))
+
+	return r, nil
 }
+
+func hw (w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Hello, you've requested: %s\n", r.URL.Path)
+}
+
 
 func setContentType(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
