@@ -27,7 +27,7 @@ COPY cmd/capacity-service/ui/capacity-service /tmp/ui
 WORKDIR /tmp/ui
 RUN npm install
 RUN npm install -g @angular/cli
-RUN ng build --prod --base-href="/ui/"
+RUN ng build --prod
 
 # do the build
 RUN mkdir -p /go/src/github.com/supergiant/capacity
