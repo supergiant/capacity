@@ -134,7 +134,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 	paused := config.Paused != nil && *(config.Paused)
 	pauseLocked := config.PauseLock
 	if paused && !pauseLocked {
-		log.Info("Service is paused in the UI.")
+		log.Info("Service is paused.")
 	}
 
 	if paused || pauseLocked {
