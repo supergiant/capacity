@@ -1,7 +1,8 @@
 #! /bin/sh -x
 # use config file if it exists, else build one from env
 if ! [ -f /etc/capacity-service/config.json ] ; then
-	env2conf config. >/etc/capacity-service/config.json
+	env2conf --underscores capacity_ >/etc/capacity-service/config.json
+	env2conf --underscores capacity_ # also print config to help user debug
 fi
 
 # if userdata was supplied via a config map, use it
@@ -9,7 +10,6 @@ if [ -f /etc/capacity-service/userdata ] ; then
 	userdataArgs="--user-data /etc/capacity-service/userdata"
 fi
 
-httpd -h /www
 capacity-service --kubescaler-config /etc/capacity-service/config.json $userdataArgs $EXTRA_ARGS
 
 

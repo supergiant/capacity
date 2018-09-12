@@ -13,7 +13,7 @@ RUN mkdir /tmp/emptydir
 
 # get env2conf and a shell
 RUN mkdir /tmp/bin
-ADD https://github.com/supergiant/env2conf/releases/download/v1.0.0/env2conf /tmp/bin/
+ADD https://github.com/supergiant/env2conf/releases/download/v1.1.0/env2conf /tmp/bin/
 RUN chmod +x /tmp/bin/env2conf
 ADD https://busybox.net/downloads/binaries/1.27.1-i686/busybox_ASH /tmp/bin/sh
 RUN chmod +x /tmp/bin/sh
@@ -34,7 +34,9 @@ RUN mkdir -p /go/src/github.com/supergiant/capacity
 COPY . /go/src/github.com/supergiant/capacity/
 WORKDIR /go/src/github.com/supergiant/capacity/cmd/capacity-service
 RUN rm -Rf ../../vendor
-RUN mv /tmp/ui cmd/capacity-service/ui/capacity-service
+# Put pre-built ui back in place
+RUN rm -Rf ui/capacity-service
+RUN mv /tmp/ui ui/capacity-service
 RUN packr build -v -ldflags="-s -w"
 RUN mv capacity-service /tmp/bin/
 
