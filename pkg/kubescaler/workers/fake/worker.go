@@ -52,6 +52,17 @@ func (m *Manager) CreateWorker(ctx context.Context, mtype string) (*workers.Work
 	}, nil
 }
 
+func (m *Manager) GetWorker(ctx context.Context, id string) (*workers.Worker, error) {
+	return &workers.Worker{
+		ClusterName:       m.clusterName,
+		MachineID:         id,
+		MachineName:       "clusterName-worker-e289335e-9579-11e8-b97f-9cb6d0f71293",
+		MachineType:       "m4.large",
+		MachineState:      "running",
+		CreationTimestamp: time.Now(),
+	}, nil
+}
+
 func (m *Manager) ListWorkers(ctx context.Context) (*workers.WorkerList, error) {
 	return &workers.WorkerList{
 		Items: []*workers.Worker{
@@ -82,6 +93,18 @@ func (m *Manager) DeleteWorker(ctx context.Context, nodeName, id string) (*worke
 		MachineName:       "clusterName-worker-e289335e-9579-11e8-b97f-9cb6d0f71293",
 		MachineType:       "m4.large",
 		MachineState:      "terminating",
+		CreationTimestamp: time.Now(),
+	}, nil
+}
+
+func (m *Manager) ReserveWorker(ctx context.Context, w *workers.Worker) (*workers.Worker, error) {
+	return &workers.Worker{
+		ClusterName:       m.clusterName,
+		MachineName:       "clusterName-worker-e289335e-9579-11e8-b97f-9cb6d0f71293",
+		MachineType:       "m4.large",
+		MachineState:      "running",
+		MachineID:         w.MachineID,
+		Reserved:          w.Reserved,
 		CreationTimestamp: time.Now(),
 	}, nil
 }

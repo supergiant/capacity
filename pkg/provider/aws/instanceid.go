@@ -22,7 +22,7 @@ var awsInstanceRegMatch = regexp.MustCompile("^i-[^/]*$")
 //  * aws:////<awsInstanceId>
 //  * <awsInstanceId>
 //
-func (p *Provider) GetMachineID(providerID string) (string, error) {
+func (p *Provider) ParseMachineID(providerID string) (string, error) {
 	if !strings.HasPrefix(providerID, "aws://") {
 		// Assume a bare aws volume id (vol-1234...)
 		// Build a URL with an empty host (AZ)
