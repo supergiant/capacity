@@ -124,6 +124,22 @@
       }
     },
     "/api/v1/workers/{machineID}": {
+      "get": {
+        "description": "This will get a worker.",
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "workers"
+        ],
+        "summary": "Get a worker with the specified machineID.",
+        "operationId": "getWorker",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/workerResponse"
+          }
+        }
+      },
       "delete": {
         "description": "This will delete a worker.",
         "produces": [
@@ -200,6 +216,13 @@
           "type": "string",
           "x-go-name": "ClusterName"
         },
+        "ignoredNodeLabels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "x-go-name": "IgnoredNodeLabels"
+        },
         "kubeAPIHost": {
           "type": "string",
           "x-go-name": "KubeAPIHost"
@@ -231,13 +254,13 @@
           "type": "string",
           "x-go-name": "MaxMachineProvisionTime"
         },
-        "paused": {
-          "type": "boolean",
-          "x-go-name": "Paused"
-        },
         "pauseLock": {
           "type": "boolean",
           "x-go-name": "PauseLock"
+        },
+        "paused": {
+          "type": "boolean",
+          "x-go-name": "Paused"
         },
         "provider": {
           "type": "object",
@@ -322,7 +345,9 @@
       "x-go-package": "github.com/supergiant/capacity/pkg/provider"
     },
     "Worker": {
+      "description": "It contains data from a (virtual) machine and a kubernetes node running on it.",
       "type": "object",
+      "title": "Worker is an abstraction used by kubescaler to manage cluster capacity.",
       "required": [
         "machineID"
       ],
@@ -333,7 +358,7 @@
           "x-go-name": "ClusterName"
         },
         "creationTimestamp": {
-          "description": "CreationTimestamp is a timestamp representing the server time when this object was created.",
+          "description": "CreationTimestamp is a timestamp representing a time when this machine was created.",
           "type": "string",
           "format": "date-time",
           "x-go-name": "CreationTimestamp"
@@ -357,6 +382,14 @@
           "description": "MachineType is type of virtual machine (eg. 't2.micro' for AWS).",
           "type": "string",
           "x-go-name": "MachineType"
+        },
+        "nodeLabels": {
+          "description": "NodeLabels represents a labels of the kubernetes node that runs on top of that machine.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "x-go-name": "NodeLabels"
         },
         "nodeName": {
           "description": "NodeName represents a name of the kubernetes node that runs on top of that machine.",

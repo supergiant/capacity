@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/supergiant/capacity/pkg/provider"
@@ -20,13 +22,15 @@ import (
 
 const (
 	LabelReserved = "capacity.supergiant.io/reserved"
-
-	ValTrue  = "true"
-	ValFalse = "false"
+	ValTrue       = "true"
 
 	ClusterRole = "worker"
 
 	MinWorkerLifespan = time.Minute * 20
+)
+
+var (
+	ErrNotFound = errors.New("not found")
 )
 
 var _ WInterface = &Manager{}
@@ -34,8 +38,10 @@ var _ WInterface = &Manager{}
 type WInterface interface {
 	MachineTypes() []*provider.MachineType
 	CreateWorker(ctx context.Context, mtype string) (*Worker, error)
+	GetWorker(ctx context.Context, id string) (*Worker, error)
 	ListWorkers(ctx context.Context) (*WorkerList, error)
 	DeleteWorker(ctx context.Context, nodeName, id string) (*Worker, error)
+	ReserveWorker(ctx context.Context, worker *Worker) (*Worker, error)
 }
 
 type Config struct {
@@ -150,6 +156,20 @@ func (m *Manager) MachineTypes() []*provider.MachineType {
 	return m.machineTypes
 }
 
+func (m *Manager) GetWorker(ctx context.Context, id string) (*Worker, error) {
+	machine, err := m.provider.GetMachine(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	node, err := m.getNodeByMachine(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.workerFrom(machine, node), nil
+}
+
 func (m *Manager) ListWorkers(ctx context.Context) (*WorkerList, error) {
 	machines, err := m.provider.Machines(ctx)
 	if err != nil {
@@ -185,6 +205,31 @@ func (m *Manager) DeleteWorker(ctx context.Context, nodeName, id string) (*Worke
 	return m.workerFrom(machine, corev1.Node{}), nil
 }
 
+func (m *Manager) ReserveWorker(ctx context.Context, want *Worker) (*Worker, error) {
+	if want == nil {
+		return nil, ErrNotFound
+	}
+
+	current, err := m.GetWorker(ctx, want.MachineID)
+	if err != nil {
+		return nil, err
+	}
+
+	if current.Reserved == want.Reserved {
+		return current, nil
+	}
+
+	return m.setReserved(current, want.Reserved)
+}
+
+func (m *Manager) getNodeByMachine(id string) (corev1.Node, error) {
+	instanceNodesMap, err := m.nodesMap()
+	if err != nil {
+		return corev1.Node{}, err
+	}
+	return instanceNodesMap[id], nil
+}
+
 func (m *Manager) nodesMap() (map[string]corev1.Node, error) {
 	nodeList, err := m.nodesClient.List(metav1.ListOptions{})
 	if err != nil {
@@ -192,7 +237,7 @@ func (m *Manager) nodesMap() (map[string]corev1.Node, error) {
 	}
 	nodeMap := make(map[string]corev1.Node)
 	for _, node := range nodeList.Items {
-		machineID, err := m.provider.GetMachineID(node.Spec.ProviderID)
+		machineID, err := m.provider.ParseMachineID(node.Spec.ProviderID)
 		if err != nil {
 			return nil, errors.Wrap(err, "parse node.Spec.ProviderID")
 		}
@@ -217,4 +262,20 @@ func (m *Manager) workerFrom(machine *provider.Machine, node corev1.Node) *Worke
 		NodeName:          node.Name,
 		NodeLabels:        node.Labels,
 	}
+}
+
+func (m *Manager) setReserved(w *Worker, reserved bool) (*Worker, error) {
+	node, err := m.patchNodeLabel(w.NodeName, LabelReserved, strconv.FormatBool(reserved))
+	if err != nil {
+		return nil, err
+	}
+	// TODO: add a method for updating
+	w.NodeLabels = node.Labels
+	w.Reserved = reserved
+	return w, nil
+}
+
+func (m *Manager) patchNodeLabel(nodeName, key, val string) (*corev1.Node, error) {
+	return m.nodesClient.Patch(nodeName, types.MergePatchType,
+		[]byte(fmt.Sprintf(`{"metadata":{"labels":{%q:%q}}}`, key, val)))
 }

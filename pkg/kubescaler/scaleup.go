@@ -13,6 +13,11 @@ import (
 	"github.com/supergiant/capacity/pkg/provider"
 )
 
+var (
+	ErrEmptyCPUValue    = errors.New("empty cpu value")
+	ErrEmptyMemoryValue = errors.New("empty memory value")
+)
+
 func (s *Kubescaler) scaleUp(unscheduledPods []*corev1.Pod, machineTypes []*provider.MachineType, currentTime time.Time) (bool, error) {
 	podsToScale := filterIgnoringPods(unscheduledPods, machineTypes, currentTime)
 	if len(podsToScale) == 0 {
@@ -72,15 +77,24 @@ func hasMachineFor(machineTypes []*provider.MachineType, pod *corev1.Pod) bool {
 }
 
 func bestMachineFor(cpu, mem resource.Quantity, machineTypes []*provider.MachineType) (provider.MachineType, error) {
+	if cpu.Value() == 0 {
+		return provider.MachineType{}, ErrEmptyCPUValue
+	}
+	if mem.Value() == 0 {
+		return provider.MachineType{}, ErrEmptyMemoryValue
+	}
 	if len(machineTypes) == 0 {
 		return provider.MachineType{}, ErrNoAllowedMachines
 	}
-	for _, m := range machineTypes {
-		if m.CPUResource.Cmp(cpu) >= 0 && m.MemoryResource.Cmp(mem) == 1 {
+
+	var biggest provider.MachineType
+	for _, m := range provider.SortedMachineTypes(machineTypes) {
+		if m.CPUResource.Cmp(cpu) > -1 && m.MemoryResource.Cmp(mem) == 1 {
 			return *m, nil
 		}
+		biggest = *m
 	}
-	return *machineTypes[len(machineTypes)-1], nil
+	return biggest, nil
 }
 
 func hasCPUMemoryContstraints(pod *corev1.Pod) bool {

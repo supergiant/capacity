@@ -27,12 +27,16 @@ var (
 	ErrNoRegionProvided   = errors.New("aws: region should shouldn't be emplty")
 	ErrInstanceIDEmpty    = errors.New("aws: instance id shouldn't be emplty")
 	ErrNoInstancesCreated = errors.New("aws: no instances were created")
+	ErrInstanceNotFound   = errors.New("aws: instance: not found")
 )
 
+// Client used for accessing AWS resources.
 type Client struct {
 	session  *session.Session
 	ec2SvcFn func(s *session.Session, region string) ec2iface.EC2API
-	tags     map[string]string
+
+	// TODO: review tags usage (restricts resources pool of the client)
+	tags map[string]string
 }
 
 // New returns a configured AWS client.
@@ -76,7 +80,7 @@ func (c *Client) AvailableInstanceTypes(ctx context.Context) ([]*EC2TypeInfo, er
 	return ec2Infos, nil
 }
 
-// CreateInstance startd a new instance due to the config.
+// CreateInstance starts a new instance due to the config.
 func (c *Client) CreateInstance(ctx context.Context, cfg InstanceConfig) (*ec2.Instance, error) {
 	cfg.Region = strings.TrimSpace(cfg.Region)
 	if cfg.Region == "" {
@@ -139,7 +143,26 @@ func (c *Client) CreateInstance(ctx context.Context, cfg InstanceConfig) (*ec2.I
 	return res.Instances[0], nil
 }
 
-// ListInstances returns a list of instances available to the client.
+// GetInstance retrieves an instance by instanceID.
+func (c *Client) GetInstance(ctx context.Context, region, id string) (*ec2.Instance, error) {
+	out, err := c.ec2SvcFn(c.session, region).DescribeInstancesWithContext(ctx,
+		&ec2.DescribeInstancesInput{InstanceIds: []*string{aws.String(id)}})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, r := range out.Reservations {
+		for _, inst := range r.Instances {
+			if *inst.InstanceId == id {
+				return inst, nil
+			}
+		}
+	}
+
+	return nil, ErrInstanceNotFound
+}
+
+// ListInstances returns a list of instances.
 func (c *Client) ListRegionInstances(ctx context.Context, region string, tags map[string]string) ([]*ec2.Instance, error) {
 	region = strings.TrimSpace(region)
 	if region == "" {

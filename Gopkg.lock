@@ -254,12 +254,12 @@
   version = "v1.5.0"
 
 [[projects]]
-  branch = "extend_aws_provider"
-  digest = "1:1d84a8d4ab60f3cb90aaa36301d95f7d18bdbd68db75e3b93bf4ec9de1f63f12"
+  branch = "aws_get_instance"
+  digest = "1:c98dbb13dd58c03b7494e7b93d578d00456851a2f6943570bfca06263d66d8f3"
   name = "github.com/saheienko/supergiant"
   packages = ["pkg/clouds/aws"]
   pruneopts = "UT"
-  revision = "9ffa568f82a8bc2db2f4de8009f60608d2369654"
+  revision = "e6b46d225aded7bd5b5a28e94d10b5c34d455b0e"
 
 [[projects]]
   digest = "1:606e395bc6f4011ae992e7ae0c613839d20ea097b8a9468e1683b22cefd8fd77"
@@ -654,12 +654,17 @@
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/fields",
+    "k8s.io/apimachinery/pkg/labels",
+    "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/sets",
     "k8s.io/autoscaler/cluster-autoscaler/utils/kubernetes",
     "k8s.io/client-go/informers",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/typed/core/v1",
+    "k8s.io/client-go/listers/core/v1",
     "k8s.io/client-go/rest",
+    "k8s.io/client-go/tools/cache",
     "k8s.io/client-go/tools/clientcmd",
   ]
   solver-name = "gps-cdcl"

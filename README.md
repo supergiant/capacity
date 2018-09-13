@@ -115,6 +115,21 @@ Create a kubescaler worker:
     }
 ```
 
+Get a kubescaler worker:
+```
+➜ $ curl -s -XGET localhost:8081/api/v1/workers/i-01e9c47fede75cb9a | jq
+    {
+      "clusterName": "clusterName",
+      "machineID": "i-01e9c47fede75cb9a",
+      "machineName": "clusterName-worker-e289335e-9579-11e8-b97f-9cb6d0f71293",
+      "machineType": "m4.large",
+      "machineState": "pending",
+      "createdAt": "2018-08-01T10:58:57Z",
+      "nodeName": "",
+      "reserved": false
+    }
+```
+
 List kubescaler workers:
 ```
 ➜ $ curl -s localhost:8081/api/v1/workers | jq

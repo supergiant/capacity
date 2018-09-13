@@ -121,6 +121,14 @@ func (p *Provider) MachineTypes(ctx context.Context) ([]*provider.MachineType, e
 	return mTypes, nil
 }
 
+func (p *Provider) GetMachine(ctx context.Context, id string) (*provider.Machine, error) {
+	inst, err := p.client.GetInstance(ctx, p.region, id)
+	if err != nil {
+		return nil, err
+	}
+	return machineFrom(inst), nil
+}
+
 func (p *Provider) Machines(ctx context.Context) ([]*provider.Machine, error) {
 	insts, err := p.client.ListRegionInstances(ctx, p.region, nil)
 	if err != nil {

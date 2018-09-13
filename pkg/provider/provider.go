@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -37,11 +38,27 @@ type MachineType struct {
 	CPUResource    resource.Quantity `json:"-"`
 }
 
+func SortedMachineTypes(mtypes []*MachineType) []*MachineType {
+	sorted := make([]*MachineType, len(mtypes))
+	copy(sorted, mtypes)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		lessCPU := sorted[i].CPUResource.Cmp(sorted[j].CPUResource) == -1
+		equalCPU := sorted[i].CPUResource.Cmp(sorted[j].CPUResource) == 0
+		lessMemory := sorted[i].MemoryResource.Cmp(sorted[j].MemoryResource) == -1
+		if equalCPU {
+			return lessMemory
+		}
+		return lessCPU
+	})
+	return sorted
+}
+
 type Config map[string]string
 
 type Provider interface {
 	Name() string
-	GetMachineID(providerID string) (string, error)
+	ParseMachineID(providerID string) (string, error)
+	GetMachine(ctx context.Context, id string) (*Machine, error)
 	MachineTypes(ctx context.Context) ([]*MachineType, error)
 	Machines(ctx context.Context) ([]*Machine, error)
 	CreateMachine(ctx context.Context, name, mtype, clusterRole, userData string, config Config) (*Machine, error)
