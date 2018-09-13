@@ -84,7 +84,7 @@ func TestKubescalerScaleDown(t *testing.T) {
 
 func TestPodsPerNode(t *testing.T) {
 	pods := []*corev1.Pod{&podStandAlone, &podWithRequests}
-	require.Equal(t, map[string]int{"": 1, NodeReadyName: 1}, nodePodsMap(pods))
+	require.Equal(t, map[string][]string{"": {podStandAlone.Name}, NodeReadyName: {podWithRequests.Name}}, nodePodsMap(pods))
 }
 
 func TestFilterStandalonePods(t *testing.T) {
@@ -125,16 +125,15 @@ func TestFilterDaemonSetPods(t *testing.T) {
 	}
 }
 
-func TestNodesWithNoPods(t *testing.T) {
+func TestGetEmpty(t *testing.T) {
 	tcs := []struct {
 		workerList *workers.WorkerList
-		nodePods   map[string]int
-		expected   []*corev1.Node
+		nodePods   map[string][]string
+		expected   []*workers.Worker
 	}{
-		{
-			expected: make([]*corev1.Node, 0),
+		{ // TC#1
 		},
-		{
+		{ // TC#2
 			workerList: &workers.WorkerList{
 				Items: []*workers.Worker{
 					{
@@ -142,9 +141,13 @@ func TestNodesWithNoPods(t *testing.T) {
 					},
 				},
 			},
-			expected: make([]*corev1.Node, 0),
+			expected: []*workers.Worker{
+				{
+					NodeName: NodeReadyName,
+				},
+			},
 		},
-		{
+		{ // TC#3
 			workerList: &workers.WorkerList{
 				Items: []*workers.Worker{
 					{
@@ -152,10 +155,10 @@ func TestNodesWithNoPods(t *testing.T) {
 					},
 				},
 			},
-			nodePods: map[string]int{"": 42},
-			expected: make([]*corev1.Node, 0),
+			nodePods: map[string][]string{NodeReadyName: {"pod"}},
+			expected: []*workers.Worker{},
 		},
-		{
+		{ // TC#4
 			workerList: &workers.WorkerList{
 				Items: []*workers.Worker{
 					{
@@ -163,8 +166,30 @@ func TestNodesWithNoPods(t *testing.T) {
 					},
 				},
 			},
-			nodePods: map[string]int{"nodeReady": 42},
-			expected: []*corev1.Node{&nodeReady},
+			nodePods: map[string][]string{NodeReadyName: {}},
+			expected: []*workers.Worker{
+				{
+					NodeName: NodeReadyName,
+				},
+			},
+		},
+		{ // TC#4
+			workerList: &workers.WorkerList{
+				Items: []*workers.Worker{
+					{
+						NodeName: NodeReadyName,
+					},
+					{
+						NodeName: NodeScaleDownName,
+					},
+				},
+			},
+			nodePods: map[string][]string{NodeReadyName: {"pod"}, NodeScaleDownName: {}},
+			expected: []*workers.Worker{
+				{
+					NodeName: NodeScaleDownName,
+				},
+			},
 		},
 	}
 
