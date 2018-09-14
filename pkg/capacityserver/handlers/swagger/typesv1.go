@@ -35,7 +35,7 @@ type workerListResponse struct {
 }
 
 // machineIDParam is used to identify a worker.
-// swagger:parameters deleteWorker
+// swagger:parameters getWorker updateWorker deleteWorker
 type machineIDParam struct {
 	// in:path
 	// required: true
