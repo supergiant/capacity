@@ -11,15 +11,12 @@ ENV CGO_ENABLED "0"
 # needed so we can mkdir in the scratch container later
 RUN mkdir /tmp/emptydir
 
-# get a shell
+# get env2conf and a shell
 RUN mkdir /tmp/bin
+ADD https://github.com/supergiant/env2conf/releases/download/v1.1.0/env2conf /tmp/bin/
+RUN chmod +x /tmp/bin/env2conf
 ADD https://busybox.net/downloads/binaries/1.27.1-i686/busybox_ASH /tmp/bin/sh
 RUN chmod +x /tmp/bin/sh
-
-# build env2conf
-RUN mkdir /tmp/env2conf
-RUN GOPATH=/tmp/env2conf go get -v github.com/supergiant/env2conf
-RUN cp /tmp/env2conf/bin/env2conf /tmp/bin
 
 # build vendor stuff first to exploit cache
 COPY vendor /go/src/

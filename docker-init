@@ -1,8 +1,8 @@
 #! /bin/sh -x
 # use config file if it exists, else build one from env
 if ! [ -f /etc/capacity-service/config.json ] ; then
-	env2conf --pid 1 capacity. >/etc/capacity-service/config.json
-	env2conf --pid 1 capacity. # also print config to help user debug
+	env2conf --underscores capacity_ >/etc/capacity-service/config.json
+	env2conf --underscores capacity_ # also print config to help user debug
 fi
 
 # if userdata was supplied via a config map, use it
