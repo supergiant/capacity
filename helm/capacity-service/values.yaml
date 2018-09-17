@@ -65,7 +65,7 @@ provider:
   # awsImageID is the AMI ID to be used by created instances
   awsImageID: "ami-xxxxxx"
   
-  # awsIAMRole is the name of an IAMROLE the capacity service will use to create and destroy instances
+  # awsIAMRole is the name of an IAMROLE the capacity service will give to new instances
   awsIAMRole: "yourIAMROLEname"
   
   # awsSecurityGroups is the Group ID of the security group instances will belong to
