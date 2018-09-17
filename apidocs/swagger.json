@@ -134,6 +134,15 @@
         ],
         "summary": "Get a worker with the specified machineID.",
         "operationId": "getWorker",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "MachineID",
+            "name": "machineID",
+            "in": "path",
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/workerResponse"
@@ -178,6 +187,15 @@
         ],
         "summary": "Update a worker.",
         "operationId": "updateWorker",
+        "parameters": [
+          {
+            "type": "string",
+            "x-go-name": "MachineID",
+            "name": "machineID",
+            "in": "path",
+            "required": true
+          }
+        ],
         "responses": {
           "200": {
             "$ref": "#/responses/workerResponse"

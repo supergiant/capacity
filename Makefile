@@ -37,3 +37,4 @@ swagger:
 	#@rm -rf $(SWAGGER_CLIENT)
 	#@mkdir $(SWAGGER_CLIENT)
 	#@swagger generate -q client -f $(SWAGGER_SPEC) -t $(SWAGGER_CLIENT)
+	@swagger validate $(SWAGGER_SPEC)
