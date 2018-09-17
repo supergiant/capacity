@@ -23,7 +23,7 @@ spec:
             subPath: userdata
           env:
           {{- range $key, $value := .Values.config }}
-          - name: capacity_{{ $key }}
+          - name: "capacity.{{ $key }}"
             {{- if typeIs "string" $value }}
             value: {{ quote (quote $value) }}
             {{- else if typeIs "<nil>" $value }}
@@ -33,7 +33,7 @@ spec:
             {{- end }}
           {{- end }}
           {{- range $key, $value := .Values.provider }}
-          - name: capacity_provider_{{ $key }}
+          - name: "capacity.provider.{{ $key }}"
             {{- if typeIs "string" $value }}
             value: {{ quote (quote $value) }}
             {{- else if typeIs "<nil>" $value }}
@@ -43,7 +43,7 @@ spec:
             {{- end }}
           {{- end }}
           {{- range $index, $value := .Values.machineTypes }}
-          - name: capacity_machineTypes_{{ $index }}
+          - name: "capacity.machineTypes[{{ $index }}]"
             {{- if typeIs "string" $value }}
             value: {{ quote (quote $value) }}
             {{- else if typeIs "<nil>" $value }}
