@@ -3,7 +3,8 @@ config:
   sshPubKey: ""
   
   # clusterName is the name of your cluster
-  clusterName: "your.supergiant.cluster"
+  # all nodes should have an AWS label of KubernetesCluster=your.supergiant.cluster.name
+  clusterName: "your.supergiant.cluster.name"
   
   # masterPrivateAddr is the private IP of your master
   masterPrivateAddr: "192.168.0.1"
