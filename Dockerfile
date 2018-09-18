@@ -1,8 +1,9 @@
 FROM golang:stretch AS build
 
-# install dependencies (npm isn't avalible in stretch)
-RUN sed -i -e 's/stretch/buster/g' /etc/apt/sources.list
-RUN apt-get update && apt-get install -y npm build-essential
+# install dependencies
+RUN echo 'deb http://deb.nodesource.com/node_10.x stretch main' >>/etc/apt/sources.list
+RUN wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
+RUN apt-get update && apt-get install -y nodejs build-essential
 RUN npm i npm@latest -g
 
 # enable totally static binaries
