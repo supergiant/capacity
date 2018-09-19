@@ -49,6 +49,10 @@ config:
   
   # ignoredNodeLabels TODO
   ignoredNodeLabels: null
+  
+  # newNodeTimeBuffer is the amount of time in seconds a node is allowed to come up
+  # and join the kubernetes cluster before we consider more scaleing actions.
+  newNodeTimeBuffer: 120
 
 provider:
   # awsKeyID is your AWS access ID
