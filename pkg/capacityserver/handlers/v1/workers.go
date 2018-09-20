@@ -105,15 +105,16 @@ func (h *workersHandler) getWorker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	worker, err := h.m.GetWorker(r.Context(), vars["machineID"])
+	machineID := vars["machineID"]
+	worker, err := h.m.GetWorker(r.Context(), machineID)
 	if err != nil {
-		log.Errorf("handler: kubescaler: get %s worker: %v", worker.MachineID, err)
+		log.Errorf("handler: kubescaler: get %s worker: %v", machineID, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if err = json.NewEncoder(w).Encode(worker); err != nil {
-		log.Errorf("handler: kubescaler: get %s worker: failed to write response: %v", worker.MachineID, err)
+		log.Errorf("handler: kubescaler: get %s worker: failed to write response: %v", machineID, err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
@@ -174,20 +175,21 @@ func (h *workersHandler) updateWorker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	worker.MachineID = vars["machineID"]
+	machineID := vars["machineID"]
+	worker.MachineID = machineID
 	worker, err = h.m.ReserveWorker(r.Context(), worker)
 	if err != nil {
 		if errors.Cause(err) == workers.ErrNotFound {
 			http.NotFound(w, r)
 			return
 		}
-		log.Errorf("handler: kubescaler: patch worker: reserve id=%s, node=%s: %v", worker.MachineID, worker.NodeName, err)
+		log.Errorf("handler: kubescaler: patch worker: reserve id=%s, %v", machineID, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if err = json.NewEncoder(w).Encode(worker); err != nil {
-		log.Errorf("handler: kubescaler: patch %s worker: failed to write response: %v", worker.MachineID, err)
+		log.Errorf("handler: kubescaler: patch %s worker: failed to write response: %v", machineID, err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
@@ -212,16 +214,14 @@ func (h *workersHandler) deleteWorker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var err error
-	worker := &workers.Worker{}
-
-	worker, err = h.m.DeleteWorker(r.Context(), "", vars["machineID"])
+	machineID := vars["machineID"]
+	worker, err := h.m.DeleteWorker(r.Context(), "", machineID)
 	if err != nil {
-		log.Errorf("handler: kubescaler: delete %s worker: %v", worker.MachineID, err)
+		log.Errorf("handler: kubescaler: delete %s worker: %v", machineID, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	log.Infof("handler: kubescaler: %s worker has been deleted", worker.MachineID)
+	log.Infof("handler: kubescaler: %s worker has been deleted", machineID)
 
 	if err = json.NewEncoder(w).Encode(worker); err != nil {
 		log.Errorf("handler: kubescaler: delete %s worker: failed to write response: %v", worker.MachineID, err)
