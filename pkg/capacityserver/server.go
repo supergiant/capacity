@@ -1,6 +1,7 @@
 package capacityserver
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers"
 	kubescaler "github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/log"
-	"context"
 )
 
 type Config struct {
