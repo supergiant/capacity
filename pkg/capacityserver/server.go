@@ -9,6 +9,7 @@ import (
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers"
 	kubescaler "github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/log"
+	"context"
 )
 
 type Config struct {
@@ -49,12 +50,21 @@ func New(conf Config) (*API, error) {
 }
 
 func (a *API) Start(stopCh <-chan struct{}) error {
-	a.ks.Run(stopCh)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
+	go func() {
+		defer cancel()
+		a.ks.Run(stopCh)
+	}()
+	go a.srv.ListenAndServe()
 	log.Infof("capacityservice: listen on %q", a.srv.Addr)
-	return a.srv.ListenAndServe()
-}
 
-func (a *API) Shutdown() error {
-	return nil
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("shutting down http server...")
+			return a.srv.Shutdown(ctx)
+		}
+	}
 }

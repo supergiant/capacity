@@ -111,7 +111,7 @@ func (s *Kubescaler) Run(stop <-chan struct{}) {
 		log.Info("Automatic Capacity will occur unless paused.")
 	}
 
-	go func() {
+	func() {
 		for {
 			select {
 			case <-time.After(DefaultScanInterval):
@@ -121,6 +121,7 @@ func (s *Kubescaler) Run(stop <-chan struct{}) {
 					}
 				}
 			case <-stop:
+				log.Info("stopping kubescaler...")
 				return
 			}
 		}
