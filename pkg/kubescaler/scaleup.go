@@ -67,7 +67,7 @@ func filterIgnoringPods(pods []*corev1.Pod, allowedMachines []*provider.MachineT
 }
 
 func hasMachineFor(machineTypes []*provider.MachineType, pod *corev1.Pod) bool {
-	cpu, mem := getCPUMem(pod)
+	cpu, mem := getCPUMemForScheduling(pod)
 	for _, m := range machineTypes {
 		if m.CPUResource.Cmp(cpu) >= 0 && m.MemoryResource.Cmp(mem) == 1 {
 			return true
@@ -98,7 +98,7 @@ func bestMachineFor(cpu, mem resource.Quantity, machineTypes []*provider.Machine
 }
 
 func hasCPUMemoryContstraints(pod *corev1.Pod) bool {
-	cpu, mem := getCPUMem(pod)
+	cpu, mem := getCPUMemForScheduling(pod)
 	return cpu.Value() != 0 && mem.Value() != 0
 }
 
@@ -115,20 +115,13 @@ func hasDaemonSetController(pod *corev1.Pod) bool {
 	return metav1.GetControllerOf(pod) != nil && metav1.GetControllerOf(pod).Kind == "DaemonSet"
 }
 
-func getCPUMem(pod *corev1.Pod) (resource.Quantity, resource.Quantity) {
+func getCPUMemForScheduling(pod *corev1.Pod) (resource.Quantity, resource.Quantity) {
+	// Scheduling is based on requests.
+	// https://github.com/kubernetes/community/blob/master/contributors/design-proposals/node/resource-qos.md#requests-and-limits
 	var cpu, mem resource.Quantity
 	for _, c := range pod.Spec.Containers {
-		if !c.Resources.Limits.Cpu().IsZero() {
-			cpu.Add(*c.Resources.Limits.Cpu())
-		} else {
-			cpu.Add(*c.Resources.Requests.Cpu())
-		}
-
-		if !c.Resources.Limits.Memory().IsZero() {
-			mem.Add(*c.Resources.Limits.Memory())
-		} else {
-			mem.Add(*c.Resources.Requests.Memory())
-		}
+		cpu.Add(*c.Resources.Requests.Cpu())
+		mem.Add(*c.Resources.Requests.Memory())
 	}
 	return cpu, mem
 }

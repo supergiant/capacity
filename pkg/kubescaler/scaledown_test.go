@@ -31,7 +31,7 @@ func TestKubescalerScaleDown(t *testing.T) {
 			allowedMachines: []string{allowedMachine.Name},
 		},
 		{
-			pods: []*corev1.Pod{&podWithHugeLimits, &podStandAlone},
+			pods: []*corev1.Pod{&podWithHugeRequests, &podStandAlone},
 			workerList: &workers.WorkerList{
 				Items: []*workers.Worker{
 					{NodeName: NodeReadyName},
@@ -41,7 +41,7 @@ func TestKubescalerScaleDown(t *testing.T) {
 			allowedMachines: []string{allowedMachine.Name},
 		},
 		{
-			pods: []*corev1.Pod{&podWithHugeLimits, &podWithRequests},
+			pods: []*corev1.Pod{&podWithHugeRequests, &podWithRequests},
 			workerList: &workers.WorkerList{
 				Items: []*workers.Worker{
 					{NodeName: NodeReadyName},
@@ -51,7 +51,7 @@ func TestKubescalerScaleDown(t *testing.T) {
 			allowedMachines: []string{allowedMachine.Name},
 		},
 		{
-			pods: []*corev1.Pod{&podWithHugeLimits, &podWithRequests},
+			pods: []*corev1.Pod{&podWithHugeRequests, &podWithRequests},
 			workerList: &workers.WorkerList{
 				Items: []*workers.Worker{
 					{NodeName: NodeReadyName},
