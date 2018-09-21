@@ -139,9 +139,9 @@ var (
 			},
 		},
 	}
-	podWithHugeLimits = corev1.Pod{
+	podWithHugeRequests = corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:              "podWithHugeLimits",
+			Name:              "podWithHugeRequests",
 			CreationTimestamp: metav1.Time{Time: currentTime.Add(-time.Hour)},
 			OwnerReferences: []metav1.OwnerReference{
 				{
@@ -154,7 +154,7 @@ var (
 			Containers: []corev1.Container{
 				{
 					Resources: corev1.ResourceRequirements{
-						Limits: resourceListHuge,
+						Requests: resourceListHuge,
 					},
 				},
 			},
@@ -226,10 +226,11 @@ func TestFilterIgnoringPos(t *testing.T) {
 		&podStandAlone,
 		&podDaemonSet,
 		&podWithLimits,
-		&podWithHugeLimits,
+		&podWithRequests,
+		&podWithHugeRequests,
 	}
 	allowedMachines := []*provider.MachineType{&allowedMachine}
-	expectedRes := []*corev1.Pod{&podWithLimits}
+	expectedRes := []*corev1.Pod{&podWithRequests}
 
 	res := filterIgnoringPods(pods, allowedMachines, currentTime)
 	require.Equal(t, expectedRes, res)
@@ -387,12 +388,12 @@ func TestGetCPUMem(t *testing.T) {
 		{&podStandAlone, resource.Quantity{}, resource.Quantity{}},
 		{&podDaemonSet, resource.Quantity{}, resource.Quantity{}},
 		{&podWithRequests, resource13, resource13Mi},
-		{&podWithLimits, resource33, resource33Mi},
-		{&podWithHugeLimits, resource.MustParse("1024"), resource.MustParse("1024Gi")},
+		{&podWithLimits, resource.Quantity{}, resource.Quantity{}},
+		{&podWithHugeRequests, resource.MustParse("1024"), resource.MustParse("1024Gi")},
 	}
 
 	for i, tc := range tcs {
-		cpu, mem := getCPUMem(tc.pod)
+		cpu, mem := getCPUMemForScheduling(tc.pod)
 		require.Equalf(t, tc.expectedCPU.Value(), cpu.Value(), "TC#%d: cpu", i+1)
 		require.Equalf(t, tc.expectedMem.Value(), mem.Value(), "TC#%d: mem", i+1)
 	}
