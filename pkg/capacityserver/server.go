@@ -9,6 +9,7 @@ import (
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers"
 	kubescaler "github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/log"
+	"github.com/gorilla/mux"
 )
 
 type Config struct {
@@ -53,6 +54,14 @@ func (a *API) Start(stopCh <-chan struct{}) error {
 
 	log.Infof("capacityservice: listen on %q", a.srv.Addr)
 	return a.srv.ListenAndServe()
+}
+
+func (a *API) Mux() (m *mux.Router, err error) {
+	m, ok := a.srv.Handler.(*mux.Router)
+	if !ok {
+		return nil, errors.New("Invalid type. Are you sure the API struct is initialized?")
+	}
+	return
 }
 
 func (a *API) Shutdown() error {

@@ -11,7 +11,7 @@ import { NodeTypesModalComponent } from "../node-types-modal/node-types-modal.co
 })
 export class CapacityServiceComponent implements OnInit {
 
-  private serverEndpoint = "http://localhost:8081/api/v1";
+  private serverEndpoint = "../api/v1";
   private configPath = this.serverEndpoint + "/config";
   private workersPath = this.serverEndpoint + "/workers";
   private machineTypesPath = this.serverEndpoint + "/machinetypes";
