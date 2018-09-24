@@ -51,7 +51,6 @@ func New(conf Config) (*API, error) {
 
 func (a *API) Start(stopCh <-chan struct{}) error {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	go func() {
 		defer cancel()
