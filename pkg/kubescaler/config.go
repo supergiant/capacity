@@ -37,6 +37,7 @@ type Config struct {
 	WorkersCountMax   int               `json:"workersCountMax"`
 	MachineTypes      []string          `json:"machineTypes"`
 	IgnoredNodeLabels map[string]string `json:"ignoredNodeLabels"`
+	NewNodeTimeBuffer int               `json:"newNodeTimeBuffer"`
 }
 
 func (c *Config) Merge(in *Config) error {
@@ -61,7 +62,9 @@ func (c *Config) Merge(in *Config) error {
 	if len(in.IgnoredNodeLabels) != 0 {
 		c.IgnoredNodeLabels = in.IgnoredNodeLabels
 	}
-
+	if in.NewNodeTimeBuffer != 0 {
+		c.NewNodeTimeBuffer = in.NewNodeTimeBuffer
+	}
 	return nil
 }
 
