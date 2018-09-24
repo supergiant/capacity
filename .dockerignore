@@ -1,0 +1,5 @@
+.git
+.dockerignore
+Dockerfile
+.travis.yml
+cmd/capacity-service/capacity-service
