@@ -1,0 +1,103 @@
+config:
+  # sshPubKey TODO
+  sshPubKey: ""
+  
+  # clusterName is the name of your cluster
+  # all nodes should have an AWS label of KubernetesCluster=your.supergiant.cluster.name
+  clusterName: "your.supergiant.cluster.name"
+  
+  # masterPrivateAddr is the private IP of your master
+  masterPrivateAddr: "192.168.0.1"
+  
+  # kubeAPIHost is the public IP or DNS name of your master
+  kubeAPIHost: "192.168.0.2"
+  
+  # kubeAPIPort is the port the API server is running on (enter as a string)
+  kubeAPIPort: "443"
+  
+  # kubeAPIUser is the basic auth user name used to authenticate with the API server
+  kubeAPIUser: "spaceman"
+  
+  # kubeAPIPassword is the basic auth password used to authenticate with the API server
+  kubeAPIPassword: "password"
+  
+  # providerName is the name of your cloud provider (currently only supported value is "aws")
+  providerName: "aws"
+  
+  # scanInterval TODO
+  scanInterval: ""
+  
+  # maxMachineProvisionTime is the maximum amount of time an instance should take to join the cluster
+  # enter a number (in secods) as a string
+  maxMachineProvisionTime: ""
+  
+  # paused boolean that will prevent automatic capacity actions if set to true
+  paused: true
+  
+  # pauseLock boolean that will prevent pause from being disabled via the api
+  pauseLock: false
+  
+  # workersCountMin is the minimum number of the kubernetes worker nodes.
+  # The capacity service will not spin down boxes below this value.
+  # This value only affects scale down descisions. 
+  workersCountMin: 1
+  
+  # workersCountMax is the maximum number of the kubernetes worker nodes.
+  # The capacity service will not spin up boxes above this value.
+  # This value only affects scale up descisions.
+  workersCountMax: 10
+  
+  # ignoredNodeLabels TODO
+  ignoredNodeLabels: null
+  
+  # newNodeTimeBuffer is the amount of time in seconds a node is allowed to come up
+  # and join the kubernetes cluster before we consider more scaleing actions.
+  newNodeTimeBuffer: 120
+
+provider:
+  # awsKeyID is your AWS access ID
+  awsKeyID: "yourID"
+  
+  # awsSecretKey is your AWS secret key
+  awsSecretKey: "yoursecretkey"
+  
+  # awsRegion is the region you will create and destroy instances
+  awsRegion: "ca-central-1"
+  
+  # awsKeyName is the key pair name used to log into an instance created by the capacity service
+  awsKeyName: "yourkeyname"
+  
+  # awsImageID is the AMI ID to be used by created instances
+  awsImageID: "ami-xxxxxx"
+  
+  # awsIAMRole is the name of an IAMROLE the capacity service will give to new instances
+  awsIAMRole: "yourIAMROLEname"
+  
+  # awsSecurityGroups is the Group ID of the security group instances will belong to
+  awsSecurityGroups: "sg-xxxxxxxxxxx"
+  
+  # awsSubnetID is the subnet instances will be created in
+  awsSubnetID: "subnet-xxxxxxxx"
+  
+  # awsVolType is the volume type of the root volume for new nodes
+  awsVolType: "gp2"
+  
+  # awsVolSize is the size of the root volume on new nodes (string value in GB)
+  awsVolSize: "100"
+  
+  #ebsOptimized string that allows EBS-optimized instances to be created (set to "true" or "false")
+  ebsOptimized: "false"
+  
+  # awsTags are tags that will be applied to newly created instances (this is a comma seperated list of key=value pairs)
+  awsTags: "yourkey1=value,yourkey2=value"
+
+# machineTypes are the types of instances that the capacity service may spin up
+machineTypes:
+  - m4.4xlarge
+  - m4.2xlarge
+  - m4.large
+
+
+userdata: |
+  #!/bin/bash
+  echo "Hello Universe!"
