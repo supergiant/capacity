@@ -8,21 +8,16 @@ import (
 	_ "github.com/supergiant/capacity/pkg/capacityserver/handlers/swagger" // for swagger generation
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers/v1"
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers/version"
-	"github.com/supergiant/capacity/pkg/kubescaler"
+	//"github.com/supergiant/capacity/pkg/kubescaler"
 )
 
-func Handler(ks *capacity.Kubescaler) (*mux.Router, error) {
-	handlerV1, err := v1.New(ks)
-	if err != nil {
-		return nil, err
-	}
-
+func RegisterRouter(handler *v1.HandlerV1) (*mux.Router, error) {
 	r := mux.NewRouter()
 
 	r.Path("/version").Methods(http.MethodGet).HandlerFunc(version.Handler)
 
 	apiv1 := r.PathPrefix("/api/v1").Subrouter()
-	handlerV1.RegisterTo(apiv1)
+	handler.RegisterTo(apiv1)
 	apiv1.Use(
 		mux.MiddlewareFunc(setContentType),
 	)

@@ -62,8 +62,8 @@ func main() {
 	mux.PathPrefix("/ui/").Handler(
 		http.StripPrefix("/ui/", http.FileServer(uiFiles)),
 	)
-	mux.Handle("/ui", http.RedirectHandler("../ui/", 301))
-	mux.Handle("/", http.RedirectHandler("./ui", 301))
+	mux.Handle("/ui", http.RedirectHandler("../ui/", http.StatusMovedPermanently))
+	mux.Handle("/", http.RedirectHandler("./ui", http.StatusMovedPermanently))
 
 	stopCh := signals.SetupSignalHandler()
 	if err = srv.Start(stopCh); err != nil {

@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers"
+	"github.com/supergiant/capacity/pkg/capacityserver/handlers/v1"
 	kubescaler "github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/log"
 	"github.com/gorilla/mux"
@@ -31,8 +32,11 @@ func New(conf Config) (*API, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "setup kubescaler")
 	}
-
-	h, err := handlers.Handler(ks)
+	handlerV1, err := v1.New(ks)
+	if err != nil {
+		return nil, errors.Wrap(err, "setup router")
+	}
+	h, err := handlers.RegisterRouter(handlerV1)
 	if err != nil {
 		return nil, errors.Wrap(err, "setup handlers")
 	}
