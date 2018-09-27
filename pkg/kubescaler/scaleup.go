@@ -99,7 +99,7 @@ func bestMachineFor(cpu, mem resource.Quantity, machineTypes []*provider.Machine
 
 func hasCPUMemoryContstraints(pod *corev1.Pod) bool {
 	cpu, mem := getCPUMemForScheduling(pod)
-	return cpu.Value() != 0 && mem.Value() != 0
+	return cpu.Value() != 0 || mem.Value() != 0
 }
 
 func hasController(pod *corev1.Pod) bool {
