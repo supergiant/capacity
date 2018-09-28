@@ -273,44 +273,39 @@ func TestBestMachineFor(t *testing.T) {
 		},
 		{ // TC#2
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
-			expectedErr:  ErrEmptyCPUValue,
+			expectedErr:  ErrNoResourcesRequested,
 		},
 		{ // TC#3
-			cpu:          resource.MustParse("1"),
-			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
-			expectedErr:  ErrEmptyMemoryValue,
-		},
-		{ // TC#4
 			cpu:          resource.MustParse("1"),
 			mem:          resource.MustParse("1Mi"),
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType13,
 		},
-		{ // TC#5
+		{ // TC#4
 			cpu:          resource.MustParse("13"),
 			mem:          resource.MustParse("12Mi"),
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType13,
 		},
-		{ // TC#6
+		{ // TC#5
 			cpu:          resource.MustParse("13"),
 			mem:          resource.MustParse("13Mi"),
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType42,
 		},
-		{ // TC#7
+		{ // TC#6
 			cpu:          resource.MustParse("35"),
 			mem:          resource.MustParse("45Mi"),
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType42,
 		},
-		{ // TC#8
+		{ // TC#7
 			cpu:          resource.MustParse("64"),
 			mem:          resource.MustParse("64Mi"),
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
 			expectedRes:  machineType42,
 		},
-		{ // TC#9
+		{ // TC#8
 			cpu:          resource.MustParse("64"),
 			mem:          resource.MustParse("64Mi"),
 			machineTypes: []*provider.MachineType{&machineType42, &machineType13},
