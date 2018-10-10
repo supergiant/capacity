@@ -1,7 +1,11 @@
-import { Component, OnInit, ViewEncapsulation, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewEncapsulation, ViewChild } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { MatDialog, MatTableDataSource, MatSort, MatPaginator } from '@angular/material';
-import { NodeTypesModalComponent } from "../node-types-modal/node-types-modal.component"
+import { Subscription } from 'rxjs/Subscription';
+import { timer } from 'rxjs/observable/timer';
+import { switchMap } from 'rxjs/operators';
+import { NodeTypesModalComponent } from "../node-types-modal/node-types-modal.component";
+import { ConfirmDeleteModalComponent } from "../confirm-delete-modal/confirm-delete-modal.component";
 
 @Component({
   selector: 'app-capacity-service',
@@ -16,6 +20,7 @@ export class CapacityServiceComponent implements OnInit {
   private workersPath = this.serverEndpoint + "/workers";
   private machineTypesPath = this.serverEndpoint + "/machinetypes";
 
+  public subscriptions = new Subscription();
   public config: any;
   public workers: any;
   public enableSetNodesCount: boolean;
@@ -26,6 +31,7 @@ export class CapacityServiceComponent implements OnInit {
   public allowedNodeTypes = [];
   public nodeListColumns = ["machineName", "machineType", "machineId", "reserved", "delete"];
   public nodeTypeOptions = [];
+  public newNodeLoading = false;
 
   @ViewChild(MatSort) sort: MatSort;
   @ViewChild(MatPaginator) paginator: MatPaginator;
@@ -58,49 +64,37 @@ export class CapacityServiceComponent implements OnInit {
         this.currentWorkersCountMin = this.config.workersCountMin;
         this.currentWorkersCountMax = this.config.workersCountMax;
         this.allowedNodeTypes = this.config.machineTypes;
-      }
+      },
+      err => console.error(err)
     );
   }
 
   getWorkers() {
-    this.get(this.workersPath).subscribe(
-      workers => {
-        this.workers = new MatTableDataSource(workers.items.filter(worker => worker.machineState != "terminated"));
-        this.workers.sort = this.sort;
-        this.workers.paginator = this.paginator;
-        // for testing nodes table scrolling
-        // const d = []
-        // const ws = workers.items.filter(worker => worker.machineState != "terminated");
-        // ws.forEach(w => d.push(w));
-        // ws.forEach(w => d.push(w));
-        // ws.forEach(w => d.push(w));
-        // ws.forEach(w => d.push(w));
-        // ws.forEach(w => d.push(w));
-        // ws.forEach(w => d.push(w));
-        // ws.forEach(w => d.push(w));
-        // ws.forEach(w => d.push(w));
-        // ws.forEach(w => d.push(w));
-        // ws.forEach(w => d.push(w));
-        // ws.forEach(w => d.push(w));
-        // ws.forEach(w => d.push(w));
-        // ws.forEach(w => d.push(w));
-        // this.workers = new MatTableDataSource(d);
-        // this.workers.sort = this.sort;
-        // this.workers.paginator = this.paginator;
-      }
-    );
+    this.subscriptions.add(timer(0, 10000).pipe(
+      switchMap(() => this.get(this.workersPath))).subscribe(
+        workers => {
+          // TODO: filter out terminated machines and set classes for 'pending' and 'shutting-down'
+          this.workers = new MatTableDataSource(workers.items.filter(
+            worker => (worker.machineState == "running" || worker.machineState == "pending")));
+          this.workers.sort = this.sort;
+          this.workers.paginator = this.paginator;
+        },
+        err => console.error(err)
+      )
+    )
   }
 
   getMachineTypes() {
     this.get(this.machineTypesPath).subscribe(
-      machines => machines.forEach(m => this.nodeTypeOptions.push(m.name))
+      machines => machines.forEach(m => this.nodeTypeOptions.push(m.name)),
+      err => console.error(err)
     )
   }
 
   toggleCapService(state) {
     this.patch(this.configPath, { "paused": !state }).subscribe(
       config => this.config = config,
-      err => console.log("ERROR: ", err)
+      err => console.error(err)
     )
   }
 
@@ -120,7 +114,7 @@ export class CapacityServiceComponent implements OnInit {
           },
           err => {
             this.allowedNodeTypes = previousAllowedNodeTypes;
-            console.log("ERROR: ", err)
+            console.error(err)
           }
         );
       }
@@ -137,7 +131,7 @@ export class CapacityServiceComponent implements OnInit {
           // this is madness
           this.enableSetNodesCount = ((this.currentWorkersCountMax != this.config.workersCountMax) || (this.currentWorkersCountMin != this.config.workersCountMin));
         },
-        err => console.log("ERROR: ", err)
+        err => console.error(err)
       )
     } else {
       this.updateNodesCountStatus(max, min);
@@ -181,31 +175,45 @@ export class CapacityServiceComponent implements OnInit {
   toggleWorkerReserved(state, id) {
     this.patch(this.workersPath + "/" + id, { "reserved": state }).subscribe(
       res => res,
-      err => console.log("ERROR: ", err)
+      err => console.error(err)
     )
   }
 
   addNewNode(type) {
+    this.newNodeLoading = true;
     this.post(this.workersPath, { "machineType": type }).subscribe(
       res => {
         const data = this.workers.data;
         data.push(res);
         this.workers.data = data;
         this.newNodeType = null;
+        this.newNodeLoading = false;
       },
-      err => console.log("ERROR: ", err)
+      err => {
+        console.error(err)
+        this.newNodeLoading = false;
+      }
     )
   }
 
-  deleteNode(id) {
-    this.delete(this.workersPath + "/" + id).subscribe(
-      worker => {
-        const data = this.workers.data;
-        const updatedWorkers = data.filter(w => w.machineID != worker.machineID);
-        this.workers.data = updatedWorkers;
-      },
-      err => console.log("ERROR: ", err)
-    )
+  deleteNode(id, name) {
+    const modal = this.dialog.open(ConfirmDeleteModalComponent, {
+      width: "420px",
+      data: { name: name }
+    })
+
+    modal.afterClosed().subscribe(res => {
+      if (res) {
+        this.delete(this.workersPath + "/" + id).subscribe(
+          worker => {
+            const data = this.workers.data;
+            const updatedWorkers = data.filter(w => w.machineID != worker.machineID);
+            this.workers.data = updatedWorkers;
+          },
+          err => console.error(err)
+        )
+      }
+    })
   }
 
   ngOnInit() {
@@ -213,6 +221,10 @@ export class CapacityServiceComponent implements OnInit {
     this.getWorkers();
     this.getMachineTypes();
     this.enableSetNodesCount = false;
+  }
+
+  ngOnDestroy() {
+    this.subscriptions.unsubscribe();
   }
 
 }
