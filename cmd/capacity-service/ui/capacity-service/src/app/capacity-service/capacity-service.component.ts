@@ -58,15 +58,17 @@ export class CapacityServiceComponent implements OnInit {
 
   // cs logic
   getConfig() {
-    this.get(this.configPath).subscribe(
-      config => {
-        this.config = config;
-        this.currentWorkersCountMin = this.config.workersCountMin;
-        this.currentWorkersCountMax = this.config.workersCountMax;
-        this.allowedNodeTypes = this.config.machineTypes;
-      },
-      err => console.error(err)
-    );
+    this.subscriptions.add(timer(0, 10000).pipe(
+      switchMap(() => this.get(this.configPath))).subscribe(
+        config => {
+          this.config = config;
+          this.currentWorkersCountMin = this.config.workersCountMin;
+          this.currentWorkersCountMax = this.config.workersCountMax;
+          this.allowedNodeTypes = this.config.machineTypes;
+        },
+        err => console.error(err)
+      )
+    )
   }
 
   getWorkers() {
@@ -85,9 +87,11 @@ export class CapacityServiceComponent implements OnInit {
   }
 
   getMachineTypes() {
-    this.get(this.machineTypesPath).subscribe(
-      machines => machines.forEach(m => this.nodeTypeOptions.push(m.name)),
-      err => console.error(err)
+    this.subscriptions.add(timer(0, 10000).pipe(
+      switchMap(() => this.get(this.machineTypesPath))).subscribe(
+        machines => machines.forEach(m => this.nodeTypeOptions.push(m.name)),
+        err => console.error(err)
+      )
     )
   }
 
