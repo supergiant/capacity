@@ -201,12 +201,34 @@
       }
 
       .node-actions {
+        height: 56.5px;
         margin: 8px auto auto 24px;
 
         .new-node-field {
           font-size: 14px;
           margin-right: 27px;
           width: 379px;
+
+        }
+
+        // fix positioning from mat-spinner in button
+        .select-loading-margin {
+          position: relative;
+          bottom: 5px;
+        }
+
+        .button-loading-margin {
+          position: relative;
+          bottom: -8px;
+        }
+
+        .mat-spinner {
+          margin: 6px auto;
+          text-align: center;
+
+          circle {
+            stroke: #fff;
+          }
         }
       }
     }
@@ -313,7 +335,7 @@
                 fill: #fff;
 
                 &:hover {
-                  cursor: default;
+                  cursor: pointer;
                 }
 
                 &:active {
