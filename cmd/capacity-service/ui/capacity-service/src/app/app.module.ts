@@ -14,20 +14,23 @@ import {
   MatInputModule,
   MatSelectModule,
   MatSortModule,
-  MatPaginatorModule
+  MatPaginatorModule,
+  MatProgressSpinnerModule
 } from '@angular/material'
 
 import { AppComponent } from './app.component';
 import { CapacityServiceComponent } from './capacity-service/capacity-service.component';
 import { AppRoutingModule } from './/app-routing.module';
 import { NodeTypesModalComponent } from './node-types-modal/node-types-modal.component';
+import { ConfirmDeleteModalComponent } from './confirm-delete-modal/confirm-delete-modal.component';
 
 
 @NgModule({
   declarations: [
     AppComponent,
     CapacityServiceComponent,
-    NodeTypesModalComponent
+    NodeTypesModalComponent,
+    ConfirmDeleteModalComponent
   ],
   imports: [
     BrowserModule,
@@ -46,10 +49,11 @@ import { NodeTypesModalComponent } from './node-types-modal/node-types-modal.com
     MatInputModule,
     MatSelectModule,
     MatSortModule,
-    MatPaginatorModule
+    MatPaginatorModule,
+    MatProgressSpinnerModule
   ],
   providers: [],
   bootstrap: [AppComponent],
-  entryComponents: [NodeTypesModalComponent]
+  entryComponents: [NodeTypesModalComponent,ConfirmDeleteModalComponent]
 })
 export class AppModule { }
