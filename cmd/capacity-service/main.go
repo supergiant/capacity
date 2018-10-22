@@ -39,7 +39,7 @@ func main() {
 	log.SetLevel(args.LogLevel)
 	for _, hook := range strings.Split(args.LogHooks, ",") {
 		if err := log.AddHook(hook); err != nil {
-			log.Errorf("capacityserver: logger: add %s hook: %v", err)
+			log.Errorf("capacityserver: logger: add %s hook: %v", hook, err)
 		}
 	}
 
