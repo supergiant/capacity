@@ -58,7 +58,7 @@ func New(kubeConfig, kubescalerConfig, userDataFile string) (*Kubescaler, error)
 	if conf.GetConfig().ProviderName == "fake" {
 		return &Kubescaler{
 			PersistentConfig: conf,
-			WInterface:       fake.NewManager(),
+			WInterface:       fake.NewManager(nil),
 		}, nil
 	}
 

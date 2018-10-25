@@ -73,7 +73,7 @@ func TestKubescalerScaleDown(t *testing.T) {
 					MachineTypes: tc.allowedMachines,
 				},
 			},
-			WInterface: fake.NewManager(),
+			WInterface: fake.NewManager(tc.providerErr),
 		}
 
 		err := ks.scaleDown(tc.pods, tc.workerList, nil, time.Now())

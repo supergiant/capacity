@@ -1,7 +1,6 @@
 package capacity
 
 import (
-	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -11,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/pkg/errors"
 
 	"github.com/supergiant/capacity/pkg/kubescaler/workers/fake"
 	"github.com/supergiant/capacity/pkg/provider"
@@ -193,7 +193,7 @@ func TestKubescalerScaleUp(t *testing.T) {
 			allowedMachines: []string{allowedMachine.Name},
 		},
 		{
-			pods:            []*corev1.Pod{&podNew, &podStandAlone, &podWithLimits},
+			pods:            []*corev1.Pod{&podNew, &podStandAlone, &podWithRequests},
 			nodes:           []*corev1.Node{&nodeReady},
 			allowedMachines: []string{allowedMachine.Name},
 			providerErr:     errFake,
@@ -211,11 +211,11 @@ func TestKubescalerScaleUp(t *testing.T) {
 					MachineTypes: tc.allowedMachines,
 				},
 			},
-			WInterface: fake.NewManager(),
+			WInterface: fake.NewManager(tc.providerErr),
 		}
 
 		_, err := ks.scaleUp(tc.pods, allowedMachines, currentTime)
-		require.Equalf(t, tc.expectedErr, err, "TC#%d", i+1)
+		require.Equalf(t, tc.expectedErr, errors.Cause(err), "TC#%d", i+1)
 	}
 
 }
