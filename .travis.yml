@@ -1,6 +1,11 @@
 services:
 - docker
 
+language: go
+
+go:
+  - 1.11.x
+
 cache:
   directories:
   - /tmp/cache
@@ -16,6 +21,7 @@ before_script:
 - 'docker load -i /tmp/cache/docker.tar ||:'
 
 script:
+- go test -v -race ./pkg/...
 - docker build --tag build --target build .
 - docker build --tag supergiant/capacity:$RELEASE_NAME .
 
