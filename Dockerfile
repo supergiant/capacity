@@ -3,7 +3,7 @@ FROM golang:stretch AS build
 # install dependencies
 RUN echo 'deb http://deb.nodesource.com/node_10.x stretch main' >>/etc/apt/sources.list
 RUN wget -qO- https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
-RUN apt-get update && apt-get install -y jq nodejs build-essential
+RUN apt-get update && apt-get install -y jq nodejs build-essential git
 RUN npm i npm@latest -g
 
 # enable totally static binaries
@@ -33,7 +33,7 @@ RUN ng build --prod --base-href="../ui/"
 
 # download packr
 # TODO: support other archs
-RUN PACKR_AMD64_URL=$(curl --silent "https://api.github.com/repos/gobuffalo/packr/releases/latest" | jq -r '.assets[].browser_download_url' | grep 'linux_amd64') && curl -sL $PACKR_AMD64_URL | tar -xzC /tmp
+#RUN PACKR_AMD64_URL=$(curl --silent "https://api.github.com/repos/gobuffalo/packr/releases/latest" | jq -r '.assets[].browser_download_url' | grep 'linux_amd64') \ curl -sL $PACKR_AMD64_URL | tar -xzC /tmp
 
 # Put pre-built ui back in place
 RUN mkdir -p /go/src/github.com/supergiant/capacity
@@ -41,7 +41,14 @@ COPY . /go/src/github.com/supergiant/capacity/
 WORKDIR /go/src/github.com/supergiant/capacity/cmd/capacity-service
 RUN rm -Rf ui/capacity-service
 RUN mv /tmp/ui ui/capacity-service
-RUN /tmp/packr build -v -ldflags="-s -w"
+#RUN /tmp/packr build -v -ldflags="-s -w"
+RUN rm -Rf /go/src/github.com/gobuffalo/packr
+RUN rm -Rf /go/src/github.com/pkg/errors
+RUN rm -Rf /go/src/golang.org/x/net/context
+RUN rm -Rf /go/src/github.com/spf13/pflag
+RUN rm -Rf /go/src/golang.org/x/net
+RUN go get -u github.com/gobuffalo/packr/packr
+RUN packr build -v -ldflags="-s -w"
 RUN mv capacity-service /tmp/bin/
 
 # add init script
