@@ -10,14 +10,19 @@ env:
   - secure: "eZ23NXgPvCJJpC5MpyuOYDiGG9bcN0VKrKvjDJ1UXc/fyQw9FxavaFbTjqObbwvifd4y8+y6yg8nP4oEylCtRM+19V1vgcjIvetboidLflZhR8V0a3Rr9fHwt5KW+u2331Omwd7Ogy30UqMrMzCPJBzPAvnCtdSJDBOoLBIYxZJjhg1E93zGwV56XtNjmIuve+TBuy/VmV+uRq+uCjmRro/4oPRz/DI0VeoqtlzLLw3mZmZj2wVa5qNGIstC9rY7SL3bH+oLQrq85cB5gkral/x2eu0m+rt4i0beXXO+mzT55yHMl/BNaDc1ug1R5JwBbEKyDa7PFlQZQyXpdrYRCNRH7NACznoncf1OL82viWl+Zsme2q0j17F2Oxv7cKGHNgg/BMVbXtqAV8MyMQMNaz16/Ed2d18YRcvda0xkFGT+AXR/Id9CW1GL/DLBZsDJGD7Ov9V/i0m7MN1IPvcElu13qFjTSn9luiPmsRqrwUKQ6k8ZWINsgJFOc4QZgR72jhSfHgH3QPas04cJTFwqK0UGJzWR/sGru6YQYvhGx4QqOOzRs9n9mwfECi/aMA52OOGYUq1rjuW7pi3LrFkOGEkFiCXA71Sx+bvVgxJ55HTIy5SpdEPdNVBBLsCG7/hlypYKeZjGj0XQHBGAiVEw9hOGr3E6jmqxt1LJekiG65s="
   - secure: "kFyGaBpFTHX3ZXKHT3pwaLmPxKkZdtLQPXEPEkQ2pwo7gFQAcLBfey41o30uqrxZztLEMPipz08pngzA8cnRajZuFDmhD9b5UcSbI6VzxkXXcusgSmOjdV3DQ0ckRhg9KfkmIOOMkxPU5CfPAw4n/wpKQHKNSepEWE/axOwkK6mZZf92t5tpBKOyzBNgQkNOYRSNBiElosevN0K0sLd8cMfNdqwQFLHBxuJPxABhFdG/u76Js84AbHN+zjFA4mBbP+Nxh6spunk85jo8mm/C04/dgEiv6J20TofRAH7q4NncFVi0u6iWoCbjFW37ahSJ3f4XT90A4zy8sZUWA8P2nUZipSIhJl3M0DcNkFDDoCU7n/VhiBWGbEobzsSouYtIXz8QE0aaOeho2ds3ywnYc3u9jxqBzsAxdG6hw0pJTf6EbLXPGoLZVurRZlU9N4KcTzQs+qhA116zC2n/Izxi6S4KeAcB06LrOJ/j9uX7qBxC1VM55HLvMBpf/khUBRLkGeGnP/6sNO56oeEFz8TIdQ23wW2js+KTZziIHsEFnW/7BLXSgynfK1B58/wWmkWDPe5YQOXRQp1dBVUmz/6L61IZFOah/xlYqc+EbTyd+4Ipus63/hH6qJPUl9mIkEBoM7WJd/tlaMOtRjZkc5WB9B/9okcWrfQOxOo6mJGPxIY="
 
-before_script:
-- branchRegEx='^release-(.*)$'
-- '[[ "$TRAVIS_BRANCH" =~ $branchRegEx ]] && export RELEASE_NAME="v${BASH_REMATCH[1]}" || export RELEASE_NAME="$TRAVIS_BRANCH"'
-- 'docker load -i /tmp/cache/docker.tar ||:'
+language: go
+
+go:
+  - "1.10"
+
+go_import_path: github.com/supergiant/capacity
+
+install:
+- go get -t ./...
+- go get github.com/tcnksm/ghr
 
 script:
-- docker build --tag build --target build .
-- docker build --tag supergiant/capacity:$RELEASE_NAME .
+- source travis_build.sh
 
 before_cache:
 - 'sudo rm -Rf /tmp/cache ||:'
@@ -25,6 +30,4 @@ before_cache:
 - "docker save -o /tmp/cache/docker.tar $(docker history -q build | tr '\n' ' ' | tr -d '<missing>')"
 
 after_success:
-- if ! [[ "${TRAVIS_BRANCH,,}" =~ private ]]; then docker login -u $DOCKER_USERNAME -p
-  $DOCKER_PASSWORD ; docker push supergiant/capacity:$RELEASE_NAME; fi
-
+- echo "Process Done."
