@@ -20,7 +20,7 @@ ADD https://busybox.net/downloads/binaries/1.27.1-i686/busybox_ASH /tmp/bin/sh
 RUN chmod +x /tmp/bin/sh
 
 # build vendor stuff first to exploit cache
-COPY vendor /go/src/
+#COPY vendor /go/src/
 RUN cd /go/src && go install -v ./...
 
 # build the UI
@@ -42,11 +42,11 @@ WORKDIR /go/src/github.com/supergiant/capacity/cmd/capacity-service
 RUN rm -Rf ui/capacity-service
 RUN mv /tmp/ui ui/capacity-service
 #RUN /tmp/packr build -v -ldflags="-s -w"
-RUN rm -Rf /go/src/github.com/gobuffalo/packr
-RUN rm -Rf /go/src/github.com/pkg/errors
-RUN rm -Rf /go/src/golang.org/x/net/context
-RUN rm -Rf /go/src/github.com/spf13/pflag
-RUN rm -Rf /go/src/golang.org/x/net
+#RUN rm -Rf /go/src/github.com/gobuffalo/packr
+#RUN rm -Rf /go/src/github.com/pkg/errors
+#RUN rm -Rf /go/src/golang.org/x/net/context
+#RUN rm -Rf /go/src/github.com/spf13/pflag
+#RUN rm -Rf /go/src/golang.org/x/net
 RUN go get -u github.com/gobuffalo/packr/packr
 RUN packr build -v -ldflags="-s -w"
 RUN mv capacity-service /tmp/bin/
