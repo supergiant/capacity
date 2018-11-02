@@ -21,13 +21,15 @@ import { AppComponent } from './app.component';
 import { CapacityServiceComponent } from './capacity-service/capacity-service.component';
 import { AppRoutingModule } from './/app-routing.module';
 import { NodeTypesModalComponent } from './node-types-modal/node-types-modal.component';
+import { FooterComponent } from './footer/footer.component';
 
 
 @NgModule({
   declarations: [
     AppComponent,
     CapacityServiceComponent,
-    NodeTypesModalComponent
+    NodeTypesModalComponent,
+    FooterComponent
   ],
   imports: [
     BrowserModule,

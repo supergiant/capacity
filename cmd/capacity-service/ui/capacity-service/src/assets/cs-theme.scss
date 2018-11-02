@@ -77,12 +77,3 @@ $theme: mat-dark-theme($primary, $accent, $warn);
 
 @include angular-material-theme($theme)
 
-// CUSTOM ADJUSTMENTS
-// .mat-checkbox .mat-checkbox-frame {
-//   border-color: #d10088 !important;
-// }
-
-// .mat-checkbox-inner-container {
-//   height: 16px !important;
-//   width: 16px !important;
-// }
