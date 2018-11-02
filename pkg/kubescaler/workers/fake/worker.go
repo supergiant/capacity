@@ -14,11 +14,13 @@ var _ workers.WInterface = &Manager{}
 
 type Manager struct {
 	clusterName string
+	err error
 }
 
-func NewManager() *Manager {
+func NewManager(err error) *Manager {
 	return &Manager{
 		clusterName: "fake",
+		err: err,
 	}
 }
 
@@ -49,7 +51,7 @@ func (m *Manager) CreateWorker(ctx context.Context, mtype string) (*workers.Work
 		MachineType:       mtype,
 		MachineState:      "pending",
 		CreationTimestamp: time.Now(),
-	}, nil
+	}, m.err
 }
 
 func (m *Manager) GetWorker(ctx context.Context, id string) (*workers.Worker, error) {
@@ -60,7 +62,7 @@ func (m *Manager) GetWorker(ctx context.Context, id string) (*workers.Worker, er
 		MachineType:       "m4.large",
 		MachineState:      "running",
 		CreationTimestamp: time.Now(),
-	}, nil
+	}, m.err
 }
 
 func (m *Manager) ListWorkers(ctx context.Context) (*workers.WorkerList, error) {
@@ -83,7 +85,7 @@ func (m *Manager) ListWorkers(ctx context.Context) (*workers.WorkerList, error) 
 				CreationTimestamp: time.Now(),
 			},
 		},
-	}, nil
+	}, m.err
 }
 
 func (m *Manager) DeleteWorker(ctx context.Context, nodeName, id string) (*workers.Worker, error) {
@@ -94,7 +96,7 @@ func (m *Manager) DeleteWorker(ctx context.Context, nodeName, id string) (*worke
 		MachineType:       "m4.large",
 		MachineState:      "terminating",
 		CreationTimestamp: time.Now(),
-	}, nil
+	}, m.err
 }
 
 func (m *Manager) ReserveWorker(ctx context.Context, w *workers.Worker) (*workers.Worker, error) {
@@ -106,5 +108,5 @@ func (m *Manager) ReserveWorker(ctx context.Context, w *workers.Worker) (*worker
 		MachineID:         w.MachineID,
 		Reserved:          w.Reserved,
 		CreationTimestamp: time.Now(),
-	}, nil
+	}, m.err
 }

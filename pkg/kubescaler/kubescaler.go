@@ -58,7 +58,7 @@ func New(kubeConfig, kubescalerConfig, userDataFile string) (*Kubescaler, error)
 	if conf.GetConfig().ProviderName == "fake" {
 		return &Kubescaler{
 			PersistentConfig: conf,
-			WInterface:       fake.NewManager(),
+			WInterface:       fake.NewManager(nil),
 		}, nil
 	}
 
@@ -174,10 +174,6 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 
 		nodePods := nodePodsMap(rss.scheduledPods)
 		log.Debugf("kubescaler: scale up: nodepods %v, ready nodes %v", nodePods, nodeNames(rss.readyNodes))
-		if len(rss.readyNodes) < len(nodePods) {
-			// have some scheduled pods (pending|ready) that have been already scheduled on nodes (not ready yet).
-			return nil
-		}
 
 		if emptyNodes := getEmptyNodes(rss.readyNodes, rss.allPods); len(emptyNodes) > 0 {
 			log.Debugf("kubescaler: scale up: there are %v ready empty nodes in the cluster", nodeNames(emptyNodes))

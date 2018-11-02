@@ -14,7 +14,8 @@ import {
   MatInputModule,
   MatSelectModule,
   MatSortModule,
-  MatPaginatorModule
+  MatPaginatorModule,
+  MatProgressSpinnerModule
 } from '@angular/material'
 
 import { AppComponent } from './app.component';
@@ -22,6 +23,7 @@ import { CapacityServiceComponent } from './capacity-service/capacity-service.co
 import { AppRoutingModule } from './/app-routing.module';
 import { NodeTypesModalComponent } from './node-types-modal/node-types-modal.component';
 import { FooterComponent } from './footer/footer.component';
+import { ConfirmDeleteModalComponent } from './confirm-delete-modal/confirm-delete-modal.component';
 
 
 @NgModule({
@@ -29,7 +31,8 @@ import { FooterComponent } from './footer/footer.component';
     AppComponent,
     CapacityServiceComponent,
     NodeTypesModalComponent,
-    FooterComponent
+    FooterComponent,
+    ConfirmDeleteModalComponent
   ],
   imports: [
     BrowserModule,
@@ -48,10 +51,11 @@ import { FooterComponent } from './footer/footer.component';
     MatInputModule,
     MatSelectModule,
     MatSortModule,
-    MatPaginatorModule
+    MatPaginatorModule,
+    MatProgressSpinnerModule
   ],
   providers: [],
   bootstrap: [AppComponent],
-  entryComponents: [NodeTypesModalComponent]
+  entryComponents: [NodeTypesModalComponent,ConfirmDeleteModalComponent]
 })
 export class AppModule { }
