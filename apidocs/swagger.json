@@ -272,6 +272,11 @@
           "type": "string",
           "x-go-name": "MaxMachineProvisionTime"
         },
+        "newNodeTimeBuffer": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "NewNodeTimeBuffer"
+        },
         "pauseLock": {
           "type": "boolean",
           "x-go-name": "PauseLock"
