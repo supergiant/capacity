@@ -22,6 +22,7 @@ import { AppComponent } from './app.component';
 import { CapacityServiceComponent } from './capacity-service/capacity-service.component';
 import { AppRoutingModule } from './/app-routing.module';
 import { NodeTypesModalComponent } from './node-types-modal/node-types-modal.component';
+import { FooterComponent } from './footer/footer.component';
 import { ConfirmDeleteModalComponent } from './confirm-delete-modal/confirm-delete-modal.component';
 
 
@@ -30,6 +31,7 @@ import { ConfirmDeleteModalComponent } from './confirm-delete-modal/confirm-dele
     AppComponent,
     CapacityServiceComponent,
     NodeTypesModalComponent,
+    FooterComponent,
     ConfirmDeleteModalComponent
   ],
   imports: [
