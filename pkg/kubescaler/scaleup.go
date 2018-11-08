@@ -1,4 +1,4 @@
-package capacity
+package kubescaler
 
 import (
 	"context"

@@ -1,6 +1,7 @@
-package capacity
+package kubescaler
 
 import (
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -13,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/supergiant/capacity/pkg/kubescaler/workers/fake"
+	"github.com/supergiant/capacity/pkg/persistentfile/file"
 	"github.com/supergiant/capacity/pkg/provider"
 )
 
@@ -203,18 +205,21 @@ func TestKubescalerScaleUp(t *testing.T) {
 
 	allowedMachines := []*provider.MachineType{&allowedMachine}
 	for i, tc := range tcs {
+		f, err := file.New("/tmp/"+uuid.New(), os.FileMode(0664))
+		require.Nilf(t, err, "TC#%d", i+1)
+
 		ks := &Kubescaler{
-			PersistentConfig: &PersistentConfig{
-				filepath: "/tmp/" + uuid.New(),
-				mu:       sync.RWMutex{},
-				conf: &Config{
+			ConfigManager: &ConfigManager{
+				file: f,
+				mu:   sync.RWMutex{},
+				conf: Config{
 					MachineTypes: tc.allowedMachines,
 				},
 			},
 			WInterface: fake.NewManager(tc.providerErr),
 		}
 
-		_, err := ks.scaleUp(tc.pods, allowedMachines, currentTime)
+		_, err = ks.scaleUp(tc.pods, allowedMachines, currentTime)
 		require.Equalf(t, tc.expectedErr, errors.Cause(err), "TC#%d", i+1)
 	}
 

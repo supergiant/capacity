@@ -1,181 +1,150 @@
-package capacity
+package kubescaler
 
 import (
 	"encoding/json"
-	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
 
+	"github.com/supergiant/capacity/pkg/persistentfile"
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/aws"
 )
 
 const (
-	EnvPrevix = "CAPACITY"
+	EnvPrefix = "CAPACITY"
 )
 
 type Config struct {
-	SSHPubKey               string            `json:"sshPubKey"`
-	ClusterName             string            `json:"clusterName"`
-	ProviderName            string            `json:"providerName"`
-	Provider                map[string]string `json:"provider"`
-	ScanInterval            string            `json:"scanInterval"`
+	ClusterName     string            `json:"clusterName"`
+	ProviderName    string            `json:"providerName"`
+	Provider        map[string]string `json:"provider"`
+	Paused          *bool             `json:"paused,omitempty"`
+	PauseLock       bool              `json:"pauseLock"`
+	ScanInterval    string            `json:"scanInterval"`
+	WorkersCountMin int               `json:"workersCountMin"`
+	WorkersCountMax int               `json:"workersCountMax"`
+	MachineTypes    []string          `json:"machineTypes"`
+	// TODO: this is hardcoded and doesn't used at the moment
 	MaxMachineProvisionTime string            `json:"maxMachineProvisionTime"`
+	IgnoredNodeLabels       map[string]string `json:"ignoredNodeLabels"`
+	NewNodeTimeBuffer       int               `json:"newNodeTimeBuffer"`
 
 	// These is a SG1.0 UserData template parameters
-	// TODO: add an explicit struct for it
+	// TODO: add an explicit struct for it or use a map for dynamic values
 	MasterPrivateAddr string `json:"masterPrivateAddr"`
 	KubeAPIHost       string `json:"kubeAPIHost"`
 	KubeAPIPort       string `json:"kubeAPIPort"`
 	KubeAPIUser       string `json:"kubeAPIUser"`
 	KubeAPIPassword   string `json:"kubeAPIPassword"`
-
-	Paused            *bool             `json:"paused,omitempty"`
-	PauseLock         bool              `json:"pauseLock"`
-	WorkersCountMin   int               `json:"workersCountMin"`
-	WorkersCountMax   int               `json:"workersCountMax"`
-	MachineTypes      []string          `json:"machineTypes"`
-	IgnoredNodeLabels map[string]string `json:"ignoredNodeLabels"`
-	NewNodeTimeBuffer int               `json:"newNodeTimeBuffer"`
+	SSHPubKey         string `json:"sshPubKey"`
 }
 
-func (c *Config) Merge(in *Config) error {
-	if in.Paused != nil {
-		c.Paused = in.Paused
+func (c Config) Validate() error {
+	// TODO: pass it with a pointer or use the ConfigRequest struct for patches.
+	if c.WorkersCountMin < 0 {
+		return errors.New("WorkersCountMin can't be negative")
 	}
-	if in.WorkersCountMin != 0 {
-		if in.WorkersCountMin < 0 {
-			return errors.New("WorkersCountMin can't be negative")
-		}
-		c.WorkersCountMin = in.WorkersCountMin
-	}
-	if in.WorkersCountMax != 0 {
-		if in.WorkersCountMax < 0 {
-			return errors.New("WorkersCountMax can't be negative")
-		}
-		c.WorkersCountMax = in.WorkersCountMax
-	}
-	if len(in.MachineTypes) != 0 {
-		c.MachineTypes = in.MachineTypes
-	}
-	if len(in.IgnoredNodeLabels) != 0 {
-		c.IgnoredNodeLabels = in.IgnoredNodeLabels
-	}
-	if in.NewNodeTimeBuffer != 0 {
-		c.NewNodeTimeBuffer = in.NewNodeTimeBuffer
+	if c.WorkersCountMax < 0 {
+		return errors.New("WorkersCountMax can't be negative")
 	}
 	return nil
 }
 
-type PersistentConfig struct {
-	filepath string
-
-	mu   sync.RWMutex
-	conf *Config
+func Merge(c, patch Config) Config {
+	if patch.Paused != nil {
+		c.Paused = patch.Paused
+	}
+	// TODO: use pointers for it?
+	if patch.WorkersCountMin != 0 {
+		c.WorkersCountMin = patch.WorkersCountMin
+	}
+	if patch.WorkersCountMax != 0 {
+		c.WorkersCountMax = patch.WorkersCountMax
+	}
+	if len(patch.MachineTypes) != 0 {
+		c.MachineTypes = patch.MachineTypes
+	}
+	if len(patch.IgnoredNodeLabels) != 0 {
+		c.IgnoredNodeLabels = patch.IgnoredNodeLabels
+	}
+	if patch.NewNodeTimeBuffer != 0 {
+		c.NewNodeTimeBuffer = patch.NewNodeTimeBuffer
+	}
+	return c
 }
 
-func NewPersistentConfig(fullpath string) (*PersistentConfig, error) {
-	_, err := os.Stat(fullpath)
-	if os.IsNotExist(err) {
-		if err = writeExampleConfig(fullpath); err != nil {
-			return nil, errors.Wrap(err, "write the example config")
+type ConfigManager struct {
+	file persistentfile.Interface
+
+	mu   sync.RWMutex
+	conf Config
+}
+
+func NewConfigManager(file persistentfile.Interface) (*ConfigManager, error) {
+	raw, err := file.Read()
+	if err != nil {
+		if persistentfile.IsNotExist(err) {
+			return nil, errors.Wrapf(err, "read config from %s", file.Info())
 		}
-		return nil, errors.New("example config has generated on " + fullpath + ". Please, go through REPLACE_IT fields")
+		return nil, errors.Wrap(err, "get config")
 	}
 
-	conf, err := readFileEnv(fullpath)
-	if err != nil {
-		return nil, errors.Wrap(err, "from file/env")
+	conf := Config{}
+	// TODO: use codec to support more formats
+	if err = json.Unmarshal(raw, &conf); err != nil {
+		return nil, errors.Wrap(err, "decode config")
 	}
 
-	// update a persistent config
-	wc, err := fileWriteCloser(fullpath)
-	if err != nil {
-		return nil, err
-	}
-	defer wc.Close()
-	if err = json.NewEncoder(wc).Encode(conf); err != nil {
-		return nil, err
-	}
-
-	return &PersistentConfig{
-		filepath: fullpath,
-		mu:       sync.RWMutex{},
-		conf:     conf,
+	return &ConfigManager{
+		file: file,
+		mu:   sync.RWMutex{},
+		conf: applyEnv(conf),
 	}, nil
 }
 
-func (m *PersistentConfig) SetConfig(conf Config) error {
-	wc, err := fileWriteCloser(m.filepath)
-	if err != nil {
-		return err
-	}
-	defer wc.Close()
-
-	if err = json.NewEncoder(wc).Encode(conf); err != nil {
+func (m *ConfigManager) SetConfig(conf Config) error {
+	if err := m.write(conf); err != nil {
 		return err
 	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.conf = &conf
+	m.conf = conf
 	return nil
 }
 
-func (m *PersistentConfig) PatchConfig(in *Config) error {
-	wc, err := fileWriteCloser(m.filepath)
-	if err != nil {
+func (m *ConfigManager) PatchConfig(in Config) error {
+	newConf := Merge(m.GetConfig(), in)
+	if err := newConf.Validate(); err != nil {
 		return err
 	}
-	defer wc.Close()
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if err = m.conf.Merge(in); err != nil {
-		return err
-	}
-
-	return json.NewEncoder(wc).Encode(m.conf)
+	return m.SetConfig(newConf)
 }
 
-func (m *PersistentConfig) GetConfig() Config {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	return *m.conf
-}
-
-func readFileEnv(fullpath string) (*Config, error) {
-	data, err := ioutil.ReadFile(fullpath)
+func (m *ConfigManager) write(conf Config) error {
+	raw, err := json.Marshal(conf)
 	if err != nil {
-		return nil, err
+		return errors.Wrap(err, "encode config")
 	}
+	return errors.Wrap(m.file.Write(raw), "write config")
+}
 
-	conf := &Config{}
-	if err = json.Unmarshal(data, conf); err != nil {
-		return nil, errors.Wrap(err, "decode")
-	}
-	if conf.Provider == nil {
-		conf.Provider = make(map[string]string)
-	}
-	if err := applyEnv(conf); err != nil {
-		return nil, errors.Wrap(err, "applyEnv")
-	}
+func (m *ConfigManager) GetConfig() Config {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-	return conf, nil
+	return m.conf
 }
 
 // TODO: just a hack, use viper in the future
-func applyEnv(conf *Config) error {
+func applyEnv(conf Config) Config {
 	envMap := map[string]string{
-		aws.KeyID:     EnvPrevix + "_PROVIDER_AWS_KEYID",
-		aws.SecretKey: EnvPrevix + "_PROVIDER_AWS_SECRETKEY",
+		aws.KeyID:     EnvPrefix + "_PROVIDER_AWS_KEYID",
+		aws.SecretKey: EnvPrefix + "_PROVIDER_AWS_SECRETKEY",
 	}
 
 	for key, env := range envMap {
@@ -184,15 +153,11 @@ func applyEnv(conf *Config) error {
 			conf.Provider[key] = val
 		}
 	}
-
-	return nil
+	return conf
 }
 
-func fileWriteCloser(filepath string) (io.WriteCloser, error) {
-	return os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
-}
-
-func writeExampleConfig(filepath string) error {
+// TODO: show this on cli help subcommand
+func writeExampleConfig(file persistentfile.Interface) error {
 	conf := &Config{
 		SSHPubKey:         "REPLACE_IT",
 		ClusterName:       "REPLACE_IT",
@@ -220,13 +185,12 @@ func writeExampleConfig(filepath string) error {
 		Paused:          BoolPtr(true),
 	}
 
-	fw, err := fileWriteCloser(filepath)
+	raw, err := json.Marshal(conf)
 	if err != nil {
 		return err
 	}
-	defer fw.Close()
 
-	return json.NewEncoder(fw).Encode(conf)
+	return file.Write(raw)
 }
 
 func BoolPtr(in bool) *bool {
