@@ -45,19 +45,19 @@ version="v1.0.0"
 
 [[override]]
 name="github.com/go-openapi/jsonpointer"
-revision="3a0015ad55fa9873f41605d3e8f28cd279c32ab2"
+version="=v0.17.2"
 
 [[override]]
 name="github.com/go-openapi/jsonreference"
-revision="3fb327e6747da3043567ee86abd02bb6376b6be2"
+version="=v0.17.2"
 
 [[override]]
 name="github.com/go-openapi/spec"
-revision="bcff419492eeeb01f76e77d2ebc714dc97b607f5"
+version="=v0.17.2"
 
 [[override]]
 name="github.com/go-openapi/swag"
-revision="811b1089cde9dad18d4d0c2d09fbdbf28dbd27a5"
+version="=v0.17.2"
 
 [[override]]
 name="github.com/gogo/protobuf"
