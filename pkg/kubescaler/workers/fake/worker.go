@@ -14,13 +14,13 @@ var _ workers.WInterface = &Manager{}
 
 type Manager struct {
 	clusterName string
-	err error
+	err         error
 }
 
 func NewManager(err error) *Manager {
 	return &Manager{
 		clusterName: "fake",
-		err: err,
+		err:         err,
 	}
 }
 

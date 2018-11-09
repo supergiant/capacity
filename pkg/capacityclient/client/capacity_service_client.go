@@ -8,7 +8,6 @@ package client
 import (
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
-
 	strfmt "github.com/go-openapi/strfmt"
 
 	"github.com/supergiant/capacity/pkg/capacityclient/client/config"

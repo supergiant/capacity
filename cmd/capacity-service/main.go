@@ -1,13 +1,13 @@
 package main
 
 import (
+	"net/http"
 	"os"
 	"strings"
-	"net/http"
 
 	"github.com/alexflint/go-arg"
-	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
 	"github.com/gobuffalo/packr"
+	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
 
 	"github.com/supergiant/capacity/pkg/capacityserver"
 	"github.com/supergiant/capacity/pkg/log"
