@@ -61,7 +61,7 @@ func New(kubeConfig, kubescalerConfig, userDataFile string) (*Kubescaler, error)
 		}, nil
 	}
 
-	kclient, err := config.GetKubernetesClientSetBasicAuth(cfg.KubeAPIHost, cfg.KubeAPIPort, cfg.KubeAPIUser, cfg.KubeAPIPassword)
+	kclient, err := config.GetKubernetesClientSet("", kubeConfig)
 	if err != nil {
 		return nil, err
 	}

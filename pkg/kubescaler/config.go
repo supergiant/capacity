@@ -21,15 +21,18 @@ const (
 type Config struct {
 	SSHPubKey               string            `json:"sshPubKey"`
 	ClusterName             string            `json:"clusterName"`
-	MasterPrivateAddr       string            `json:"masterPrivateAddr"`
-	KubeAPIHost             string            `json:"kubeAPIHost"`
-	KubeAPIPort             string            `json:"kubeAPIPort"`
-	KubeAPIUser             string            `json:"kubeAPIUser"`
-	KubeAPIPassword         string            `json:"kubeAPIPassword"`
 	ProviderName            string            `json:"providerName"`
 	Provider                map[string]string `json:"provider"`
 	ScanInterval            string            `json:"scanInterval"`
 	MaxMachineProvisionTime string            `json:"maxMachineProvisionTime"`
+
+	// These is a SG1.0 UserData template parameters
+	// TODO: add an explicit struct for it
+	MasterPrivateAddr string `json:"masterPrivateAddr"`
+	KubeAPIHost       string `json:"kubeAPIHost"`
+	KubeAPIPort       string `json:"kubeAPIPort"`
+	KubeAPIUser       string `json:"kubeAPIUser"`
+	KubeAPIPassword   string `json:"kubeAPIPassword"`
 
 	Paused            *bool             `json:"paused,omitempty"`
 	PauseLock         bool              `json:"pauseLock"`
