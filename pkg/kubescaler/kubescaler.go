@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubeutil "k8s.io/autoscaler/cluster-autoscaler/utils/kubernetes"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/supergiant/capacity/pkg/kubernetes/config"
@@ -34,9 +33,9 @@ var (
 )
 
 type ListerRegistry interface {
-	ReadyNodeLister() kubeutil.NodeLister
-	ScheduledPodLister() kubeutil.PodLister
-	UnschedulablePodLister() kubeutil.PodLister
+	ReadyNodeLister() listers.NodeLister
+	ScheduledPodLister() listers.PodLister
+	UnschedulablePodLister() listers.PodLister
 }
 
 type Kubescaler struct {

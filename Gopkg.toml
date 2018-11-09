@@ -209,9 +209,5 @@ branch="master"
 
 
 [[constraint]]
-  name = "github.com/rs/cors"
-  version = "1.5.0"
-
-[[constraint]]
   branch = "aws_get_instance"
   name = "github.com/saheienko/supergiant"

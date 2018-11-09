@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 
-	"github.com/gorilla/mux"
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers"
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers/v1"
 	kubescaler "github.com/supergiant/capacity/pkg/kubescaler"
