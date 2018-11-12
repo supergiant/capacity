@@ -15,10 +15,10 @@ var (
 )
 
 type configHandler struct {
-	pconf *capacity.PersistentConfig
+	cm *kubescaler.ConfigManager
 }
 
-func newConfigHandler(pconf *capacity.PersistentConfig) (*configHandler, error) {
+func newConfigHandler(pconf *kubescaler.ConfigManager) (*configHandler, error) {
 	if pconf == nil {
 		return nil, ErrInvalidPersistentConfig
 	}
@@ -40,7 +40,7 @@ func (h *configHandler) getConfig(w http.ResponseWriter, r *http.Request) {
 	//     Responses:
 	//     200: configResponse
 
-	if err := json.NewEncoder(w).Encode(h.pconf.GetConfig()); err != nil {
+	if err := json.NewEncoder(w).Encode(h.cm.GetConfig()); err != nil {
 		log.Errorf("handle: kubescaler: get config: failed to encode")
 		w.WriteHeader(http.StatusInternalServerError)
 	}
@@ -64,20 +64,20 @@ func (h *configHandler) patchConfig(w http.ResponseWriter, r *http.Request) {
 	//     Responses:
 	//     200: configResponse
 
-	patch := capacity.Config{}
+	patch := kubescaler.Config{}
 	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
 		log.Errorf("handler: kubescaler: patch config: decode: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if err := h.pconf.PatchConfig(&patch); err != nil {
+	if err := h.cm.PatchConfig(patch); err != nil {
 		log.Errorf("handler: kubescaler: patch config: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(h.pconf.GetConfig()); err != nil {
+	if err := json.NewEncoder(w).Encode(h.cm.GetConfig()); err != nil {
 		log.Errorf("handle: kubescaler: patch config: failed to encode")
 		w.WriteHeader(http.StatusInternalServerError)
 	}

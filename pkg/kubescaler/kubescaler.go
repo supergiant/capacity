@@ -1,7 +1,8 @@
-package capacity
+package kubescaler
 
 import (
 	"context"
+	"os"
 	"strings"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/supergiant/capacity/pkg/kubernetes/config"
 	"github.com/supergiant/capacity/pkg/kubernetes/filters"
@@ -16,11 +18,15 @@ import (
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers/fake"
 	"github.com/supergiant/capacity/pkg/log"
+	"github.com/supergiant/capacity/pkg/persistentfile"
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/factory"
 )
 
 const (
+	DefaultConfigFilepath = "/etc/kubescaler.conf"
+	DefaultConfigMapKey   = "kubescaler.conf"
+
 	// How old the oldest unschedulable pod should be before starting scale up.
 	unschedulablePodTimeBuffer = 2 * time.Second
 )
@@ -38,37 +44,50 @@ type ListerRegistry interface {
 	UnschedulablePodLister() listers.PodLister
 }
 
+type Options struct {
+	ConfigFile         string
+	ConfigMapName      string
+	ConfigMapNamespace string
+	Kubeconfig         string
+	UserDataFile       string
+}
+
 type Kubescaler struct {
-	*PersistentConfig
+	*ConfigManager
 	workers.WInterface
 
 	kclient        kubernetes.Clientset
 	listerRegistry listers.Registry
 }
 
-func New(kubeConfig, kubescalerConfig, userDataFile string) (*Kubescaler, error) {
-	conf, err := NewPersistentConfig(kubescalerConfig)
+func New(opts Options) (*Kubescaler, error) {
+	kclient, err := config.GetKubernetesClientSet("", opts.Kubeconfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "build config")
+		return nil, errors.Wrap(err, "build kubernetes client")
+	}
+	v, err := kclient.ServerVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := getConfigFile(opts, kclient.CoreV1())
+	if err != nil {
+		return nil, err
+	}
+	log.Infof("kubescaler: get config from: %s", f.Info())
+
+	conf, err := NewConfigManager(f)
+	if err != nil {
+		return nil, errors.Wrap(err, "setup persistent config")
 	}
 	cfg := conf.GetConfig()
 
 	// use a fake kubescaler for testing
 	if conf.GetConfig().ProviderName == "fake" {
 		return &Kubescaler{
-			PersistentConfig: conf,
-			WInterface:       fake.NewManager(nil),
+			ConfigManager: conf,
+			WInterface:    fake.NewManager(nil),
 		}, nil
-	}
-
-	kclient, err := config.GetKubernetesClientSet("", kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	v, err := kclient.ServerVersion()
-	if err != nil {
-		return nil, err
 	}
 
 	vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)
@@ -83,7 +102,7 @@ func New(kubeConfig, kubescalerConfig, userDataFile string) (*Kubescaler, error)
 		KubeAPIPassword:   cfg.KubeAPIPassword,
 		ProviderName:      cfg.ProviderName,
 		SSHPubKey:         cfg.SSHPubKey,
-		UserDataFile:      userDataFile,
+		UserDataFile:      opts.UserDataFile,
 	}
 	wm, err := workers.NewManager(cfg.ClusterName, kclient.CoreV1().Nodes(), vmProvider, workersConf)
 	if err != nil {
@@ -91,9 +110,9 @@ func New(kubeConfig, kubescalerConfig, userDataFile string) (*Kubescaler, error)
 	}
 
 	return &Kubescaler{
-		PersistentConfig: conf,
-		WInterface:       wm,
-		listerRegistry:   listers.NewRegistryWithDefaultListers(kclient, nil),
+		ConfigManager:  conf,
+		WInterface:     wm,
+		listerRegistry: listers.NewRegistryWithDefaultListers(kclient, nil),
 	}, nil
 }
 
@@ -367,4 +386,47 @@ func getNewNodes(nodes []*corev1.Node, currentTime time.Time, newNodeTimeBuffer 
 
 func isNewNode(node *corev1.Node, currentTime time.Time, newNodeTimeBuffer int) bool {
 	return node.CreationTimestamp.Add(time.Duration(newNodeTimeBuffer) * time.Second).After(currentTime)
+}
+
+// getConfigFile tries to locate the kubescaler config file.
+// Sources priority order:
+//   - file on the provided path;
+//   - configmap;
+//   - file on the default path.
+//
+// TODO: pass only configfile options
+func getConfigFile(opts Options, cmGetter v1.ConfigMapsGetter) (persistentfile.Interface, error) {
+	// try to use a file on provided path
+	f, err := persistentfile.New(persistentfile.Config{
+		Type: persistentfile.FSFile,
+		Path: opts.ConfigFile,
+		Perm: os.FileMode(0644),
+	})
+	if err == nil {
+		return f, nil
+	}
+
+	// try to setup a configMap file
+	f, err = persistentfile.New(persistentfile.Config{
+		Type:               persistentfile.ConfigMapFile,
+		ConfigMapName:      opts.ConfigMapName,
+		ConfigMapNamespace: opts.ConfigMapNamespace,
+		Key:                DefaultConfigMapKey,
+		ConfigMapClient:    cmGetter,
+	})
+	if err == nil {
+		return f, nil
+	}
+
+	// try to use a file on default path
+	f, err = persistentfile.New(persistentfile.Config{
+		Type: persistentfile.FSFile,
+		Path: DefaultConfigFilepath,
+		Perm: os.FileMode(0644),
+	})
+	if err == nil {
+		return f, nil
+	}
+
+	return nil, errors.New("config file/configmap not found")
 }

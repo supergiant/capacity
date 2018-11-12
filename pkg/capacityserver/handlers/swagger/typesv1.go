@@ -10,7 +10,7 @@ import (
 // swagger:response configResponse
 type configResponse struct {
 	// in:body
-	Config *capacity.Config `json:"config"`
+	Config *kubescaler.Config `json:"config"`
 }
 
 // machineTypesListResponse contains a list of workers.

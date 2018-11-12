@@ -10,29 +10,31 @@ import (
 	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
 
 	"github.com/supergiant/capacity/pkg/capacityserver"
+	"github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/log"
 )
 
 type args struct {
-	KubescalerConfig string `arg:"--kubescaler-config" env:"CAPACITY_KUBESCALER_CONFIG" help:"path to a kubescaler config"`
-	KubeConfig       string `arg:"--kube-config"       env:"CAPACITY_KUBE_CONFIG"       help:"path to a kubeconfig file"`
-	ListenAddr       string `arg:"--listen-addr"       env:"CAPACITY_LISTEN_ADDR"       help:"address to listen on, pass as a addr:port"`
-	LogLevel         string `arg:"--verbosity"         env:"CAPACITY_LOG_LEVEL"         help:"logging verbosity"`
-	LogHooks         string `arg:"--log-hooks"         env:"CAPACITY_LOG_HOOKS"         help:"list of comma-separated log providers (syslog)"`
-	UserDataFile     string `arg:"--user-data"         env:"CAPACITY_USER_DATA"         help:"path to a userdata file"`
+	KubescalerConfig   string `arg:"--kubescaler-config,   env:CAPACITY_KUBESCALER_CONFIG"   help:"path to a kubescaler config"`
+	ConfigMapName      string `arg:"--configmap-name,      env:CAPACITY_CONFIGMAP_NAME"      help:"name of configMap with the 'kubescaler.conf' file"`
+	ConfigMapNamespace string `arg:"--configmap-namespace, env:CAPACITY_CONFIGMAP_NAMESPACE" help:"namespace of configMap with kubescaler config"`
+	KubeConfig         string `arg:"--kubeconfig,          env:CAPACITY_KUBE_CONFIG"         help:"path to a kubeconfig file, needs for building a kubernetes client"`
+	ListenAddr         string `arg:"--listen-addr,         env:CAPACITY_LISTEN_ADDR"         help:"address to listen on, pass as a addr:port"`
+	LogLevel           string `arg:"--verbosity,           env:CAPACITY_LOG_LEVEL"           help:"logging verbosity"`
+	LogHooks           string `arg:"--log-hooks,           env:CAPACITY_LOG_HOOKS"           help:"list of comma-separated log providers (syslog)"`
+	UserDataFile       string `arg:"--user-data,           env:CAPACITY_USER_DATA"           help:"path to a userdata file"`
 }
 
 func (args) Version() string {
-	return "raw"
+	return "v0.1.0"
 }
 
 func main() {
-	args := &args{
-		KubescalerConfig: "/etc/kubescaler.conf",
-		ListenAddr:       ":8081",
-		LogLevel:         "info",
+	args := args{
+		ListenAddr: ":8081",
+		LogLevel:   "info",
 	}
-	arg.MustParse(args)
+	arg.MustParse(&args)
 
 	// setup logger
 	log.SetOutput(os.Stdout)
@@ -44,10 +46,14 @@ func main() {
 	}
 
 	srv, err := capacityserver.New(capacityserver.Config{
-		KubescalerConfig: args.KubescalerConfig,
-		KubeConfig:       args.KubeConfig,
-		ListenAddr:       args.ListenAddr,
-		UserDataFile:     args.UserDataFile,
+		KubescalerOptions: kubescaler.Options{
+			ConfigFile:         args.KubescalerConfig,
+			ConfigMapName:      args.ConfigMapName,
+			ConfigMapNamespace: args.ConfigMapNamespace,
+			Kubeconfig:         args.KubeConfig,
+			UserDataFile:       args.UserDataFile,
+		},
+		ListenAddr: args.ListenAddr,
 	})
 	if err != nil {
 		log.Fatalf("capacityserver: %v\n", err)

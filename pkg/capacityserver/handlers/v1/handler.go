@@ -18,7 +18,7 @@ type HandlerV1 struct {
 	config  *configHandler
 }
 
-func New(ks *capacity.Kubescaler) (*HandlerV1, error) {
+func New(ks *kubescaler.Kubescaler) (*HandlerV1, error) {
 	if ks == nil {
 		return nil, ErrNoKubescaler
 	}
@@ -26,7 +26,7 @@ func New(ks *capacity.Kubescaler) (*HandlerV1, error) {
 	if err != nil {
 		return nil, err
 	}
-	cf, err := newConfigHandler(ks.PersistentConfig)
+	cf, err := newConfigHandler(ks.ConfigManager)
 	if err != nil {
 		return nil, err
 	}
