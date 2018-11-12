@@ -12,7 +12,7 @@ ENV CGO_ENABLED "0"
 # needed so we can mkdir in the scratch container later
 RUN mkdir /tmp/emptydir
 
-# get env2conf and a shell
+# get a shell
 RUN mkdir /tmp/bin
 ADD https://busybox.net/downloads/binaries/1.27.1-i686/busybox_ASH /tmp/bin/sh
 RUN chmod +x /tmp/bin/sh
