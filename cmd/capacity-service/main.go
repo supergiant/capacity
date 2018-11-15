@@ -2,12 +2,12 @@ package main
 
 import (
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/alexflint/go-arg"
 	"github.com/gobuffalo/packr"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
+	"github.com/sirupsen/logrus"
 
 	"github.com/supergiant/capacity/pkg/capacityserver"
 	"github.com/supergiant/capacity/pkg/kubescaler"
@@ -20,7 +20,8 @@ type args struct {
 	ConfigMapNamespace string `arg:"--configmap-namespace, env:CAPACITY_CONFIGMAP_NAMESPACE" help:"namespace of configMap with kubescaler config"`
 	KubeConfig         string `arg:"--kubeconfig,          env:CAPACITY_KUBE_CONFIG"         help:"path to a kubeconfig file, needs for building a kubernetes client"`
 	ListenAddr         string `arg:"--listen-addr,         env:CAPACITY_LISTEN_ADDR"         help:"address to listen on, pass as a addr:port"`
-	LogLevel           string `arg:"--verbosity,           env:CAPACITY_LOG_LEVEL"           help:"logging verbosity"`
+	LogLevel           string `arg:"--log-level"           env:"CAPACITY_LOG_LEVEL"          help:"logging verbosity [debug info warn error fatal panic]"`
+	LogFormat          string `arg:"--log-format"          env:"CAPACITY_LOG_LEVEL"          help:"logging format [txt json]"`
 	LogHooks           string `arg:"--log-hooks,           env:CAPACITY_LOG_HOOKS"           help:"list of comma-separated log providers (syslog)"`
 	UserDataFile       string `arg:"--user-data,           env:CAPACITY_USER_DATA"           help:"path to a userdata file"`
 }
@@ -33,12 +34,13 @@ func main() {
 	args := args{
 		ListenAddr: ":8081",
 		LogLevel:   "info",
+		LogFormat:  "txt",
 	}
 	arg.MustParse(&args)
 
 	// setup logger
-	log.SetOutput(os.Stdout)
-	log.SetLevel(args.LogLevel)
+	configureLogging(args.LogLevel, args.LogFormat)
+
 	for _, hook := range strings.Split(args.LogHooks, ",") {
 		if err := log.AddHook(hook); err != nil {
 			log.Errorf("capacityserver: logger: add %s hook: %v", hook, err)
@@ -74,5 +76,18 @@ func main() {
 	stopCh := signals.SetupSignalHandler()
 	if err = srv.Start(stopCh); err != nil {
 		log.Fatalf("capacityserver: start: %v\n", err)
+	}
+}
+
+func configureLogging(level, format string) {
+	log.SetLevel(level)
+
+	switch strings.TrimSpace(format) {
+	case "json":
+		log.SetFormatter(&logrus.JSONFormatter{})
+	default:
+		log.SetFormatter(&logrus.TextFormatter{
+			FullTimestamp: true,
+		})
 	}
 }
