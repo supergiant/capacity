@@ -30,7 +30,7 @@ spec:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: CAPACITY_USER_DATA
-            value: /etc/capacity-cervice/userdata
+            value: /etc/capacity-service/userdata
           ports:
           - name: http
             containerPort: {{ .Values.service.port }}
@@ -44,7 +44,7 @@ spec:
 {{ toYaml .Values.resources | indent 12 }}
           volumeMounts:
           - name: userdata
-            mountPath: /etc/capacity-cervice
+            mountPath: /etc/capacity-service
       volumes:
       - name: userdata
         configMap:
