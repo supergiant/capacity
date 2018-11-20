@@ -1,0 +1,34 @@
+# Default values for capacity.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: supergiant/capacity
+  tag: v0.1.0
+  pullPolicy: IfNotPresent
+
+config:
+  kubescaler:
+    raw: ""
+  userdata: ""
+
+serviceAccount:
+  create: true
+  name: ""
+
+rbac:
+  create: true
+
+service:
+  type: ClusterIP
+  port: 8081
+
+resources:
+  limits:
+    memory: 512Mi
+  requests:
+    memory: 450Mi
+
