@@ -7,6 +7,6 @@ metadata:
 {{ include "capacity.labels" . | indent 4 }}
 data:
   kubescaler.conf: |
-    {{ .Values.config.kubescaler.raw }}
+    {{ .Values.config.kubescaler.raw | required "kubescaler configuration should be provided" }}
   userdata: |
     {{ .Values.config.userdata }}
