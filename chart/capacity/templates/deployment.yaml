@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "capacity.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ template "capacity.name" . }}
+{{ include "capacity.labels" . | indent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ template "capacity.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ template "capacity.name" . }}
+{{ include "capacity.labels" . | indent 8 }}
+    spec:
+      serviceAccountName: {{ template "capacity.serviceAccountName" . }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+          - name: CAPACITY_CONFIGMAP_NAME
+            value: {{ template "capacity.fullname" . }}-config
+          - name: CAPACITY_CONFIGMAP_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: CAPACITY_USER_DATA
+            value: /etc/capacity-service/userdata
+          ports:
+          - name: http
+            containerPort: {{ .Values.service.port }}
+            protocol: TCP
+          readinessProbe:
+            timeoutSeconds: 60
+            httpGet:
+              path: /version
+              port: http
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+          volumeMounts:
+          - name: userdata
+            mountPath: /etc/capacity-service
+      volumes:
+      - name: userdata
+        configMap:
+          name: {{ template "capacity.fullname" . }}-config
+          optional: true
+          items:
+          - key: userdata
+            path: userdata

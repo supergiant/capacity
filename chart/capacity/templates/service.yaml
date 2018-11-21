@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "capacity.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ template "capacity.name" . }}
+{{ include "capacity.labels" . | indent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: {{ template "capacity.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}

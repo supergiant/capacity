@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "capacity.fullname" . }}-config
+  labels:
+    app.kubernetes.io/name: {{ template "capacity.name" . }}
+{{ include "capacity.labels" . | indent 4 }}
+data:
+  kubescaler.conf: |
+    {{ .Values.config.kubescaler.raw | required "kubescaler configuration should be provided" }}
+  userdata: |
+    {{ .Values.config.userdata }}
