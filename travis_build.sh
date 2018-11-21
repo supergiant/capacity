@@ -31,7 +31,7 @@ if [[ "$TRAVIS_TAG" =~ ^v[0-9]. ]]; then
 	./push_release.sh
 	check_status
 # on an unstable branch, tests are run and the docker container is built and pushed.
-elif [[ "$TRAVIS_BRANCH" == *Release-* ]]; then
+elif [[ "$TRAVIS_BRANCH" == *release-* ]]; then
 	echo "unstable branch"
 	export TAG="${TAG}-unstable"
 	echo "Tag Name: ${TAG}"
