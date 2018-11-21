@@ -1,3 +1,22 @@
+<!-- Badge Links -->
+[Release Widget]: https://img.shields.io/github/release/supergiant/capacity.svg
+[Release URL]: https://github.com/supergiant/capacity/releases/latest
+
+[GoDoc Widget]: https://godoc.org/github.com/supergiant/capacity?status.svg
+[GoDoc URL]: https://godoc.org/github.com/supergiant/capacity
+
+[Travis Widget]: https://travis-ci.org/supergiant/capacity.svg?branch=master
+[Travis URL]: https://travis-ci.org/supergiant/capacity
+
+[Coverage Status]: https://coveralls.io/github/supergiant/capacity?branch=master
+[Coverage Status Widget]: https://coveralls.io/repos/github/supergiant/capacity/badge.svg?branch=master
+
+[GoReportCard Widget]: https://goreportcard.com/badge/github.com/supergiant/capacity
+[GoReportCard URL]: https://goreportcard.com/report/github.com/supergiant/capacity
+
+<!-- Badges -->
+[![Release Widget]][Release URL] [![GoDoc Widget]][GoDoc URL] [![Travis Widget]][Travis URL] [![Coverage Status Widget]][Coverage Status] [![GoReportCard Widget]][GoReportCard URL]
+
 # capacity
 
 ## Setup
