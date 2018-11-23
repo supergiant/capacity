@@ -120,26 +120,12 @@ func getCPUMemForScheduling(pod *corev1.Pod) (resource.Quantity, resource.Quanti
 	return cpu, mem
 }
 
-func getCPUMemTo(cpu, mem *resource.Quantity, pod *corev1.Pod) {
-	for _, c := range pod.Spec.Containers {
-		if !c.Resources.Limits.Cpu().IsZero() {
-			cpu.Add(*c.Resources.Limits.Cpu())
-		} else {
-			cpu.Add(*c.Resources.Requests.Cpu())
-		}
-
-		if !c.Resources.Limits.Memory().IsZero() {
-			mem.Add(*c.Resources.Limits.Memory())
-		} else {
-			mem.Add(*c.Resources.Requests.Memory())
-		}
-	}
-}
-
 func totalCPUMem(pods []*corev1.Pod) (resource.Quantity, resource.Quantity) {
 	var cpu, mem resource.Quantity
 	for _, pod := range pods {
-		getCPUMemTo(&cpu, &mem, pod)
+		pcpu, pmem := getCPUMemForScheduling(pod)
+		cpu.Add(pcpu)
+		mem.Add(pmem)
 	}
 	return cpu, mem
 }

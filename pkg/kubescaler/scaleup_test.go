@@ -404,7 +404,7 @@ func TestTotalCPUMem(t *testing.T) {
 		&podWithRequests,
 		&podWithLimits,
 	}
-	expectedCPU, expectedMem := resource.MustParse("46"), resource.MustParse("46Mi")
+	expectedCPU, expectedMem := resource.MustParse("13"), resource.MustParse("13Mi")
 
 	cpu, mem := totalCPUMem(pods)
 	require.Equal(t, expectedCPU.Value(), cpu.Value(), "cpu")
