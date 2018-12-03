@@ -15,7 +15,7 @@
 [GoReportCard Widget]: https://goreportcard.com/badge/github.com/supergiant/capacity
 [GoReportCard URL]: https://goreportcard.com/report/github.com/supergiant/capacity
 
-<img src="https://s3.amazonaws.com/supergiant-docs-assets/capacity_light.svg">
+<img src="https://s3.amazonaws.com/supergiant-docs-assets/control_light.svg">
 
 ---
 
@@ -30,11 +30,10 @@ A hosted K8s experience—in your own cluster. Assert through intelligent node a
 
 # Features
 
-  * Create K8s clusters on **AWS** and **Digital Ocean**
-  * Upstream, **Certified** Kubernetes (version `1.11.1`)
-  * **Helm** releases made easy with an **intuitive UI**
-  * At-a-glance **metrics** of cluster resource usage
-  * Can easily plug into [SG Control](https://github.com/supergiant/control)
+* Automatic K8s node **upscaling** and **downscaling** on AWS
+* Configurable node setup, using [AWS UserData](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html)
+* Can easily plug into [SG Control](https://github.com/supergiant/control)
+* **API** and **UI** designed for intuitive interaction
 
 # Resources
 
