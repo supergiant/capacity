@@ -15,7 +15,7 @@
 [GoReportCard Widget]: https://goreportcard.com/badge/github.com/supergiant/capacity
 [GoReportCard URL]: https://goreportcard.com/report/github.com/supergiant/capacity
 
-<img src="https://s3.amazonaws.com/supergiant-docs-assets/control_light.svg">
+<img src="https://s3.amazonaws.com/supergiant-docs-assets/capacity_light.svg">
 
 ---
 
