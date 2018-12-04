@@ -40,3 +40,7 @@ client: swagger
 	@rm -rf $(SWAGGER_CLIENT)
 	@mkdir $(SWAGGER_CLIENT)
 	@swagger generate -q client -f $(SWAGGER_SPEC) -t $(SWAGGER_CLIENT)
+
+build-ui:
+	npm install --prefix ./cmd/capacity-service/ui/capacity-service
+	npm run build --prefix ./cmd/capacity-service/ui/capacity-service
