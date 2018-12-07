@@ -7,6 +7,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 
+	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
 	"github.com/supergiant/capacity/pkg/log"
 )
@@ -63,7 +64,7 @@ func (h *workersHandler) createWorker(w http.ResponseWriter, r *http.Request) {
 	//     201: workerResponse
 
 	var err error
-	worker := &workers.Worker{}
+	worker := &api.Worker{}
 	if err = json.NewDecoder(r.Body).Decode(worker); err != nil {
 		log.Errorf("handler: kubescaler: create worker: decode: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -168,7 +169,7 @@ func (h *workersHandler) updateWorker(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var err error
-	worker := &workers.Worker{}
+	worker := &api.Worker{}
 	if err = json.NewDecoder(r.Body).Decode(&worker); err != nil {
 		log.Errorf("handler: kubescaler: patch worker: decode: %v", err)
 		w.WriteHeader(http.StatusBadRequest)

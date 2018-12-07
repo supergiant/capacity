@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/persistentfile"
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/aws"
@@ -17,43 +18,7 @@ const (
 	EnvPrefix = "CAPACITY"
 )
 
-type Config struct {
-	ClusterName     string            `json:"clusterName"`
-	ProviderName    string            `json:"providerName"`
-	Provider        map[string]string `json:"provider"`
-	Paused          *bool             `json:"paused,omitempty"`
-	PauseLock       bool              `json:"pauseLock"`
-	ScanInterval    string            `json:"scanInterval"`
-	WorkersCountMin int               `json:"workersCountMin"`
-	WorkersCountMax int               `json:"workersCountMax"`
-	MachineTypes    []string          `json:"machineTypes"`
-	// TODO: this is hardcoded and doesn't used at the moment
-	MaxMachineProvisionTime string            `json:"maxMachineProvisionTime"`
-	IgnoredNodeLabels       map[string]string `json:"ignoredNodeLabels"`
-	NewNodeTimeBuffer       int               `json:"newNodeTimeBuffer"`
-
-	// These is a SG1.0 UserData template parameters
-	// TODO: add an explicit struct for it or use a map for dynamic values
-	MasterPrivateAddr string `json:"masterPrivateAddr"`
-	KubeAPIHost       string `json:"kubeAPIHost"`
-	KubeAPIPort       string `json:"kubeAPIPort"`
-	KubeAPIUser       string `json:"kubeAPIUser"`
-	KubeAPIPassword   string `json:"kubeAPIPassword"`
-	SSHPubKey         string `json:"sshPubKey"`
-}
-
-func (c Config) Validate() error {
-	// TODO: pass it with a pointer or use the ConfigRequest struct for patches.
-	if c.WorkersCountMin < 0 {
-		return errors.New("WorkersCountMin can't be negative")
-	}
-	if c.WorkersCountMax < 0 {
-		return errors.New("WorkersCountMax can't be negative")
-	}
-	return nil
-}
-
-func Merge(c, patch Config) Config {
+func Merge(c, patch api.Config) api.Config {
 	if patch.Paused != nil {
 		c.Paused = patch.Paused
 	}
@@ -80,7 +45,7 @@ type ConfigManager struct {
 	file persistentfile.Interface
 
 	mu   sync.RWMutex
-	conf Config
+	conf api.Config
 }
 
 func NewConfigManager(file persistentfile.Interface) (*ConfigManager, error) {
@@ -92,7 +57,7 @@ func NewConfigManager(file persistentfile.Interface) (*ConfigManager, error) {
 		return nil, errors.Wrap(err, "get config")
 	}
 
-	conf := Config{}
+	conf := api.Config{}
 	// TODO: use codec to support more formats
 	if err = json.Unmarshal(raw, &conf); err != nil {
 		return nil, errors.Wrap(err, "decode config")
@@ -105,7 +70,7 @@ func NewConfigManager(file persistentfile.Interface) (*ConfigManager, error) {
 	}, nil
 }
 
-func (m *ConfigManager) SetConfig(conf Config) error {
+func (m *ConfigManager) SetConfig(conf api.Config) error {
 	if err := m.write(conf); err != nil {
 		return err
 	}
@@ -117,7 +82,7 @@ func (m *ConfigManager) SetConfig(conf Config) error {
 	return nil
 }
 
-func (m *ConfigManager) PatchConfig(in Config) error {
+func (m *ConfigManager) PatchConfig(in api.Config) error {
 	newConf := Merge(m.GetConfig(), in)
 	if err := newConf.Validate(); err != nil {
 		return err
@@ -125,7 +90,7 @@ func (m *ConfigManager) PatchConfig(in Config) error {
 	return m.SetConfig(newConf)
 }
 
-func (m *ConfigManager) write(conf Config) error {
+func (m *ConfigManager) write(conf api.Config) error {
 	raw, err := json.Marshal(conf)
 	if err != nil {
 		return errors.Wrap(err, "encode config")
@@ -133,7 +98,7 @@ func (m *ConfigManager) write(conf Config) error {
 	return errors.Wrap(m.file.Write(raw), "write config")
 }
 
-func (m *ConfigManager) GetConfig() Config {
+func (m *ConfigManager) GetConfig() api.Config {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -141,7 +106,7 @@ func (m *ConfigManager) GetConfig() Config {
 }
 
 // TODO: just a hack, use viper in the future
-func applyEnv(conf Config) Config {
+func applyEnv(conf api.Config) api.Config {
 	envMap := map[string]string{
 		aws.KeyID:     EnvPrefix + "_PROVIDER_AWS_KEYID",
 		aws.SecretKey: EnvPrefix + "_PROVIDER_AWS_SECRETKEY",
@@ -158,7 +123,7 @@ func applyEnv(conf Config) Config {
 
 // TODO: show this on cli help subcommand
 func writeExampleConfig(file persistentfile.Interface) error {
-	conf := &Config{
+	conf := &api.Config{
 		SSHPubKey:         "REPLACE_IT",
 		ClusterName:       "REPLACE_IT",
 		MasterPrivateAddr: "REPLACE_IT",
