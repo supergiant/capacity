@@ -12,6 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/typed/core/v1"
 
+	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/kubernetes/config"
 	"github.com/supergiant/capacity/pkg/kubernetes/filters"
 	"github.com/supergiant/capacity/pkg/kubernetes/listers"
@@ -234,7 +235,7 @@ type resources struct {
 	allPods         []*corev1.Pod
 	scheduledPods   []*corev1.Pod
 	unscheduledPods []*corev1.Pod
-	workerList      *workers.WorkerList
+	workerList      *api.WorkerList
 }
 
 func (s *Kubescaler) getResources() (*resources, error) {
@@ -263,7 +264,7 @@ func (s *Kubescaler) getResources() (*resources, error) {
 	}, nil
 }
 
-func (s *Kubescaler) checkWorkers(workerList *workers.WorkerList, currentTime time.Time) ([]string, []string) {
+func (s *Kubescaler) checkWorkers(workerList *api.WorkerList, currentTime time.Time) ([]string, []string) {
 	//failedMachines:
 	//	- state == 'running'
 	//	- running >= maxProvisionTime
@@ -325,7 +326,7 @@ func findMachine(name string, machineTypes []*provider.MachineType) *provider.Ma
 	return nil
 }
 
-func isMaster(w *workers.Worker) bool {
+func isMaster(w *api.Worker) bool {
 	// TODO: use role tags for it in SG2.0
 	return strings.Contains(strings.ToLower(w.MachineName), "master")
 }

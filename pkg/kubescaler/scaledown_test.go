@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/supergiant/capacity/pkg/kubescaler/workers"
+	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers/fake"
 	"github.com/supergiant/capacity/pkg/persistentfile/file"
 )
@@ -18,15 +18,15 @@ import (
 func TestKubescalerScaleDown(t *testing.T) {
 	tcs := []struct {
 		pods            []*corev1.Pod
-		workerList      *workers.WorkerList
+		workerList      *api.WorkerList
 		allowedMachines []string
 		providerErr     error
 		expectedErr     error
 	}{
 		{
 			pods: []*corev1.Pod{&podNew, &podStandAlone, &podWithRequests},
-			workerList: &workers.WorkerList{
-				Items: []*workers.Worker{
+			workerList: &api.WorkerList{
+				Items: []*api.Worker{
 					{NodeName: NodeReadyName},
 				},
 			},
@@ -34,8 +34,8 @@ func TestKubescalerScaleDown(t *testing.T) {
 		},
 		{
 			pods: []*corev1.Pod{&podWithHugeRequests, &podStandAlone},
-			workerList: &workers.WorkerList{
-				Items: []*workers.Worker{
+			workerList: &api.WorkerList{
+				Items: []*api.Worker{
 					{NodeName: NodeReadyName},
 					{NodeName: NodeScaleDownName},
 				},
@@ -44,8 +44,8 @@ func TestKubescalerScaleDown(t *testing.T) {
 		},
 		{
 			pods: []*corev1.Pod{&podWithHugeRequests, &podWithRequests},
-			workerList: &workers.WorkerList{
-				Items: []*workers.Worker{
+			workerList: &api.WorkerList{
+				Items: []*api.Worker{
 					{NodeName: NodeReadyName},
 					{NodeName: NodeScaleDownName},
 				},
@@ -54,8 +54,8 @@ func TestKubescalerScaleDown(t *testing.T) {
 		},
 		{
 			pods: []*corev1.Pod{&podWithHugeRequests, &podWithRequests},
-			workerList: &workers.WorkerList{
-				Items: []*workers.Worker{
+			workerList: &api.WorkerList{
+				Items: []*api.Worker{
 					{NodeName: NodeReadyName},
 					{NodeName: NodeScaleDownName},
 				},
@@ -74,7 +74,7 @@ func TestKubescalerScaleDown(t *testing.T) {
 			ConfigManager: &ConfigManager{
 				file: f,
 				mu:   sync.RWMutex{},
-				conf: Config{
+				conf: api.Config{
 					MachineTypes: tc.allowedMachines,
 				},
 			},
@@ -132,55 +132,55 @@ func TestFilterDaemonSetPods(t *testing.T) {
 
 func TestGetEmpty(t *testing.T) {
 	tcs := []struct {
-		workerList *workers.WorkerList
+		workerList *api.WorkerList
 		nodePods   map[string][]string
-		expected   []*workers.Worker
+		expected   []*api.Worker
 	}{
 		{ // TC#1
 		},
 		{ // TC#2
-			workerList: &workers.WorkerList{
-				Items: []*workers.Worker{
+			workerList: &api.WorkerList{
+				Items: []*api.Worker{
 					{
 						NodeName: NodeReadyName,
 					},
 				},
 			},
-			expected: []*workers.Worker{
+			expected: []*api.Worker{
 				{
 					NodeName: NodeReadyName,
 				},
 			},
 		},
 		{ // TC#3
-			workerList: &workers.WorkerList{
-				Items: []*workers.Worker{
+			workerList: &api.WorkerList{
+				Items: []*api.Worker{
 					{
 						NodeName: NodeReadyName,
 					},
 				},
 			},
 			nodePods: map[string][]string{NodeReadyName: {"pod"}},
-			expected: []*workers.Worker{},
+			expected: []*api.Worker{},
 		},
 		{ // TC#4
-			workerList: &workers.WorkerList{
-				Items: []*workers.Worker{
+			workerList: &api.WorkerList{
+				Items: []*api.Worker{
 					{
 						NodeName: NodeReadyName,
 					},
 				},
 			},
 			nodePods: map[string][]string{NodeReadyName: {}},
-			expected: []*workers.Worker{
+			expected: []*api.Worker{
 				{
 					NodeName: NodeReadyName,
 				},
 			},
 		},
 		{ // TC#4
-			workerList: &workers.WorkerList{
-				Items: []*workers.Worker{
+			workerList: &api.WorkerList{
+				Items: []*api.Worker{
 					{
 						NodeName: NodeReadyName,
 					},
@@ -190,7 +190,7 @@ func TestGetEmpty(t *testing.T) {
 				},
 			},
 			nodePods: map[string][]string{NodeReadyName: {"pod"}, NodeScaleDownName: {}},
-			expected: []*workers.Worker{
+			expected: []*api.Worker{
 				{
 					NodeName: NodeScaleDownName,
 				},

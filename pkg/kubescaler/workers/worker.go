@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/typed/core/v1"
 
+	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/provider"
 )
 
@@ -37,11 +38,11 @@ var _ WInterface = &Manager{}
 
 type WInterface interface {
 	MachineTypes() []*provider.MachineType
-	CreateWorker(ctx context.Context, mtype string) (*Worker, error)
-	GetWorker(ctx context.Context, id string) (*Worker, error)
-	ListWorkers(ctx context.Context) (*WorkerList, error)
-	DeleteWorker(ctx context.Context, nodeName, id string) (*Worker, error)
-	ReserveWorker(ctx context.Context, worker *Worker) (*Worker, error)
+	CreateWorker(ctx context.Context, mtype string) (*api.Worker, error)
+	GetWorker(ctx context.Context, id string) (*api.Worker, error)
+	ListWorkers(ctx context.Context) (*api.WorkerList, error)
+	DeleteWorker(ctx context.Context, nodeName, id string) (*api.Worker, error)
+	ReserveWorker(ctx context.Context, worker *api.Worker) (*api.Worker, error)
 }
 
 type Config struct {
@@ -52,42 +53,6 @@ type Config struct {
 	KubeAPIPassword   string
 	ProviderName      string
 	UserDataFile      string
-}
-
-// Worker is an abstraction used by kubescaler to manage cluster capacity.
-// It contains data from a (virtual) machine and a kubernetes node running on it.
-type Worker struct {
-	// ClusterName is a kubernetes cluster name.
-	ClusterName string `json:"clusterName"`
-	// MachineID is a unique id of the provider's virtual machine.
-	// required: true
-	MachineID string `json:"machineID"`
-	// MachineName is a human-readable name of virtual machine.
-	MachineName string `json:"machineName"`
-	// MachineType is type of virtual machine (eg. 't2.micro' for AWS).
-	MachineType string `json:"machineType"`
-	// MachineState represent a virtual machine state.
-	MachineState string `json:"machineState"`
-	// CreationTimestamp is a timestamp representing a time when this machine was created.
-	CreationTimestamp time.Time `json:"creationTimestamp"`
-	// Reserved is a parameter that is used to prevent downscaling of the worker.
-	Reserved bool `json:"reserved"`
-	// NodeName represents a name of the kubernetes node that runs on top of that machine.
-	NodeName string `json:"nodeName"`
-	// NodeLabels represents a labels of the kubernetes node that runs on top of that machine.
-	NodeLabels map[string]string `json:"nodeLabels,omitempty"`
-}
-
-type WorkerList struct {
-	Items []*Worker `json:"items"`
-}
-
-func NewWorker(node *corev1.Node) *Worker {
-	return &Worker{
-		MachineID: node.Spec.ExternalID,
-		NodeName:  node.Name,
-		Reserved:  IsReserved(node),
-	}
 }
 
 func IsReserved(node *corev1.Node) bool {
@@ -144,7 +109,7 @@ func NewManager(clusterName string, nodesClient v1.NodeInterface, provider provi
 	}, nil
 }
 
-func (m *Manager) CreateWorker(ctx context.Context, mtype string) (*Worker, error) {
+func (m *Manager) CreateWorker(ctx context.Context, mtype string) (*api.Worker, error) {
 	machine, err := m.provider.CreateMachine(ctx, m.workerName(), mtype, ClusterRole, m.userData, nil)
 	if err != nil {
 		return nil, err
@@ -156,7 +121,7 @@ func (m *Manager) MachineTypes() []*provider.MachineType {
 	return m.machineTypes
 }
 
-func (m *Manager) GetWorker(ctx context.Context, id string) (*Worker, error) {
+func (m *Manager) GetWorker(ctx context.Context, id string) (*api.Worker, error) {
 	machine, err := m.provider.GetMachine(ctx, id)
 	if err != nil {
 		return nil, err
@@ -170,7 +135,7 @@ func (m *Manager) GetWorker(ctx context.Context, id string) (*Worker, error) {
 	return m.workerFrom(machine, node), nil
 }
 
-func (m *Manager) ListWorkers(ctx context.Context) (*WorkerList, error) {
+func (m *Manager) ListWorkers(ctx context.Context) (*api.WorkerList, error) {
 	machines, err := m.provider.Machines(ctx)
 	if err != nil {
 		return nil, err
@@ -180,17 +145,17 @@ func (m *Manager) ListWorkers(ctx context.Context) (*WorkerList, error) {
 		return nil, err
 	}
 
-	workers := make([]*Worker, len(machines))
+	workers := make([]*api.Worker, len(machines))
 	for i := range machines {
 		workers[i] = m.workerFrom(machines[i], nodesMap[machines[i].ID])
 	}
 
-	return &WorkerList{
+	return &api.WorkerList{
 		Items: workers,
 	}, nil
 }
 
-func (m *Manager) DeleteWorker(ctx context.Context, nodeName, id string) (*Worker, error) {
+func (m *Manager) DeleteWorker(ctx context.Context, nodeName, id string) (*api.Worker, error) {
 	if nodeName != "" {
 		if err := m.nodesClient.Delete(nodeName, nil); err != nil {
 			return nil, err
@@ -205,7 +170,7 @@ func (m *Manager) DeleteWorker(ctx context.Context, nodeName, id string) (*Worke
 	return m.workerFrom(machine, corev1.Node{}), nil
 }
 
-func (m *Manager) ReserveWorker(ctx context.Context, want *Worker) (*Worker, error) {
+func (m *Manager) ReserveWorker(ctx context.Context, want *api.Worker) (*api.Worker, error) {
 	if want == nil {
 		return nil, ErrNotFound
 	}
@@ -250,8 +215,8 @@ func (m *Manager) workerName() string {
 	return fmt.Sprintf("%s-%s-%s", m.clusterName, "worker", uuid.NewUUID().String())
 }
 
-func (m *Manager) workerFrom(machine *provider.Machine, node corev1.Node) *Worker {
-	return &Worker{
+func (m *Manager) workerFrom(machine *provider.Machine, node corev1.Node) *api.Worker {
+	return &api.Worker{
 		ClusterName:       m.clusterName,
 		MachineID:         machine.ID,
 		MachineName:       machine.Name,
@@ -264,7 +229,7 @@ func (m *Manager) workerFrom(machine *provider.Machine, node corev1.Node) *Worke
 	}
 }
 
-func (m *Manager) setReserved(w *Worker, reserved bool) (*Worker, error) {
+func (m *Manager) setReserved(w *api.Worker, reserved bool) (*api.Worker, error) {
 	node, err := m.patchNodeLabel(w.NodeName, LabelReserved, strconv.FormatBool(reserved))
 	if err != nil {
 		return nil, err

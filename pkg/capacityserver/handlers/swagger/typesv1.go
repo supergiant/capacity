@@ -1,8 +1,7 @@
 package swagger
 
 import (
-	"github.com/supergiant/capacity/pkg/kubescaler"
-	"github.com/supergiant/capacity/pkg/kubescaler/workers"
+	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/provider"
 )
 
@@ -10,7 +9,7 @@ import (
 // swagger:response configResponse
 type configResponse struct {
 	// in:body
-	Config *kubescaler.Config `json:"config"`
+	Config *api.Config `json:"config"`
 }
 
 // machineTypesListResponse contains a list of workers.
@@ -24,14 +23,14 @@ type machineTypesListResponse struct {
 // swagger:response workerResponse
 type workerResponse struct {
 	// in:body
-	Worker *workers.Worker `json:"worker"`
+	Worker *api.Worker `json:"worker"`
 }
 
 // workerListResponse contains a list of workers.
 // swagger:response workerListResponse
 type workerListResponse struct {
 	// in:body
-	WorkerList *workers.WorkerList `json:"workerList"`
+	WorkerList *api.WorkerList `json:"workerList"`
 }
 
 // machineIDParam is used to identify a worker.

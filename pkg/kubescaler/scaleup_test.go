@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers/fake"
 	"github.com/supergiant/capacity/pkg/persistentfile/file"
 	"github.com/supergiant/capacity/pkg/provider"
@@ -212,7 +213,7 @@ func TestKubescalerScaleUp(t *testing.T) {
 			ConfigManager: &ConfigManager{
 				file: f,
 				mu:   sync.RWMutex{},
-				conf: Config{
+				conf: api.Config{
 					MachineTypes: tc.allowedMachines,
 				},
 			},

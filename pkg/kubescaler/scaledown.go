@@ -8,22 +8,23 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
 	"github.com/supergiant/capacity/pkg/log"
 )
 
 // TODO: use workers here
-func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, workerList *workers.WorkerList, ignoreLabels map[string]string, currentTime time.Time) error {
+func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, workerList *api.WorkerList, ignoreLabels map[string]string, currentTime time.Time) error {
 	// TODO: don't skip failed stateful pods?
 	scheduledPods = filterOutDaemonSetPods(filterOutStandalonePods(scheduledPods))
 	nodePodsMap := nodePodsMap(scheduledPods)
 
-	emptyWorkers := getEmpty(workerList, nodePodsMap)
-	if len(emptyWorkers) == 0 {
+	emptyapi := getEmpty(workerList, nodePodsMap)
+	if len(emptyapi) == 0 {
 		return nil
 	}
 	log.Debugf("kubescaler: scale down: nodepods %v", nodePodsMap)
-	log.Debugf("kubescaler: scale down: nodes to delete: %v", workerNodeNames(emptyWorkers))
+	log.Debugf("kubescaler: scale down: nodes to delete: %v", workerNodeNames(emptyapi))
 
 	removed := make([]string, 0)
 	ignored := make([]string, 0)
@@ -36,7 +37,7 @@ func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, workerList *workers.
 		}
 	}()
 
-	for _, w := range emptyWorkers {
+	for _, w := range emptyapi {
 		if reason := ignoreReason(w, ignoreLabels, currentTime); reason != "" {
 			ignored = append(ignored, fmt.Sprintf("%s(%s,%s)", w.NodeName, w.MachineID, reason))
 			continue
@@ -51,7 +52,7 @@ func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, workerList *workers.
 	return nil
 }
 
-func ignoreReason(w *workers.Worker, ignoreLabels map[string]string, currentTime time.Time) string {
+func ignoreReason(w *api.Worker, ignoreLabels map[string]string, currentTime time.Time) string {
 	switch {
 	case w.Reserved:
 		return "reserved=true"
@@ -95,7 +96,7 @@ func filterOutDaemonSetPods(pods []*corev1.Pod) []*corev1.Pod {
 	return filtered
 }
 
-func getEmpty(workerList *workers.WorkerList, nodePods map[string][]string) []*workers.Worker {
+func getEmpty(workerList *api.WorkerList, nodePods map[string][]string) []*api.Worker {
 	if workerList == nil || len(workerList.Items) == 0 {
 		return nil
 	}
@@ -103,17 +104,17 @@ func getEmpty(workerList *workers.WorkerList, nodePods map[string][]string) []*w
 		return workerList.Items
 	}
 
-	emptyWorkers := make([]*workers.Worker, 0)
+	emptyapi := make([]*api.Worker, 0)
 	for _, worker := range workerList.Items {
 		if worker.NodeName == "" || len(nodePods[worker.NodeName]) > 0 {
 			continue
 		}
-		emptyWorkers = append(emptyWorkers, worker)
+		emptyapi = append(emptyapi, worker)
 	}
-	return emptyWorkers
+	return emptyapi
 }
 
-func workerNodeNames(wkrs []*workers.Worker) []string {
+func workerNodeNames(wkrs []*api.Worker) []string {
 	list := make([]string, 0, len(wkrs))
 	for _, w := range wkrs {
 		if w.NodeName != "" {
@@ -123,11 +124,11 @@ func workerNodeNames(wkrs []*workers.Worker) []string {
 	return list
 }
 
-func isNewWorker(worker *workers.Worker, currentTime time.Time) bool {
+func isNewWorker(worker *api.Worker, currentTime time.Time) bool {
 	return worker.CreationTimestamp.Add(workers.MinWorkerLifespan).After(currentTime)
 }
 
-func hasIgnoredLabel(worker *workers.Worker, ignored map[string]string) bool {
+func hasIgnoredLabel(worker *api.Worker, ignored map[string]string) bool {
 	if ignored != nil {
 		for ignoredK, ignoredV := range ignored {
 			val, ok := worker.NodeLabels[ignoredK]

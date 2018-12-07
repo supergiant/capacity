@@ -6,6 +6,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/resource"
 
+	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
 	"github.com/supergiant/capacity/pkg/provider"
 )
@@ -43,8 +44,8 @@ func (m *Manager) MachineTypes() []*provider.MachineType {
 	}
 }
 
-func (m *Manager) CreateWorker(ctx context.Context, mtype string) (*workers.Worker, error) {
-	return &workers.Worker{
+func (m *Manager) CreateWorker(ctx context.Context, mtype string) (*api.Worker, error) {
+	return &api.Worker{
 		ClusterName:       m.clusterName,
 		MachineID:         "i-01e9c47fede75cb9a",
 		MachineName:       "clusterName-worker-e289335e-9579-11e8-b97f-9cb6d0f71293",
@@ -54,8 +55,8 @@ func (m *Manager) CreateWorker(ctx context.Context, mtype string) (*workers.Work
 	}, m.err
 }
 
-func (m *Manager) GetWorker(ctx context.Context, id string) (*workers.Worker, error) {
-	return &workers.Worker{
+func (m *Manager) GetWorker(ctx context.Context, id string) (*api.Worker, error) {
+	return &api.Worker{
 		ClusterName:       m.clusterName,
 		MachineID:         id,
 		MachineName:       "clusterName-worker-e289335e-9579-11e8-b97f-9cb6d0f71293",
@@ -65,9 +66,9 @@ func (m *Manager) GetWorker(ctx context.Context, id string) (*workers.Worker, er
 	}, m.err
 }
 
-func (m *Manager) ListWorkers(ctx context.Context) (*workers.WorkerList, error) {
-	return &workers.WorkerList{
-		Items: []*workers.Worker{
+func (m *Manager) ListWorkers(ctx context.Context) (*api.WorkerList, error) {
+	return &api.WorkerList{
+		Items: []*api.Worker{
 			{
 				ClusterName:       m.clusterName,
 				MachineID:         "i-01e9c47fededccb9a",
@@ -88,8 +89,8 @@ func (m *Manager) ListWorkers(ctx context.Context) (*workers.WorkerList, error) 
 	}, m.err
 }
 
-func (m *Manager) DeleteWorker(ctx context.Context, nodeName, id string) (*workers.Worker, error) {
-	return &workers.Worker{
+func (m *Manager) DeleteWorker(ctx context.Context, nodeName, id string) (*api.Worker, error) {
+	return &api.Worker{
 		ClusterName:       m.clusterName,
 		MachineID:         "i-01e9c47fede75cb9a",
 		MachineName:       "clusterName-worker-e289335e-9579-11e8-b97f-9cb6d0f71293",
@@ -99,8 +100,8 @@ func (m *Manager) DeleteWorker(ctx context.Context, nodeName, id string) (*worke
 	}, m.err
 }
 
-func (m *Manager) ReserveWorker(ctx context.Context, w *workers.Worker) (*workers.Worker, error) {
-	return &workers.Worker{
+func (m *Manager) ReserveWorker(ctx context.Context, w *api.Worker) (*api.Worker, error) {
+	return &api.Worker{
 		ClusterName:       m.clusterName,
 		MachineName:       "clusterName-worker-e289335e-9579-11e8-b97f-9cb6d0f71293",
 		MachineType:       "m4.large",

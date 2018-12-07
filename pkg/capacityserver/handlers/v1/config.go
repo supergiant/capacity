@@ -6,6 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/log"
 )
@@ -64,7 +65,7 @@ func (h *configHandler) patchConfig(w http.ResponseWriter, r *http.Request) {
 	//     Responses:
 	//     200: configResponse
 
-	patch := kubescaler.Config{}
+	patch := api.Config{}
 	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
 		log.Errorf("handler: kubescaler: patch config: decode: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
