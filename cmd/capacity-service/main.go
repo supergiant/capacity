@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -73,9 +74,13 @@ func main() {
 	mux.Handle("/ui", http.RedirectHandler("../ui/", http.StatusMovedPermanently))
 	mux.Handle("/", http.RedirectHandler("./ui", http.StatusMovedPermanently))
 
-	stopCh := signals.SetupSignalHandler()
-	if err = srv.Start(stopCh); err != nil {
-		log.Fatalf("capacityserver: start: %v\n", err)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		defer cancel()
+		<-signals.SetupSignalHandler()
+	}()
+	if err = srv.Start(ctx); err != nil {
+		log.Fatal(err)
 	}
 }
 

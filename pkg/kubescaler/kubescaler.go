@@ -57,6 +57,7 @@ type Kubescaler struct {
 	*ConfigManager
 	workers.WInterface
 
+	stopCh         chan struct{}
 	kclient        kubernetes.Clientset
 	listerRegistry listers.Registry
 }
@@ -84,10 +85,12 @@ func New(opts Options) (*Kubescaler, error) {
 	cfg := conf.GetConfig()
 
 	// use a fake kubescaler for testing
+	// TODO: fake provider doesn't work without kubernetes cluster
 	if conf.GetConfig().ProviderName == "fake" {
 		return &Kubescaler{
 			ConfigManager: conf,
 			WInterface:    fake.NewManager(nil),
+			stopCh:        make(chan struct{}),
 		}, nil
 	}
 
@@ -113,12 +116,12 @@ func New(opts Options) (*Kubescaler, error) {
 	return &Kubescaler{
 		ConfigManager:  conf,
 		WInterface:     wm,
+		stopCh:         make(chan struct{}),
 		listerRegistry: listers.NewRegistryWithDefaultListers(kclient, nil),
 	}, nil
 }
 
-func (s *Kubescaler) Run(stop <-chan struct{}) {
-	log.Info("starting kubescaler...")
+func (s *Kubescaler) Run() error {
 	pauseLockCheck := s.GetConfig()
 	//checking to see if pauselock is engaged.
 	//We do this check here so the Warn will not eat up logs in the RunOnce func.
@@ -128,7 +131,7 @@ func (s *Kubescaler) Run(stop <-chan struct{}) {
 		log.Info("Automatic Capacity will occur unless paused.")
 	}
 
-	go func() {
+	func() {
 		for {
 			select {
 			case <-time.After(DefaultScanInterval):
@@ -137,11 +140,31 @@ func (s *Kubescaler) Run(stop <-chan struct{}) {
 						log.Errorf("kubescaler: %v", err)
 					}
 				}
-			case <-stop:
+			case <-s.stopCh:
 				return
 			}
 		}
 	}()
+
+	return nil
+}
+
+func (s *Kubescaler) Stop(ctx context.Context) error {
+	done := make(chan struct{})
+	go func() {
+		// stop chan is synchronous, waiting for receiver
+		s.stopCh <- struct{}{}
+		done <- struct{}{}
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-done:
+			return nil
+		}
+	}
 }
 
 func (s *Kubescaler) RunOnce(currentTime time.Time) error {
