@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/supergiant/capacity/pkg/capacityserver"
 	"github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/log"
+	"github.com/supergiant/capacity/pkg/version"
 )
 
 type args struct {
@@ -21,14 +23,14 @@ type args struct {
 	ConfigMapNamespace string `arg:"--configmap-namespace, env:CAPACITY_CONFIGMAP_NAMESPACE" help:"namespace of configMap with kubescaler config"`
 	KubeConfig         string `arg:"--kubeconfig,          env:CAPACITY_KUBE_CONFIG"         help:"path to a kubeconfig file, needs for building a kubernetes client"`
 	ListenAddr         string `arg:"--listen-addr,         env:CAPACITY_LISTEN_ADDR"         help:"address to listen on, pass as a addr:port"`
-	LogLevel           string `arg:"--log-level"           env:"CAPACITY_LOG_LEVEL"          help:"logging verbosity [debug info warn error fatal panic]"`
-	LogFormat          string `arg:"--log-format"          env:"CAPACITY_LOG_LEVEL"          help:"logging format [txt json]"`
+	LogLevel           string `arg:"--log-level,           env:CAPACITY_LOG_LEVEL"           help:"logging verbosity [debug info warn error fatal panic]"`
+	LogFormat          string `arg:"--log-format,          env:CAPACITY_LOG_LEVEL"           help:"logging format [txt json]"`
 	LogHooks           string `arg:"--log-hooks,           env:CAPACITY_LOG_HOOKS"           help:"list of comma-separated log providers (syslog)"`
 	UserDataFile       string `arg:"--user-data,           env:CAPACITY_USER_DATA"           help:"path to a userdata file"`
 }
 
 func (args) Version() string {
-	return "v0.1.0"
+	return fmt.Sprintf("Version: %#v\n", version.Get())
 }
 
 func main() {

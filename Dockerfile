@@ -29,10 +29,15 @@ RUN ng build --prod --base-href="../ui/"
 # download packr
 RUN go get -u github.com/gobuffalo/packr/packr
 
+ARG GIT_VERSION=none
+ARG GIT_COMMIT=none
+
 # Put pre-built ui back in place
 WORKDIR /go/src/github.com/supergiant/capacity/cmd/capacity-service
-# TODO: set app version
-RUN packr build -v -o /tmp/bin/capacity-service -ldflags="-s -w"
+RUN packr build -v -o /tmp/bin/capacity-service -ldflags="-s -w \
+    -X github.com/supergiant/capacity/pkg/version.gitVersion=${GIT_VERSION} \
+    -X github.com/supergiant/capacity/pkg/version.gitCommit=${GIT_COMMIT} \
+    -X github.com/supergiant/capacity/pkg/version.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
 
 # build final container
 FROM scratch

@@ -1,6 +1,11 @@
 #!/bin/bash
 
+export TRAVIS_REPO_SLUG="${TRAVIS_REPO_SLUG:-supergiant/capacity}"
 export TAG=${TRAVIS_BRANCH:-unstable}
+
+export DOCKER_BUILD_ARGS="--build-arg=GIT_VERSION=${TAG} --build-arg=GIT_COMMIT=$(git rev-parse HEAD)"
+export DOCKER_IMAGE_VERSIONED="${TRAVIS_REPO_SLUG}:${TAG}"
+export DOCKER_IMAGE_LATEST="${TRAVIS_REPO_SLUG}:latest"
 
 # checks for success of the previous task
 check_status () {

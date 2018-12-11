@@ -5,7 +5,8 @@ echo "Log into docker"
 docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
 # push to docker
 echo "Pushing to Docker"
-docker push "$TRAVIS_REPO_SLUG":"$TAG"
+docker push $(DOCKER_IMAGE_VERSIONED)
+docker push $(DOCKER_IMAGE_LATEST)
 
 # Check for errors
 if [ $? -eq 0 ]; then
