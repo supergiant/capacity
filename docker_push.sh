@@ -7,6 +7,12 @@ docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
 echo "Pushing to Docker"
 docker push "$TRAVIS_REPO_SLUG":"$TAG"
 
+# On a release tag we also push a 'latest' tag to dockerhub
+echo "Pushing latest tag to Docker"
+if [[ "$TRAVIS_TAG" =~ ^v[0-9]. ]]; then
+	docker push "$TRAVIS_REPO_SLUG":"latest"
+fi
+
 # Check for errors
 if [ $? -eq 0 ]; then
 	echo "Push Complete"
