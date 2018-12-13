@@ -9,7 +9,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: {{ template "capacity.serviceAccountName" . }}
-  namespace: default
+  namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
   name: {{ template "capacity.name" . }}-nodepod-permissions

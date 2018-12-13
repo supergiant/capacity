@@ -9,7 +9,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: {{ template "capacity.serviceAccountName" . }}
-  namespace: default
+  namespace: {{ .Release.Namespace }}
 roleRef:
   kind: Role
   name: {{ template "capacity.name" . }}-configmap-updater
