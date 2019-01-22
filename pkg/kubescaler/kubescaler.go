@@ -53,7 +53,7 @@ type Options struct {
 
 type Kubescaler struct {
 	*configManager
-	*workers.Manager
+	workers.WInterface
 
 	stopCh         chan struct{}
 	kclient        kubernetes.Clientset
@@ -103,7 +103,7 @@ func New(opts Options) (*Kubescaler, error) {
 
 	return &Kubescaler{
 		configManager: conf,
-		Manager:       wm,
+		WInterface:       wm,
 
 		stopCh:         make(chan struct{}),
 		listerRegistry: listers.NewRegistryWithDefaultListers(kclient, nil),
