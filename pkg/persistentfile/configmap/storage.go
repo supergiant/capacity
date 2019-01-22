@@ -38,12 +38,6 @@ type CMFile struct {
 // New creates the new CMFile.
 func New(cmName, ns, key string, client v1.ConfigMapsGetter) (*CMFile, error) {
 	cmName, ns, key = strings.TrimSpace(cmName), strings.TrimSpace(ns), strings.TrimSpace(key)
-	if cmName == "" || ns == "" {
-		return nil, ErrInvalidConfigMap
-	}
-	if key == "" {
-		return nil, ErrInvalidConfigMapKey
-	}
 	if client == nil {
 		return nil, ErrInvalidConfigMapClient
 	}
@@ -68,10 +62,7 @@ func (f CMFile) Read() ([]byte, error) {
 		return nil, err
 	}
 
-	data, ok := cm.Data[f.key]
-	if !ok {
-		return nil, ErrKeyNotFound
-	}
+	data, _ := cm.Data[f.key]
 
 	return []byte(data), nil
 }

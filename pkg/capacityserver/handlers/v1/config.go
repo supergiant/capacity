@@ -16,10 +16,10 @@ var (
 )
 
 type configHandler struct {
-	cm *kubescaler.ConfigManager
+	cm kubescaler.ConfigManager
 }
 
-func newConfigHandler(pconf *kubescaler.ConfigManager) (*configHandler, error) {
+func newConfigHandler(pconf kubescaler.ConfigManager) (*configHandler, error) {
 	if pconf == nil {
 		return nil, ErrInvalidPersistentConfig
 	}

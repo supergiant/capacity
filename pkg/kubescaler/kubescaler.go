@@ -53,7 +53,7 @@ type Options struct {
 }
 
 type Kubescaler struct {
-	*ConfigManager
+	*ConfigManagerImpl
 	workers.WInterface
 
 	stopCh         chan struct{}
@@ -73,7 +73,7 @@ func New(opts Options) (*Kubescaler, error) {
 
 	f, err := getConfigFile(opts, kclient.CoreV1())
 	if err != nil {
-		return nil, err
+		log.Warnf("kubescaler: get config from: %s", f.Info())
 	}
 	log.Infof("kubescaler: get config from: %s", f.Info())
 
@@ -87,9 +87,9 @@ func New(opts Options) (*Kubescaler, error) {
 	// TODO: fake provider doesn't work without kubernetes cluster
 	if conf.GetConfig().ProviderName == "fake" {
 		return &Kubescaler{
-			ConfigManager: conf,
-			WInterface:    fake.NewManager(nil),
-			stopCh:        make(chan struct{}),
+			ConfigManagerImpl: conf,
+			WInterface:        fake.NewManager(nil),
+			stopCh:            make(chan struct{}),
 		}, nil
 	}
 
@@ -113,10 +113,10 @@ func New(opts Options) (*Kubescaler, error) {
 	}
 
 	return &Kubescaler{
-		ConfigManager:  conf,
-		WInterface:     wm,
-		stopCh:         make(chan struct{}),
-		listerRegistry: listers.NewRegistryWithDefaultListers(kclient, nil),
+		ConfigManagerImpl: conf,
+		WInterface:        wm,
+		stopCh:            make(chan struct{}),
+		listerRegistry:    listers.NewRegistryWithDefaultListers(kclient, nil),
 	}, nil
 }
 

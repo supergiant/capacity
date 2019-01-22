@@ -22,11 +22,11 @@ func New(ks *kubescaler.Kubescaler) (*HandlerV1, error) {
 	if ks == nil {
 		return nil, ErrNoKubescaler
 	}
-	wh, err := newWorkersHandler(ks.WInterface)
+	wh, err := newWorkersHandler(ks)
 	if err != nil {
 		return nil, err
 	}
-	cf, err := newConfigHandler(ks.ConfigManager)
+	cf, err := newConfigHandler(ks)
 	if err != nil {
 		return nil, err
 	}

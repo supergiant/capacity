@@ -18,6 +18,12 @@ const (
 	EnvPrefix = "CAPACITY"
 )
 
+type ConfigManager interface {
+	SetConfig(api.Config) error
+	PatchConfig(api.Config) error
+	GetConfig() api.Config
+}
+
 func Merge(c, patch api.Config) api.Config {
 	if patch.Paused != nil {
 		c.Paused = patch.Paused
@@ -41,14 +47,14 @@ func Merge(c, patch api.Config) api.Config {
 	return c
 }
 
-type ConfigManager struct {
+type ConfigManagerImpl struct {
 	file persistentfile.Interface
 
 	mu   sync.RWMutex
 	conf api.Config
 }
 
-func NewConfigManager(file persistentfile.Interface) (*ConfigManager, error) {
+func NewConfigManager(file persistentfile.Interface) (*ConfigManagerImpl, error) {
 	raw, err := file.Read()
 	if err != nil {
 		if persistentfile.IsNotExist(err) {
@@ -63,14 +69,14 @@ func NewConfigManager(file persistentfile.Interface) (*ConfigManager, error) {
 		return nil, errors.Wrap(err, "decode config")
 	}
 
-	return &ConfigManager{
+	return &ConfigManagerImpl{
 		file: file,
 		mu:   sync.RWMutex{},
 		conf: applyEnv(conf),
 	}, nil
 }
 
-func (m *ConfigManager) SetConfig(conf api.Config) error {
+func (m *ConfigManagerImpl) SetConfig(conf api.Config) error {
 	if err := m.write(conf); err != nil {
 		return err
 	}
@@ -82,7 +88,7 @@ func (m *ConfigManager) SetConfig(conf api.Config) error {
 	return nil
 }
 
-func (m *ConfigManager) PatchConfig(in api.Config) error {
+func (m *ConfigManagerImpl) PatchConfig(in api.Config) error {
 	newConf := Merge(m.GetConfig(), in)
 	if err := newConf.Validate(); err != nil {
 		return err
@@ -90,7 +96,7 @@ func (m *ConfigManager) PatchConfig(in api.Config) error {
 	return m.SetConfig(newConf)
 }
 
-func (m *ConfigManager) write(conf api.Config) error {
+func (m *ConfigManagerImpl) write(conf api.Config) error {
 	raw, err := json.Marshal(conf)
 	if err != nil {
 		return errors.Wrap(err, "encode config")
@@ -98,7 +104,7 @@ func (m *ConfigManager) write(conf api.Config) error {
 	return errors.Wrap(m.file.Write(raw), "write config")
 }
 
-func (m *ConfigManager) GetConfig() api.Config {
+func (m *ConfigManagerImpl) GetConfig() api.Config {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
