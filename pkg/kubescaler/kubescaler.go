@@ -80,6 +80,7 @@ func New(opts Options) (*Kubescaler, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "setup persistent config")
 	}
+	// TODO(stgleb): Move this stuff out of this constructor
 	cfg := conf.GetConfig()
 
 	vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)

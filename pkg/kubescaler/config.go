@@ -12,6 +12,7 @@ import (
 	"github.com/supergiant/capacity/pkg/persistentfile"
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/aws"
+	"github.com/supergiant/capacity/pkg/log"
 )
 
 const (
@@ -57,23 +58,24 @@ type configManager struct {
 }
 
 func NewConfigManager(file persistentfile.Interface) (*configManager, error) {
-	raw, err := file.Read()
-	if err != nil {
-		if persistentfile.IsNotExist(err) {
-			return nil, errors.Wrapf(err, "read config from %s", file.Info())
-		}
-		return nil, errors.Wrap(err, "get config")
-	}
-
+	isReady := false
 	conf := api.Config{}
-	// TODO: use codec to support more formats
-	if err = json.Unmarshal(raw, &conf); err != nil {
-		return nil, errors.Wrap(err, "decode config")
+	raw, err := file.Read()
+
+	if err != nil {
+		log.Warnf("Read config %v", err)
+	} else {
+		isReady = true
+		// TODO: use codec to support more formats
+		if err = json.Unmarshal(raw, &conf); err != nil {
+			return nil, errors.Wrap(err, "decode config")
+		}
 	}
 
 	return &configManager{
 		file: file,
 		mu:   sync.RWMutex{},
+		isReady: isReady,
 		conf: applyEnv(conf),
 	}, nil
 }
