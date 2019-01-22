@@ -40,6 +40,7 @@ func New(ks *kubescaler.Kubescaler) (*HandlerV1, error) {
 func (h *HandlerV1) RegisterTo(r *mux.Router) {
 	r.Path("/config").Methods(http.MethodGet).HandlerFunc(h.config.getConfig)
 	r.Path("/config").Methods(http.MethodPatch).HandlerFunc(h.config.patchConfig)
+	r.Path("/config").Methods(http.MethodPatch).HandlerFunc(h.config.createConfig)
 
 	r.Path("/machinetypes").HandlerFunc(h.workers.listMachineTypes).Methods(http.MethodGet)
 
