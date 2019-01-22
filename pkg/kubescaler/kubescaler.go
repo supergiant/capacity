@@ -2,7 +2,6 @@ package kubescaler
 
 import (
 	"context"
-	"os"
 	"strings"
 	"time"
 
@@ -420,33 +419,13 @@ func isNewNode(node *corev1.Node, currentTime time.Time, newNodeTimeBuffer int) 
 //
 // TODO: pass only configfile options
 func getConfigFile(opts Options, cmGetter v1.ConfigMapsGetter) (persistentfile.Interface, error) {
-	// try to use a file on provided path
-	f, err := persistentfile.New(persistentfile.Config{
-		Type: persistentfile.FSFile,
-		Path: opts.ConfigFile,
-		Perm: os.FileMode(0644),
-	})
-	if err == nil {
-		return f, nil
-	}
-
 	// try to setup a configMap file
-	f, err = persistentfile.New(persistentfile.Config{
+	f, err := persistentfile.New(persistentfile.Config{
 		Type:               persistentfile.ConfigMapFile,
 		ConfigMapName:      opts.ConfigMapName,
 		ConfigMapNamespace: opts.ConfigMapNamespace,
 		Key:                DefaultConfigMapKey,
 		ConfigMapClient:    cmGetter,
-	})
-	if err == nil {
-		return f, nil
-	}
-
-	// try to use a file on default path
-	f, err = persistentfile.New(persistentfile.Config{
-		Type: persistentfile.FSFile,
-		Path: DefaultConfigFilepath,
-		Perm: os.FileMode(0644),
 	})
 	if err == nil {
 		return f, nil
