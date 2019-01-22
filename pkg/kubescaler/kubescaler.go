@@ -16,7 +16,6 @@ import (
 	"github.com/supergiant/capacity/pkg/kubernetes/filters"
 	"github.com/supergiant/capacity/pkg/kubernetes/listers"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
-	"github.com/supergiant/capacity/pkg/kubescaler/workers/fake"
 	"github.com/supergiant/capacity/pkg/log"
 	"github.com/supergiant/capacity/pkg/persistentfile"
 	"github.com/supergiant/capacity/pkg/provider"
@@ -53,8 +52,8 @@ type Options struct {
 }
 
 type Kubescaler struct {
-	*ConfigManagerImpl
-	workers.WInterface
+	*configManager
+	*workers.Manager
 
 	stopCh         chan struct{}
 	kclient        kubernetes.Clientset
@@ -83,16 +82,6 @@ func New(opts Options) (*Kubescaler, error) {
 	}
 	cfg := conf.GetConfig()
 
-	// use a fake kubescaler for testing
-	// TODO: fake provider doesn't work without kubernetes cluster
-	if conf.GetConfig().ProviderName == "fake" {
-		return &Kubescaler{
-			ConfigManagerImpl: conf,
-			WInterface:        fake.NewManager(nil),
-			stopCh:            make(chan struct{}),
-		}, nil
-	}
-
 	vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)
 	if err != nil {
 		return nil, err
@@ -113,10 +102,11 @@ func New(opts Options) (*Kubescaler, error) {
 	}
 
 	return &Kubescaler{
-		ConfigManagerImpl: conf,
-		WInterface:        wm,
-		stopCh:            make(chan struct{}),
-		listerRegistry:    listers.NewRegistryWithDefaultListers(kclient, nil),
+		configManager: conf,
+		Manager:       wm,
+
+		stopCh:         make(chan struct{}),
+		listerRegistry: listers.NewRegistryWithDefaultListers(kclient, nil),
 	}, nil
 }
 
@@ -330,7 +320,7 @@ func (s *Kubescaler) removeFailedMachines(ids []string) error {
 func (s *Kubescaler) machineTypes(permitted []string) []*provider.MachineType {
 	out := make([]*provider.MachineType, 0, len(permitted))
 	for _, name := range permitted {
-		if mt := findMachine(name, s.WInterface.MachineTypes()); mt != nil {
+		if mt := findMachine(name, s.MachineTypes()); mt != nil {
 			out = append(out, mt)
 		}
 	}

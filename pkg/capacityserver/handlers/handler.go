@@ -9,15 +9,16 @@ import (
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers/v1"
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers/version"
 	//"github.com/supergiant/capacity/pkg/kubescaler"
+	"github.com/supergiant/capacity/pkg/kubescaler"
 )
 
-func RegisterRouter(handler *v1.HandlerV1) (*mux.Router, error) {
+func RegisterRouter(ks *kubescaler.Kubescaler, handler *v1.HandlerV1) (*mux.Router, error) {
 	r := mux.NewRouter()
 
 	r.Path("/version").Methods(http.MethodGet).HandlerFunc(version.Handler)
 
 	apiv1 := r.PathPrefix("/api/v1").Subrouter()
-	handler.RegisterTo(apiv1)
+	handler.RegisterTo(ks, apiv1)
 	apiv1.Use(
 		mux.MiddlewareFunc(setContentType),
 	)

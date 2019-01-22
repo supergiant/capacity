@@ -42,7 +42,7 @@ func New(conf Config) (*API, error) {
 		return nil, errors.Wrap(err, "setup router")
 	}
 
-	h, err := handlers.RegisterRouter(handlerV1)
+	h, err := handlers.RegisterRouter(ks, handlerV1)
 	if err != nil {
 		return nil, errors.Wrap(err, "setup handlers")
 	}

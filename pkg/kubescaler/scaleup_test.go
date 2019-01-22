@@ -210,7 +210,7 @@ func TestKubescalerScaleUp(t *testing.T) {
 		require.Nilf(t, err, "TC#%d", i+1)
 
 		ks := &Kubescaler{
-			ConfigManagerImpl: &ConfigManagerImpl{
+			configManager: &configManager{
 				file: f,
 				mu:   sync.RWMutex{},
 				conf: api.Config{

@@ -22,6 +22,7 @@ type ConfigManager interface {
 	SetConfig(api.Config) error
 	PatchConfig(api.Config) error
 	GetConfig() api.Config
+	IsReady() bool
 }
 
 func Merge(c, patch api.Config) api.Config {
@@ -47,14 +48,15 @@ func Merge(c, patch api.Config) api.Config {
 	return c
 }
 
-type ConfigManagerImpl struct {
+type configManager struct {
 	file persistentfile.Interface
 
 	mu   sync.RWMutex
 	conf api.Config
+	isReady bool
 }
 
-func NewConfigManager(file persistentfile.Interface) (*ConfigManagerImpl, error) {
+func NewConfigManager(file persistentfile.Interface) (*configManager, error) {
 	raw, err := file.Read()
 	if err != nil {
 		if persistentfile.IsNotExist(err) {
@@ -69,14 +71,14 @@ func NewConfigManager(file persistentfile.Interface) (*ConfigManagerImpl, error)
 		return nil, errors.Wrap(err, "decode config")
 	}
 
-	return &ConfigManagerImpl{
+	return &configManager{
 		file: file,
 		mu:   sync.RWMutex{},
 		conf: applyEnv(conf),
 	}, nil
 }
 
-func (m *ConfigManagerImpl) SetConfig(conf api.Config) error {
+func (m *configManager) SetConfig(conf api.Config) error {
 	if err := m.write(conf); err != nil {
 		return err
 	}
@@ -84,11 +86,12 @@ func (m *ConfigManagerImpl) SetConfig(conf api.Config) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	m.isReady = true
 	m.conf = conf
 	return nil
 }
 
-func (m *ConfigManagerImpl) PatchConfig(in api.Config) error {
+func (m *configManager) PatchConfig(in api.Config) error {
 	newConf := Merge(m.GetConfig(), in)
 	if err := newConf.Validate(); err != nil {
 		return err
@@ -96,7 +99,7 @@ func (m *ConfigManagerImpl) PatchConfig(in api.Config) error {
 	return m.SetConfig(newConf)
 }
 
-func (m *ConfigManagerImpl) write(conf api.Config) error {
+func (m *configManager) write(conf api.Config) error {
 	raw, err := json.Marshal(conf)
 	if err != nil {
 		return errors.Wrap(err, "encode config")
@@ -104,11 +107,19 @@ func (m *ConfigManagerImpl) write(conf api.Config) error {
 	return errors.Wrap(m.file.Write(raw), "write config")
 }
 
-func (m *ConfigManagerImpl) GetConfig() api.Config {
+func (m *configManager) GetConfig() api.Config {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	return m.conf
+}
+
+
+func (m *configManager) IsReady() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return m.isReady
 }
 
 // TODO: just a hack, use viper in the future
