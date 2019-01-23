@@ -144,7 +144,7 @@ func (h *workersHandler) listWorkers(w http.ResponseWriter, r *http.Request) {
 	//     Responses:
 	//     200: workerListResponse
 
-	h.kubeScaler.RUnlock()
+	h.kubeScaler.RLock()
 	defer h.kubeScaler.RUnlock()
 
 	workers, err := h.kubeScaler.ListWorkers(r.Context())
@@ -175,7 +175,7 @@ func (h *workersHandler) updateWorker(w http.ResponseWriter, r *http.Request) {
 	//     Responses:
 	//     200: workerResponse
 
-	h.kubeScaler.RUnlock()
+	h.kubeScaler.RLock()
 	defer h.kubeScaler.RUnlock()
 
 	vars := mux.Vars(r)
@@ -225,7 +225,7 @@ func (h *workersHandler) deleteWorker(w http.ResponseWriter, r *http.Request) {
 	//     Responses:
 	//     200: workerResponse
 
-	h.kubeScaler.RUnlock()
+	h.kubeScaler.RLock()
 	defer h.kubeScaler.RUnlock()
 
 	vars := mux.Vars(r)
