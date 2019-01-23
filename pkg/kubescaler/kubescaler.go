@@ -16,6 +16,7 @@ import (
 	"github.com/supergiant/capacity/pkg/kubernetes/filters"
 	"github.com/supergiant/capacity/pkg/kubernetes/listers"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
+	"github.com/supergiant/capacity/pkg/kubescaler/workers/fake"
 	"github.com/supergiant/capacity/pkg/log"
 	"github.com/supergiant/capacity/pkg/persistentfile"
 	"github.com/supergiant/capacity/pkg/provider"
@@ -55,12 +56,17 @@ type Kubescaler struct {
 	*configManager
 	workers.WInterface
 
-	stopCh         chan struct{}
+	userData string
+	k8sClient  *kubernetes.Clientset
+	notifyChan chan struct{}
+	stopCh     chan struct{}
+
 	kclient        kubernetes.Clientset
 	listerRegistry listers.Registry
 }
 
 func New(opts Options) (*Kubescaler, error) {
+	notifyChan := make(chan struct{})
 	kclient, err := config.GetKubernetesClientSet("", opts.Kubeconfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "build kubernetes client")
@@ -76,7 +82,7 @@ func New(opts Options) (*Kubescaler, error) {
 	}
 	log.Infof("kubescaler: get config from: %s", f.Info())
 
-	conf, err := NewConfigManager(f)
+	conf, err := NewConfigManager(notifyChan, f)
 	if err != nil {
 		return nil, errors.Wrap(err, "setup persistent config")
 	}
@@ -84,8 +90,17 @@ func New(opts Options) (*Kubescaler, error) {
 	cfg := conf.GetConfig()
 
 	vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)
+
+	// Create fake provider in case of empty config
 	if err != nil {
-		return nil, err
+		return &Kubescaler{
+			configManager: conf,
+			userData: opts.UserDataFile,
+			k8sClient:     kclient,
+			notifyChan:    notifyChan,
+			WInterface:    fake.NewManager(nil),
+			stopCh:        make(chan struct{}),
+		}, nil
 	}
 
 	workersConf := workers.Config{
@@ -104,8 +119,11 @@ func New(opts Options) (*Kubescaler, error) {
 
 	return &Kubescaler{
 		configManager: conf,
-		WInterface:       wm,
+		WInterface:    wm,
 
+		userData: opts.UserDataFile,
+		k8sClient:      kclient,
+		notifyChan:     notifyChan,
 		stopCh:         make(chan struct{}),
 		listerRegistry: listers.NewRegistryWithDefaultListers(kclient, nil),
 	}, nil
@@ -130,6 +148,39 @@ func (s *Kubescaler) Run() error {
 						log.Errorf("kubescaler: %v", err)
 					}
 				}
+			case <-s.notifyChan:
+				cfg := s.configManager.GetConfig()
+
+				vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)
+
+				// Create fake provider in case of empty config
+				if err != nil {
+					continue
+				}
+
+				v, err := s.k8sClient.ServerVersion()
+				if err != nil {
+					continue
+				}
+
+				workersConf := workers.Config{
+					KubeVersion:       v.String(),
+					MasterPrivateAddr: cfg.MasterPrivateAddr,
+					KubeAPIPort:       cfg.KubeAPIPort,
+					KubeAPIPassword:   cfg.KubeAPIPassword,
+					ProviderName:      cfg.ProviderName,
+					SSHPubKey:         cfg.SSHPubKey,
+					UserDataFile:      s.userData,
+				}
+				wm, err := workers.NewManager(cfg.ClusterName,
+					s.k8sClient.CoreV1().Nodes(), vmProvider, workersConf)
+
+				if err != nil {
+					continue
+				}
+
+				// Set another worker manager
+				s.WInterface = wm
 			case <-s.stopCh:
 				return
 			}

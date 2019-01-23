@@ -73,7 +73,7 @@ func (a *API) Start(ctx context.Context) error {
 		{
 			name: "web server",
 			run: func() error {
-				log.Infof("listen on %q", a.srv.Addr)
+				log.Infof("listen on %s", a.srv.Addr)
 				err := a.srv.ListenAndServe()
 				if err != nil || err != http.ErrServerClosed {
 					return err

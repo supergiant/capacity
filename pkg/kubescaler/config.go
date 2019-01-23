@@ -51,13 +51,14 @@ func Merge(c, patch api.Config) api.Config {
 
 type configManager struct {
 	file persistentfile.Interface
+	notifyChan chan <-struct{}
 
 	mu   sync.RWMutex
 	conf api.Config
 	isReady bool
 }
 
-func NewConfigManager(file persistentfile.Interface) (*configManager, error) {
+func NewConfigManager(notifyChan chan struct{}, file persistentfile.Interface) (*configManager, error) {
 	isReady := false
 	conf := api.Config{}
 	raw, err := file.Read()
@@ -74,6 +75,7 @@ func NewConfigManager(file persistentfile.Interface) (*configManager, error) {
 
 	return &configManager{
 		file: file,
+		notifyChan: notifyChan,
 		mu:   sync.RWMutex{},
 		isReady: isReady,
 		conf: applyEnv(conf),
@@ -87,6 +89,8 @@ func (m *configManager) SetConfig(conf api.Config) error {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	// notify about config change
+	m.notifyChan <- struct{}{}
 
 	m.isReady = true
 	m.conf = conf
