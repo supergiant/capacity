@@ -10,21 +10,22 @@ import (
 	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
 	"github.com/supergiant/capacity/pkg/log"
+	"github.com/supergiant/capacity/pkg/kubescaler"
 )
 
 var (
-	ErrInvalidWorkersManager = errors.New("invalid workers manager")
+	ErrInvalidKubeScaler = errors.New("invalid workers manager")
 )
 
 type workersHandler struct {
-	m workers.WInterface
+	kubeScaler *kubescaler.Kubescaler
 }
 
-func newWorkersHandler(wiface workers.WInterface) (*workersHandler, error) {
-	if wiface == nil {
-		return nil, ErrInvalidWorkersManager
+func newWorkersHandler(kubeScaler *kubescaler.Kubescaler) (*workersHandler, error) {
+	if kubeScaler == nil {
+		return nil, ErrInvalidKubeScaler
 	}
-	return &workersHandler{wiface}, nil
+	return &workersHandler{kubeScaler: kubeScaler}, nil
 }
 
 func (h *workersHandler) listMachineTypes(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +41,10 @@ func (h *workersHandler) listMachineTypes(w http.ResponseWriter, r *http.Request
 	//     Responses:
 	//     200: machineTypesListResponse
 
-	if err := json.NewEncoder(w).Encode(h.m.MachineTypes()); err != nil {
+	h.kubeScaler.RUnlock()
+	defer h.kubeScaler.RUnlock()
+
+	if err := json.NewEncoder(w).Encode(h.kubeScaler.MachineTypes()); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
@@ -63,6 +67,10 @@ func (h *workersHandler) createWorker(w http.ResponseWriter, r *http.Request) {
 	//     Responses:
 	//     201: workerResponse
 
+
+	h.kubeScaler.RUnlock()
+	defer h.kubeScaler.RUnlock()
+
 	var err error
 	worker := &api.Worker{}
 	if err = json.NewDecoder(r.Body).Decode(worker); err != nil {
@@ -71,7 +79,7 @@ func (h *workersHandler) createWorker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	worker, err = h.m.CreateWorker(r.Context(), worker.MachineType)
+	worker, err = h.kubeScaler.CreateWorker(r.Context(), worker.MachineType)
 	if err != nil {
 		log.Errorf("handler: kubescaler: create worker: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -99,6 +107,9 @@ func (h *workersHandler) getWorker(w http.ResponseWriter, r *http.Request) {
 	//     Responses:
 	//     200: workerResponse
 
+	h.kubeScaler.RUnlock()
+	defer h.kubeScaler.RUnlock()
+
 	vars := mux.Vars(r)
 	if vars == nil {
 		log.Errorf("handler: kubescaler: get worker: vars hasn't been found")
@@ -107,7 +118,7 @@ func (h *workersHandler) getWorker(w http.ResponseWriter, r *http.Request) {
 	}
 
 	machineID := vars["machineID"]
-	worker, err := h.m.GetWorker(r.Context(), machineID)
+	worker, err := h.kubeScaler.GetWorker(r.Context(), machineID)
 	if err != nil {
 		log.Errorf("handler: kubescaler: get %s worker: %v", machineID, err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -133,7 +144,10 @@ func (h *workersHandler) listWorkers(w http.ResponseWriter, r *http.Request) {
 	//     Responses:
 	//     200: workerListResponse
 
-	workers, err := h.m.ListWorkers(r.Context())
+	h.kubeScaler.RUnlock()
+	defer h.kubeScaler.RUnlock()
+
+	workers, err := h.kubeScaler.ListWorkers(r.Context())
 	if err != nil {
 		log.Errorf("handler: kubescaler: list workers: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -161,6 +175,9 @@ func (h *workersHandler) updateWorker(w http.ResponseWriter, r *http.Request) {
 	//     Responses:
 	//     200: workerResponse
 
+	h.kubeScaler.RUnlock()
+	defer h.kubeScaler.RUnlock()
+
 	vars := mux.Vars(r)
 	if vars == nil {
 		log.Errorf("handler: kubescaler: delete worker: vars wasn't found")
@@ -178,7 +195,7 @@ func (h *workersHandler) updateWorker(w http.ResponseWriter, r *http.Request) {
 
 	machineID := vars["machineID"]
 	worker.MachineID = machineID
-	worker, err = h.m.ReserveWorker(r.Context(), worker)
+	worker, err = h.kubeScaler.ReserveWorker(r.Context(), worker)
 	if err != nil {
 		if errors.Cause(err) == workers.ErrNotFound {
 			http.NotFound(w, r)
@@ -208,6 +225,9 @@ func (h *workersHandler) deleteWorker(w http.ResponseWriter, r *http.Request) {
 	//     Responses:
 	//     200: workerResponse
 
+	h.kubeScaler.RUnlock()
+	defer h.kubeScaler.RUnlock()
+
 	vars := mux.Vars(r)
 	if vars == nil {
 		log.Errorf("handler: kubescaler: delete worker: vars wasn't found")
@@ -216,7 +236,7 @@ func (h *workersHandler) deleteWorker(w http.ResponseWriter, r *http.Request) {
 	}
 
 	machineID := vars["machineID"]
-	worker, err := h.m.DeleteWorker(r.Context(), "", machineID)
+	worker, err := h.kubeScaler.DeleteWorker(r.Context(), "", machineID)
 	if err != nil {
 		log.Errorf("handler: kubescaler: delete %s worker: %v", machineID, err)
 		w.WriteHeader(http.StatusInternalServerError)

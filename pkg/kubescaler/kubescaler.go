@@ -21,6 +21,7 @@ import (
 	"github.com/supergiant/capacity/pkg/persistentfile"
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/factory"
+	"sync"
 )
 
 const (
@@ -53,6 +54,7 @@ type Options struct {
 }
 
 type Kubescaler struct {
+	sync.RWMutex
 	*configManager
 	workers.WInterface
 
@@ -179,8 +181,11 @@ func (s *Kubescaler) Run() error {
 					continue
 				}
 
+				// Protect it from handlers that read it and use ot
+				s.Lock()
 				// Set another worker manager
 				s.WInterface = wm
+				s.Unlock()
 			case <-s.stopCh:
 				return
 			}
