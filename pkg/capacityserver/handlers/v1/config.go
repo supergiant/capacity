@@ -101,6 +101,7 @@ func (h *configHandler) createConfig(w http.ResponseWriter, r *http.Request) {
 	//
 	//     Responses:
 	//     201: configResponse
+	log.Info("Create config")
 
 	patch := api.Config{}
 	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
@@ -118,6 +119,7 @@ func (h *configHandler) createConfig(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(h.cm.GetConfig()); err != nil {
 		log.Errorf("handle: kubescaler: create config: failed to encode")
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusCreated)

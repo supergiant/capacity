@@ -63,7 +63,8 @@ func NewConfigManager(notifyChan chan struct{}, file persistentfile.Interface) (
 	conf := api.Config{}
 	raw, err := file.Read()
 
-	if err != nil {
+	// If error has happen or content is simply empty - dont try to unmarshall it
+	if err != nil || len(raw) == 0{
 		log.Warnf("Read config %v", err)
 	} else {
 		isReady = true
