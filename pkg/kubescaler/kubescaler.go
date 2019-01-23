@@ -132,6 +132,7 @@ func New(opts Options) (*Kubescaler, error) {
 }
 
 func (s *Kubescaler) Run() error {
+	log.Info("Run kubescaler")
 	pauseLockCheck := s.GetConfig()
 	//checking to see if pauselock is engaged.
 	//We do this check here so the Warn will not eat up logs in the RunOnce func.
@@ -151,17 +152,20 @@ func (s *Kubescaler) Run() error {
 					}
 				}
 			case <-s.notifyChan:
+				log.Info("notify about config update")
 				cfg := s.configManager.GetConfig()
 
 				vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)
 
 				// Create fake provider in case of empty config
 				if err != nil {
+					log.Errorf("Error creating vmProvider %v", err)
 					continue
 				}
 
 				v, err := s.k8sClient.ServerVersion()
 				if err != nil {
+					log.Errorf("Error getting k8s version %v", err)
 					continue
 				}
 
@@ -178,12 +182,14 @@ func (s *Kubescaler) Run() error {
 					s.k8sClient.CoreV1().Nodes(), vmProvider, workersConf)
 
 				if err != nil {
+					log.Errorf("Error creating worker manager %v", err)
 					continue
 				}
 
 				// Protect it from handlers that read it and use ot
 				s.Lock()
 				// Set another worker manager
+				log.Info("Change worker interface %v for %v", s.WInterface, wm)
 				s.WInterface = wm
 				s.Unlock()
 			case <-s.stopCh:
