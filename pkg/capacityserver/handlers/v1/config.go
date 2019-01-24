@@ -12,14 +12,20 @@ import (
 )
 
 var (
-	ErrInvalidPersistentConfig = errors.New("invalid persistent config")
+	ErrInvalidPersistentConfig = errors.New("invalid persistent configHandler")
 )
 
-type configHandler struct {
-	cm *kubescaler.ConfigManager
+type ConfigManager interface {
+	GetConfig() api.Config
+	SetConfig(api.Config) error
+	PatchConfig(api.Config) error
 }
 
-func newConfigHandler(pconf *kubescaler.ConfigManager) (*configHandler, error) {
+type configHandler struct {
+	cm ConfigManager
+}
+
+func newConfigHandler(pconf *kubescaler.Kubescaler) (*configHandler, error) {
 	if pconf == nil {
 		return nil, ErrInvalidPersistentConfig
 	}
@@ -81,5 +87,44 @@ func (h *configHandler) patchConfig(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(h.cm.GetConfig()); err != nil {
 		log.Errorf("handle: kubescaler: patch config: failed to encode")
 		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func (h *configHandler) createConfig(w http.ResponseWriter, r *http.Request) {
+	// swagger:route POST /api/v1/config config updateConfig
+	//
+	// Returns a new view of the kubescaler configuration.
+	//
+	// This will update current configuration of the application.
+	//
+	//     Consumes:
+	//     - application/json
+	//
+	//     Produces:
+	//     - application/json
+	//
+	//     Schemes: https, http
+	//
+	//     Responses:
+	//     201: configResponse
+	log.Info("Create config")
+
+	patch := api.Config{}
+	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
+		log.Errorf("handler: kubescaler: patch config: decode: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err := h.cm.SetConfig(patch); err != nil {
+		log.Errorf("handler: kubescaler: create config: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(h.cm.GetConfig()); err != nil {
+		log.Errorf("handle: kubescaler: create config: failed to encode")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }

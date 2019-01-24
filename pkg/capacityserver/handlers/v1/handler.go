@@ -2,6 +2,7 @@ package v1
 
 import (
 	"net/http"
+	"fmt"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -14,38 +15,54 @@ var (
 )
 
 type HandlerV1 struct {
-	workers *workersHandler
-	config  *configHandler
+	workerHandler *workersHandler
+	configHandler *configHandler
 }
 
 func New(ks *kubescaler.Kubescaler) (*HandlerV1, error) {
 	if ks == nil {
 		return nil, ErrNoKubescaler
 	}
-	wh, err := newWorkersHandler(ks.WInterface)
+	wh, err := newWorkersHandler(ks)
 	if err != nil {
 		return nil, err
 	}
-	cf, err := newConfigHandler(ks.ConfigManager)
+	cf, err := newConfigHandler(ks)
 	if err != nil {
 		return nil, err
 	}
 
 	return &HandlerV1{
-		workers: wh,
-		config:  cf,
+		workerHandler: wh,
+		configHandler: cf,
 	}, nil
 }
 
-func (h *HandlerV1) RegisterTo(r *mux.Router) {
-	r.Path("/config").Methods(http.MethodGet).HandlerFunc(h.config.getConfig)
-	r.Path("/config").Methods(http.MethodPatch).HandlerFunc(h.config.patchConfig)
+func (h *HandlerV1) RegisterTo(ks *kubescaler.Kubescaler, r *mux.Router) {
+	r.Path("/configHandler").Methods(http.MethodPost).HandlerFunc(h.configHandler.createConfig)
 
-	r.Path("/machinetypes").HandlerFunc(h.workers.listMachineTypes).Methods(http.MethodGet)
+	r.Path("/configHandler").Methods(http.MethodGet).HandlerFunc(readyMiddleware(ks, h.configHandler.getConfig))
+	r.Path("/configHandler").Methods(http.MethodPatch).HandlerFunc(readyMiddleware(ks, h.configHandler.patchConfig))
 
-	r.Path("/workers").Methods(http.MethodPost).HandlerFunc(h.workers.createWorker)
-	r.Path("/workers").Methods(http.MethodGet).HandlerFunc(h.workers.listWorkers)
-	r.Path("/workers/{machineID}").Methods(http.MethodGet).HandlerFunc(h.workers.getWorker)
-	r.Path("/workers/{machineID}").Methods(http.MethodPatch).HandlerFunc(h.workers.updateWorker)
-	r.Path("/workers/{machineID}").Methods(http.MethodDelete).HandlerFunc(h.workers.deleteWorker)
+	r.Path("/machinetypes").Methods(http.MethodGet).HandlerFunc(readyMiddleware(ks, h.workerHandler.listMachineTypes))
+
+	r.Path("/workerHandler").Methods(http.MethodPost).HandlerFunc(readyMiddleware(ks, h.workerHandler.createWorker))
+	r.Path("/workerHandler").Methods(http.MethodGet).HandlerFunc(readyMiddleware(ks, h.workerHandler.listWorkers))
+	r.Path("/workerHandler/{machineID}").Methods(http.MethodGet).HandlerFunc(readyMiddleware(ks, h.workerHandler.getWorker))
+	r.Path("/workerHandler/{machineID}").Methods(http.MethodPatch).HandlerFunc(readyMiddleware(ks, h.workerHandler.updateWorker))
+	r.Path("/workerHandler/{machineID}").Methods(http.MethodDelete).HandlerFunc(readyMiddleware(ks, h.workerHandler.deleteWorker))
+}
+
+// We allow all method only when kubescaler was configured
+func readyMiddleware(ks *kubescaler.Kubescaler, h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if ks.IsReady() {
+			h.ServeHTTP(w, r)
+			return
+		}
+
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, "kube scaler was not configured yet, to configure "+
+			"make POST request to /api/v1/configHandler with valid configHandler object")
+	}
 }

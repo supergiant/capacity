@@ -34,7 +34,6 @@ var (
 	ErrNotFound = errors.New("not found")
 )
 
-var _ WInterface = &Manager{}
 
 type WInterface interface {
 	MachineTypes() []*provider.MachineType

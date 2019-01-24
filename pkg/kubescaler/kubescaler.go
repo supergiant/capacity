@@ -17,11 +17,11 @@ import (
 	"github.com/supergiant/capacity/pkg/kubernetes/filters"
 	"github.com/supergiant/capacity/pkg/kubernetes/listers"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers"
-	"github.com/supergiant/capacity/pkg/kubescaler/workers/fake"
 	"github.com/supergiant/capacity/pkg/log"
 	"github.com/supergiant/capacity/pkg/persistentfile"
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/factory"
+	"sync"
 )
 
 const (
@@ -34,6 +34,7 @@ const (
 
 var (
 	ErrNoAllowedMachines = errors.New("no allowed machines were provided")
+	ErrNotConfigured     = errors.New("worker manager is not configured properly")
 
 	DefaultScanInterval            = time.Second * 20
 	DefaultMaxMachineProvisionTime = time.Minute * 10
@@ -54,22 +55,23 @@ type Options struct {
 }
 
 type Kubescaler struct {
-	*ConfigManager
-	workers.WInterface
-
 	stopCh         chan struct{}
 	kclient        kubernetes.Clientset
 	listerRegistry listers.Registry
+
+	// TODO(stgleb): Shall user data go in config?
+	userData      string
+	configManager *ConfigManager
+
+	workerMutex   sync.RWMutex
+	isReady       bool
+	workerManager *workers.Manager
 }
 
 func New(opts Options) (*Kubescaler, error) {
 	kclient, err := config.GetKubernetesClientSet("", opts.Kubeconfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "build kubernetes client")
-	}
-	v, err := kclient.ServerVersion()
-	if err != nil {
-		return nil, err
 	}
 
 	f, err := getConfigFile(opts, kclient.CoreV1())
@@ -82,47 +84,23 @@ func New(opts Options) (*Kubescaler, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "setup persistent config")
 	}
-	cfg := conf.GetConfig()
 
-	// use a fake kubescaler for testing
-	// TODO: fake provider doesn't work without kubernetes cluster
-	if conf.GetConfig().ProviderName == "fake" {
-		return &Kubescaler{
-			ConfigManager: conf,
-			WInterface:    fake.NewManager(nil),
-			stopCh:        make(chan struct{}),
-		}, nil
-	}
-
-	vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)
-	if err != nil {
-		return nil, err
-	}
-
-	workersConf := workers.Config{
-		KubeVersion:       v.String(),
-		MasterPrivateAddr: cfg.MasterPrivateAddr,
-		KubeAPIPort:       cfg.KubeAPIPort,
-		KubeAPIPassword:   cfg.KubeAPIPassword,
-		ProviderName:      cfg.ProviderName,
-		SSHPubKey:         cfg.SSHPubKey,
-		UserDataFile:      opts.UserDataFile,
-	}
-	wm, err := workers.NewManager(cfg.ClusterName, kclient.CoreV1().Nodes(), vmProvider, workersConf)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Kubescaler{
-		ConfigManager:  conf,
-		WInterface:     wm,
+	kubeScaler := &Kubescaler{
+		kclient:        *kclient,
+		configManager:  conf,
 		stopCh:         make(chan struct{}),
 		listerRegistry: listers.NewRegistryWithDefaultListers(kclient, nil),
-	}, nil
+	}
+
+	// We skip this error because on this stage capacity service may not be
+	// configured
+	kubeScaler.buildWorkerManager()
+
+	return kubeScaler, nil
 }
 
 func (s *Kubescaler) Run() error {
-	pauseLockCheck := s.GetConfig()
+	pauseLockCheck := s.configManager.getConfig()
 	//checking to see if pauselock is engaged.
 	//We do this check here so the Warn will not eat up logs in the RunOnce func.
 	if pauseLockCheck.PauseLock == true {
@@ -168,11 +146,11 @@ func (s *Kubescaler) Stop(ctx context.Context) error {
 }
 
 func (s *Kubescaler) RunOnce(currentTime time.Time) error {
-	config := s.GetConfig()
+	cfg := s.configManager.getConfig()
 
 	//Paused defaults to false if omitted.
-	paused := config.Paused != nil && *(config.Paused)
-	pauseLocked := config.PauseLock
+	paused := cfg.Paused != nil && *(cfg.Paused)
+	pauseLocked := cfg.PauseLock
 	if paused && !pauseLocked {
 		log.Info("Service is paused.")
 	}
@@ -182,7 +160,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 		return nil
 	}
 
-	allowedMachineTypes := s.machineTypes(config.MachineTypes)
+	allowedMachineTypes := s.machineTypes(cfg.MachineTypes)
 	if len(allowedMachineTypes) == 0 {
 		log.Error("kubescaler: node available machine types we found; please, check the configuration")
 		return nil
@@ -209,7 +187,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 	}
 
 	if len(rss.unscheduledPods) > 0 {
-		if newNodes := getNewNodes(rss.allNodes, currentTime, config.NewNodeTimeBuffer); len(newNodes) != 0 {
+		if newNodes := getNewNodes(rss.allNodes, currentTime, cfg.NewNodeTimeBuffer); len(newNodes) != 0 {
 			log.Debugf("kubescaler: scale up: newNodes=%v, skipping", newNodes)
 			return nil
 		}
@@ -223,7 +201,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 		}
 
 		// TODO: use workers instead of nodes (workerList may contain 'terminating' machines)
-		if config.WorkersCountMax > 0 && config.WorkersCountMax > len(rss.readyNodes) {
+		if cfg.WorkersCountMax > 0 && cfg.WorkersCountMax > len(rss.readyNodes) {
 			var scaled bool
 			// try to scale up the cluster. In case of success no need to scale down
 			scaled, err = s.scaleUp(rss.unscheduledPods, allowedMachineTypes, currentTime)
@@ -235,18 +213,18 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 			}
 		} else {
 			log.Debugf("kubescaler: scaleup: workersCountMax(%d) >= number of ready nodes(%d), skipping..",
-				config.WorkersCountMax, len(rss.readyNodes))
+				cfg.WorkersCountMax, len(rss.readyNodes))
 		}
 	}
 
 	// TODO: workerList may contain 'terminating' machines.
-	if config.WorkersCountMin > 0 && config.WorkersCountMin < len(rss.readyNodes) {
-		if err = s.scaleDown(rss.scheduledPods, rss.workerList, config.IgnoredNodeLabels, currentTime); err != nil {
+	if cfg.WorkersCountMin > 0 && cfg.WorkersCountMin < len(rss.readyNodes) {
+		if err = s.scaleDown(rss.scheduledPods, rss.workerList, cfg.IgnoredNodeLabels, currentTime); err != nil {
 			return errors.Wrap(err, "scale down")
 		}
 	} else {
 		log.Debugf("kubescaler: scaledown: workersCountMin(%d) < number of ready nodes(%d), skipping..",
-			config.WorkersCountMin, len(rss.readyNodes))
+			cfg.WorkersCountMin, len(rss.readyNodes))
 	}
 
 	return nil
@@ -272,7 +250,10 @@ func (s *Kubescaler) getResources() (*resources, error) {
 		return nil, err
 	}
 
-	workers, err := s.ListWorkers(context.Background())
+	s.workerMutex.RLock()
+	defer s.workerMutex.RUnlock()
+
+	workerList, err := s.workerManager.ListWorkers(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +264,7 @@ func (s *Kubescaler) getResources() (*resources, error) {
 		allPods:         allPods,
 		scheduledPods:   filters.GetScheduledPods(allPods),
 		unscheduledPods: filters.GetUnschedulablePods(allPods),
-		workerList:      workers,
+		workerList:      workerList,
 	}, nil
 }
 
@@ -319,8 +300,11 @@ func (s *Kubescaler) checkWorkers(workerList *api.WorkerList, currentTime time.T
 }
 
 func (s *Kubescaler) removeFailedMachines(ids []string) error {
+	s.workerMutex.RLock()
+	defer s.workerMutex.RUnlock()
+
 	for _, id := range ids {
-		if _, err := s.DeleteWorker(context.Background(), "", id); err != nil {
+		if _, err := s.workerManager.DeleteWorker(context.Background(), "", id); err != nil {
 			return err
 		}
 
@@ -329,15 +313,17 @@ func (s *Kubescaler) removeFailedMachines(ids []string) error {
 }
 
 func (s *Kubescaler) machineTypes(permitted []string) []*provider.MachineType {
+	s.workerMutex.RLock()
+	defer s.workerMutex.RUnlock()
+
 	out := make([]*provider.MachineType, 0, len(permitted))
 	for _, name := range permitted {
-		if mt := findMachine(name, s.WInterface.MachineTypes()); mt != nil {
+		if mt := findMachine(name, s.workerManager.MachineTypes()); mt != nil {
 			out = append(out, mt)
 		}
 	}
 
 	return out
-
 }
 
 func findMachine(name string, machineTypes []*provider.MachineType) *provider.MachineType {
@@ -453,4 +439,121 @@ func getConfigFile(opts Options, cmGetter v1.ConfigMapsGetter) (persistentfile.I
 	}
 
 	return nil, errors.New("config file/configmap not found")
+}
+
+func (s *Kubescaler) MachineTypes() []*provider.MachineType {
+	s.workerMutex.RLock()
+	defer s.workerMutex.RUnlock()
+	return s.workerManager.MachineTypes()
+}
+
+func (s *Kubescaler) CreateWorker(ctx context.Context, mtype string) (*api.Worker, error) {
+	s.workerMutex.RLock()
+	defer s.workerMutex.RUnlock()
+	return s.workerManager.CreateWorker(ctx, mtype)
+}
+
+func (s *Kubescaler) GetWorker(ctx context.Context, id string) (*api.Worker, error) {
+	s.workerMutex.RLock()
+	defer s.workerMutex.RUnlock()
+	return s.workerManager.GetWorker(ctx, id)
+}
+
+func (s *Kubescaler) ListWorkers(ctx context.Context) (*api.WorkerList, error) {
+	s.workerMutex.RLock()
+	defer s.workerMutex.RUnlock()
+	return s.workerManager.ListWorkers(ctx)
+}
+
+func (s *Kubescaler) DeleteWorker(ctx context.Context, nodeName, id string) (*api.Worker, error) {
+	s.workerMutex.RLock()
+	defer s.workerMutex.RUnlock()
+	return s.workerManager.DeleteWorker(ctx, nodeName, id)
+}
+
+func (s *Kubescaler) ReserveWorker(ctx context.Context, worker *api.Worker) (*api.Worker, error) {
+	s.workerMutex.RLock()
+	defer s.workerMutex.RUnlock()
+	return s.workerManager.ReserveWorker(ctx, worker)
+}
+
+func (s *Kubescaler) SetConfig(conf api.Config) error {
+	// Recreate worker manager on config update
+	err := s.configManager.setConfig(conf)
+
+	if err != nil {
+		return err
+	}
+
+	s.workerMutex.Lock()
+	defer s.workerMutex.Unlock()
+	err = s.buildWorkerManager()
+
+	if err != nil {
+		return err
+	}
+	s.isReady = true
+	return nil
+}
+
+func (s *Kubescaler) GetConfig() api.Config {
+	return s.configManager.getConfig()
+}
+
+func (s *Kubescaler) PatchConfig(conf api.Config) error {
+	err := s.configManager.patchConfig(conf)
+
+	// Recreate worker manager on config update
+	if err != nil {
+		return err
+	}
+
+	s.workerMutex.Lock()
+	defer s.workerMutex.Unlock()
+
+	err = s.buildWorkerManager()
+	if err != nil {
+		return err
+	}
+	s.isReady = true
+	return nil
+}
+
+func (s *Kubescaler) IsReady() bool {
+	s.workerMutex.RLock()
+	defer s.workerMutex.RUnlock()
+	return s.isReady
+}
+
+func (s *Kubescaler) buildWorkerManager() error {
+	cfg := s.configManager.getConfig()
+
+	vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)
+
+	if err != nil {
+		return errors.Wrapf(err, "build worker manager")
+	}
+	v, err := s.kclient.ServerVersion()
+	if err != nil {
+		return errors.Wrapf(err, "build worker manager")
+	}
+
+	workersConf := workers.Config{
+		KubeVersion:       v.String(),
+		MasterPrivateAddr: cfg.MasterPrivateAddr,
+		KubeAPIPort:       cfg.KubeAPIPort,
+		KubeAPIPassword:   cfg.KubeAPIPassword,
+		ProviderName:      cfg.ProviderName,
+		SSHPubKey:         cfg.SSHPubKey,
+		UserDataFile:      s.userData,
+	}
+	workerManager, err := workers.NewManager(cfg.ClusterName,
+		s.kclient.CoreV1().Nodes(), vmProvider, workersConf)
+
+	if err != nil {
+		return errors.Wrapf(err, "build worker manager")
+	}
+
+	s.workerManager = workerManager
+	return nil
 }
