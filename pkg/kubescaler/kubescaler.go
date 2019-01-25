@@ -94,7 +94,9 @@ func New(opts Options) (*Kubescaler, error) {
 
 	// We skip this error because on this stage capacity service may not be
 	// configured
-	kubeScaler.buildWorkerManager()
+	if err := kubeScaler.buildWorkerManager(); err == nil {
+		kubeScaler.isReady = true
+	}
 
 	return kubeScaler, nil
 }
