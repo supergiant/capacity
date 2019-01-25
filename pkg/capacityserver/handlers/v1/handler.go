@@ -39,18 +39,18 @@ func New(ks *kubescaler.Kubescaler) (*HandlerV1, error) {
 }
 
 func (h *HandlerV1) RegisterTo(ks *kubescaler.Kubescaler, r *mux.Router) {
-	r.Path("/configHandler").Methods(http.MethodPost).HandlerFunc(h.configHandler.createConfig)
+	r.Path("/config").Methods(http.MethodPost).HandlerFunc(h.configHandler.createConfig)
 
-	r.Path("/configHandler").Methods(http.MethodGet).HandlerFunc(readyMiddleware(ks, h.configHandler.getConfig))
-	r.Path("/configHandler").Methods(http.MethodPatch).HandlerFunc(readyMiddleware(ks, h.configHandler.patchConfig))
+	r.Path("/config").Methods(http.MethodGet).HandlerFunc(readyMiddleware(ks, h.configHandler.getConfig))
+	r.Path("/config").Methods(http.MethodPatch).HandlerFunc(readyMiddleware(ks, h.configHandler.patchConfig))
 
 	r.Path("/machinetypes").Methods(http.MethodGet).HandlerFunc(readyMiddleware(ks, h.workerHandler.listMachineTypes))
 
-	r.Path("/workerHandler").Methods(http.MethodPost).HandlerFunc(readyMiddleware(ks, h.workerHandler.createWorker))
-	r.Path("/workerHandler").Methods(http.MethodGet).HandlerFunc(readyMiddleware(ks, h.workerHandler.listWorkers))
-	r.Path("/workerHandler/{machineID}").Methods(http.MethodGet).HandlerFunc(readyMiddleware(ks, h.workerHandler.getWorker))
-	r.Path("/workerHandler/{machineID}").Methods(http.MethodPatch).HandlerFunc(readyMiddleware(ks, h.workerHandler.updateWorker))
-	r.Path("/workerHandler/{machineID}").Methods(http.MethodDelete).HandlerFunc(readyMiddleware(ks, h.workerHandler.deleteWorker))
+	r.Path("/workers").Methods(http.MethodPost).HandlerFunc(readyMiddleware(ks, h.workerHandler.createWorker))
+	r.Path("/workers").Methods(http.MethodGet).HandlerFunc(readyMiddleware(ks, h.workerHandler.listWorkers))
+	r.Path("/workers/{machineID}").Methods(http.MethodGet).HandlerFunc(readyMiddleware(ks, h.workerHandler.getWorker))
+	r.Path("/workers/{machineID}").Methods(http.MethodPatch).HandlerFunc(readyMiddleware(ks, h.workerHandler.updateWorker))
+	r.Path("/workers/{machineID}").Methods(http.MethodDelete).HandlerFunc(readyMiddleware(ks, h.workerHandler.deleteWorker))
 }
 
 // We allow all method only when kubescaler was configured

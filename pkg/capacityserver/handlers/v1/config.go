@@ -109,22 +109,19 @@ func (h *configHandler) createConfig(w http.ResponseWriter, r *http.Request) {
 	//     201: configResponse
 	log.Info("Create config")
 
-	patch := api.Config{}
-	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
-		log.Errorf("handler: kubescaler: patch config: decode: %v", err)
+	cfg := api.Config{}
+	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
+		log.Errorf("handler: kubescaler: cfg config: decode: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if err := h.cm.SetConfig(patch); err != nil {
+	log.Info("Set config")
+	if err := h.cm.SetConfig(cfg); err != nil {
 		log.Errorf("handler: kubescaler: create config: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	if err := json.NewEncoder(w).Encode(h.cm.GetConfig()); err != nil {
-		log.Errorf("handle: kubescaler: create config: failed to encode")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	w.WriteHeader(http.StatusCreated)
 }

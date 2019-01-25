@@ -479,12 +479,14 @@ func (s *Kubescaler) ReserveWorker(ctx context.Context, worker *api.Worker) (*ap
 
 func (s *Kubescaler) SetConfig(conf api.Config) error {
 	// Recreate worker manager on config update
+	log.Info("kubescaler set config")
 	err := s.configManager.setConfig(conf)
 
 	if err != nil {
 		return err
 	}
 
+	log.Info("Aquire worker mutex")
 	s.workerMutex.Lock()
 	defer s.workerMutex.Unlock()
 	err = s.buildWorkerManager()
@@ -547,6 +549,7 @@ func (s *Kubescaler) buildWorkerManager() error {
 		SSHPubKey:         cfg.SSHPubKey,
 		UserDataFile:      s.userData,
 	}
+	log.Infof("Create new worker manager for cluster %s", cfg.ClusterName)
 	workerManager, err := workers.NewManager(cfg.ClusterName,
 		s.kclient.CoreV1().Nodes(), vmProvider, workersConf)
 
