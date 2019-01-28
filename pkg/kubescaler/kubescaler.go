@@ -65,7 +65,7 @@ type Kubescaler struct {
 
 	workerMutex   sync.RWMutex
 	isReady       bool
-	workerManager *workers.Manager
+	workerManager workers.WInterface
 }
 
 func New(opts Options) (*Kubescaler, error) {
