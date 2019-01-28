@@ -12,6 +12,7 @@ import (
 	"github.com/supergiant/capacity/pkg/persistentfile"
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/aws"
+	"github.com/supergiant/capacity/pkg/log"
 )
 
 const (
@@ -50,17 +51,16 @@ type ConfigManager struct {
 
 func NewConfigManager(file persistentfile.Interface) (*ConfigManager, error) {
 	raw, err := file.Read()
-	if err != nil {
-		if persistentfile.IsNotExist(err) {
-			return nil, errors.Wrapf(err, "read config from %s", file.Info())
-		}
-		return nil, errors.Wrap(err, "get config")
-	}
-
 	conf := api.Config{}
-	// TODO: use codec to support more formats
-	if err = json.Unmarshal(raw, &conf); err != nil {
-		return nil, errors.Wrap(err, "decode config")
+
+	// If error has happen or content is simply empty - dont try to unmarshall it
+	if err != nil || len(raw) == 0{
+		log.Warnf("Read config %v", err)
+	} else {
+		// TODO: use codec to support more formats
+		if err = json.Unmarshal(raw, &conf); err != nil {
+			return nil, errors.Wrap(err, "decode config")
+		}
 	}
 
 	return &ConfigManager{
@@ -70,7 +70,8 @@ func NewConfigManager(file persistentfile.Interface) (*ConfigManager, error) {
 	}, nil
 }
 
-func (m *ConfigManager) SetConfig(conf api.Config) error {
+// methods for manipulating config
+func (m *ConfigManager) setConfig(conf api.Config) error {
 	if err := m.write(conf); err != nil {
 		return err
 	}
@@ -82,27 +83,28 @@ func (m *ConfigManager) SetConfig(conf api.Config) error {
 	return nil
 }
 
-func (m *ConfigManager) PatchConfig(in api.Config) error {
-	newConf := Merge(m.GetConfig(), in)
+func (m *ConfigManager) patchConfig(in api.Config) error {
+	newConf := Merge(m.getConfig(), in)
 	if err := newConf.Validate(); err != nil {
 		return err
 	}
-	return m.SetConfig(newConf)
+	return m.setConfig(newConf)
 }
 
+func (m *ConfigManager) getConfig() api.Config {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return m.conf
+}
+
+// utility functions
 func (m *ConfigManager) write(conf api.Config) error {
 	raw, err := json.Marshal(conf)
 	if err != nil {
 		return errors.Wrap(err, "encode config")
 	}
 	return errors.Wrap(m.file.Write(raw), "write config")
-}
-
-func (m *ConfigManager) GetConfig() api.Config {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	return m.conf
 }
 
 // TODO: just a hack, use viper in the future

@@ -1,17 +1,16 @@
 package kubescaler
 
 import (
-	"os"
-	"sync"
 	"testing"
-	"time"
-
-	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/supergiant/capacity/pkg/api"
+	"github.com/pborman/uuid"
+	"os"
+	"sync"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers/fake"
+	"time"
 	"github.com/supergiant/capacity/pkg/persistentfile/file"
 )
 
@@ -71,14 +70,14 @@ func TestKubescalerScaleDown(t *testing.T) {
 		require.Nilf(t, err, "TC#%d", i+1)
 
 		ks := &Kubescaler{
-			ConfigManager: &ConfigManager{
+			configManager: &ConfigManager{
 				file: f,
 				mu:   sync.RWMutex{},
 				conf: api.Config{
 					MachineTypes: tc.allowedMachines,
 				},
 			},
-			WInterface: fake.NewManager(tc.providerErr),
+			workerManager: fake.NewManager(tc.providerErr),
 		}
 
 		err = ks.scaleDown(tc.pods, tc.workerList, nil, time.Now())

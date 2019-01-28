@@ -210,14 +210,14 @@ func TestKubescalerScaleUp(t *testing.T) {
 		require.Nilf(t, err, "TC#%d", i+1)
 
 		ks := &Kubescaler{
-			ConfigManager: &ConfigManager{
+			configManager: &ConfigManager{
 				file: f,
 				mu:   sync.RWMutex{},
 				conf: api.Config{
 					MachineTypes: tc.allowedMachines,
 				},
 			},
-			WInterface: fake.NewManager(tc.providerErr),
+			workerManager: fake.NewManager(tc.providerErr),
 		}
 
 		_, err = ks.scaleUp(tc.pods, allowedMachines, currentTime)
