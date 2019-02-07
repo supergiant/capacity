@@ -1,16 +1,17 @@
 package kubescaler
 
 import (
+	"os"
+	"sync"
 	"testing"
+	"time"
+
+	"github.com/pborman/uuid"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/supergiant/capacity/pkg/api"
-	"github.com/pborman/uuid"
-	"os"
-	"sync"
 	"github.com/supergiant/capacity/pkg/kubescaler/workers/fake"
-	"time"
 	"github.com/supergiant/capacity/pkg/persistentfile/file"
 )
 

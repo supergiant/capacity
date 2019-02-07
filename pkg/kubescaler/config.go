@@ -9,10 +9,10 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/supergiant/capacity/pkg/api"
+	"github.com/supergiant/capacity/pkg/log"
 	"github.com/supergiant/capacity/pkg/persistentfile"
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/aws"
-	"github.com/supergiant/capacity/pkg/log"
 )
 
 const (
@@ -54,7 +54,7 @@ func NewConfigManager(file persistentfile.Interface) (*ConfigManager, error) {
 	conf := api.Config{}
 
 	// If error has happen or content is simply empty - dont try to unmarshall it
-	if err != nil || len(raw) == 0{
+	if err != nil || len(raw) == 0 {
 		log.Warnf("Read config %v", err)
 	} else {
 		// TODO: use codec to support more formats

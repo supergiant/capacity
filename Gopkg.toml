@@ -209,5 +209,5 @@ branch="master"
 
 
 [[constraint]]
-  branch = "aws_get_instance"
-  name = "github.com/saheienko/supergiant"
+  name = "github.com/supergiant/control"
+  revision = "d0fc41185e8ab3ee48dadcf09b362809e204d97f"

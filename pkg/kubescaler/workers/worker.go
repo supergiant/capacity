@@ -34,7 +34,6 @@ var (
 	ErrNotFound = errors.New("not found")
 )
 
-
 type WInterface interface {
 	MachineTypes() []*provider.MachineType
 	CreateWorker(ctx context.Context, mtype string) (*api.Worker, error)
