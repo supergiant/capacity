@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -21,7 +22,6 @@ import (
 	"github.com/supergiant/capacity/pkg/persistentfile"
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/factory"
-	"sync"
 )
 
 const (

@@ -1,8 +1,8 @@
 package v1
 
 import (
-	"net/http"
 	"fmt"
+	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"

@@ -8,7 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/pkg/errors"
-	"github.com/saheienko/supergiant/pkg/clouds/aws"
+	"github.com/supergiant/control/pkg/clouds/aws"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/supergiant/capacity/pkg/provider"

@@ -392,14 +392,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "aws_get_instance"
-  digest = "1:c98dbb13dd58c03b7494e7b93d578d00456851a2f6943570bfca06263d66d8f3"
-  name = "github.com/saheienko/supergiant"
-  packages = ["pkg/clouds/aws"]
-  pruneopts = "UT"
-  revision = "e6b46d225aded7bd5b5a28e94d10b5c34d455b0e"
-
-[[projects]]
   digest = "1:606e395bc6f4011ae992e7ae0c613839d20ea097b8a9468e1683b22cefd8fd77"
   name = "github.com/sirupsen/logrus"
   packages = [
@@ -428,6 +420,13 @@
   pruneopts = "UT"
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
+
+[[projects]]
+  digest = "1:327068b4794d2da9b305ce5402660b4e9549bb732810a1bfa7a2d6c303b89675"
+  name = "github.com/supergiant/control"
+  packages = ["pkg/clouds/aws"]
+  pruneopts = "UT"
+  revision = "d0fc41185e8ab3ee48dadcf09b362809e204d97f"
 
 [[projects]]
   digest = "1:3f3a05ae0b95893d90b9b3b5afdb79a9b3d96e4e36e099d841ae602e4aca0da8"
@@ -734,10 +733,10 @@
     "github.com/kubernetes-sigs/kubebuilder/pkg/signals",
     "github.com/pborman/uuid",
     "github.com/pkg/errors",
-    "github.com/saheienko/supergiant/pkg/clouds/aws",
     "github.com/sirupsen/logrus",
     "github.com/sirupsen/logrus/hooks/syslog",
     "github.com/stretchr/testify/require",
+    "github.com/supergiant/control/pkg/clouds/aws",
     "golang.org/x/net/context",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/api/errors",
