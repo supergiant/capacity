@@ -31,6 +31,7 @@ const (
 	SubnetID       = "awsSubnetID"
 	VolType        = "awsVolType"
 	VolSize        = "awsVolSize"
+	VolDeviceName  = "awsVolDeviceName"
 	EBSOptimized   = "ebsOptimized"
 	Tags           = "awsTags"
 )
@@ -43,6 +44,7 @@ type Config struct {
 	SubnetID       string
 	VolType        string
 	VolSize        int64
+	VolDeviceName  string
 	EBSOptimized   *bool
 	Tags           map[string]string
 }
@@ -70,6 +72,11 @@ func New(clusterName string, config provider.Config) (*Provider, error) {
 		return nil, err
 	}
 
+	volSize, err := strconv.ParseInt(config[VolSize], 10, 64)
+	if err != nil {
+		return nil, errors.Wrapf(err, "invalid %q volume size", config[VolSize])
+	}
+
 	return &Provider{
 		clusterName: clusterName,
 		region:      region,
@@ -80,7 +87,8 @@ func New(clusterName string, config provider.Config) (*Provider, error) {
 			SecurityGroups: provider.ParseList(config[SecurityGroups]),
 			SubnetID:       config[SubnetID],
 			VolType:        config[VolType],
-			VolSize:        int64(100),
+			VolSize:        volSize,
+			VolDeviceName:  config[VolDeviceName],
 			EBSOptimized:   parseBool(config[EBSOptimized]),
 			Tags:           tags,
 		},
@@ -147,21 +155,22 @@ func (p *Provider) CreateMachine(ctx context.Context, name, mtype, clusterRole, 
 	// TODO: merge and validate config parameters
 
 	inst, err := p.client.CreateInstance(ctx, aws.InstanceConfig{
-		TagName:        name,
-		TagClusterName: p.clusterName,
-		TagClusterRole: clusterRole,
-		Type:           mtype,
-		Region:         p.region,
-		ImageID:        p.instConf.ImageID,
-		KeyName:        p.instConf.KeyName,
-		IAMRole:        p.instConf.IAMRole,
-		SecurityGroups: p.instConf.SecurityGroups,
-		SubnetID:       p.instConf.SubnetID,
-		VolumeType:     p.instConf.VolType,
-		VolumeSize:     p.instConf.VolSize,
-		EBSOptimized:   p.instConf.EBSOptimized,
-		Tags:           p.instConf.Tags,
-		UsedData:       base64.StdEncoding.EncodeToString([]byte(userData)),
+		TagName:          name,
+		TagClusterName:   p.clusterName,
+		TagClusterRole:   clusterRole,
+		Type:             mtype,
+		Region:           p.region,
+		ImageID:          p.instConf.ImageID,
+		KeyName:          p.instConf.KeyName,
+		IAMRole:          p.instConf.IAMRole,
+		SecurityGroups:   p.instConf.SecurityGroups,
+		SubnetID:         p.instConf.SubnetID,
+		VolumeType:       p.instConf.VolType,
+		VolumeSize:       p.instConf.VolSize,
+		VolumeDeviceName: p.instConf.VolDeviceName,
+		EBSOptimized:     p.instConf.EBSOptimized,
+		Tags:             p.instConf.Tags,
+		UsedData:         base64.StdEncoding.EncodeToString([]byte(userData)),
 	})
 	if err != nil {
 		return nil, err
