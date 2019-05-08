@@ -10,7 +10,6 @@ import (
 	"github.com/gobuffalo/packr"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
 	"github.com/sirupsen/logrus"
-
 	"github.com/supergiant/capacity/pkg/capacityserver"
 	"github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/log"
@@ -26,7 +25,6 @@ type args struct {
 	LogLevel           string `arg:"--log-level,           env:CAPACITY_LOG_LEVEL"           help:"logging verbosity [debug info warn error fatal panic]"`
 	LogFormat          string `arg:"--log-format,          env:CAPACITY_LOG_LEVEL"           help:"logging format [txt json]"`
 	LogHooks           string `arg:"--log-hooks,           env:CAPACITY_LOG_HOOKS"           help:"list of comma-separated log providers (syslog)"`
-	UserDataFile       string `arg:"--user-data,           env:CAPACITY_USER_DATA"           help:"path to a userdata file"`
 }
 
 func (args) Version() string {
@@ -56,7 +54,6 @@ func main() {
 			ConfigMapName:      args.ConfigMapName,
 			ConfigMapNamespace: args.ConfigMapNamespace,
 			Kubeconfig:         args.KubeConfig,
-			UserDataFile:       args.UserDataFile,
 		},
 		ListenAddr: args.ListenAddr,
 	})

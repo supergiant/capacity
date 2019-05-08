@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-
 	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/log"
 	"github.com/supergiant/capacity/pkg/persistentfile"
@@ -71,7 +70,7 @@ func NewConfigManager(file persistentfile.Interface) (*ConfigManager, error) {
 }
 
 // methods for manipulating config
-func (m *ConfigManager) setConfig(conf api.Config) error {
+func (m *ConfigManager) SetConfig(conf api.Config) error {
 	if err := m.write(conf); err != nil {
 		return err
 	}
@@ -83,15 +82,15 @@ func (m *ConfigManager) setConfig(conf api.Config) error {
 	return nil
 }
 
-func (m *ConfigManager) patchConfig(in api.Config) error {
-	newConf := Merge(m.getConfig(), in)
+func (m *ConfigManager) PatchConfig(in api.Config) error {
+	newConf := Merge(m.GetConfig(), in)
 	if err := newConf.Validate(); err != nil {
 		return err
 	}
-	return m.setConfig(newConf)
+	return m.SetConfig(newConf)
 }
 
-func (m *ConfigManager) getConfig() api.Config {
+func (m *ConfigManager) GetConfig() api.Config {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -126,20 +125,14 @@ func applyEnv(conf api.Config) api.Config {
 // TODO: show this on cli help subcommand
 func writeExampleConfig(file persistentfile.Interface) error {
 	conf := &api.Config{
-		SSHPubKey:         "REPLACE_IT",
-		ClusterName:       "REPLACE_IT",
-		MasterPrivateAddr: "REPLACE_IT",
-		KubeAPIHost:       "REPLACE_IT",
-		KubeAPIPort:       "REPLACE_IT",
-		KubeAPIUser:       "REPLACE_IT",
-		KubeAPIPassword:   "REPLACE_IT",
-		ProviderName:      "aws",
+		ClusterName:  "REPLACE_IT",
+		ProviderName: "aws",
 		Provider: map[string]string{
 			aws.KeyID:          "REPLACE_IT",
 			aws.SecretKey:      "REPLACE_IT",
 			aws.Region:         "REPLACE_IT",
 			aws.KeyName:        "REPLACE_IT",
-			aws.ImageID:        "ami-cc0900ac",
+			aws.ImageID:        "REPLACE_IT",
 			aws.IAMRole:        "kubernetes-node",
 			aws.SecurityGroups: strings.Join([]string{"REPLACE_IT"}, provider.ListSep),
 			aws.SubnetID:       "REPLACE_IT",
@@ -150,6 +143,19 @@ func writeExampleConfig(file persistentfile.Interface) error {
 		WorkersCountMax: 3,
 		WorkersCountMin: 1,
 		Paused:          BoolPtr(true),
+		Userdata:        "REPLACE_IT",
+		UserdataTpl:     "REPLACE_IT",
+		UserdataVars: map[string]string{
+			"REPLACE_IT": "REPLACE_IT",
+		},
+		SupergiantV1Config: &api.SupergiantV1UserdataVars{
+			MasterPrivateAddr: "REPLACE_IT",
+			KubeAPIHost:       "REPLACE_IT",
+			KubeAPIPort:       "REPLACE_IT",
+			KubeAPIUser:       "REPLACE_IT",
+			KubeAPIPassword:   "REPLACE_IT",
+			SSHPubKey:         "REPLACE_IT",
+		},
 	}
 
 	raw, err := json.Marshal(conf)

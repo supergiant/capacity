@@ -1,4 +1,4 @@
-package workers
+package kubescaler
 
 const userDataTpl = `#cloud-config
 
