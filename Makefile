@@ -44,3 +44,6 @@ client: swagger
 build-ui:
 	npm install --prefix ./cmd/capacity-service/ui/capacity-service
 	npm run build --prefix ./cmd/capacity-service/ui/capacity-service
+
+gen:
+	go generate ./pkg/provider/aws/instancetypes

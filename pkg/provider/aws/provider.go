@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"encoding/base64"
+	"github.com/supergiant/capacity/pkg/provider/aws/instancetypes"
 	"strconv"
 	"strings"
 
@@ -100,27 +101,27 @@ func (p *Provider) Name() string {
 	return "aws"
 }
 
-func (p *Provider) MachineTypes(ctx context.Context) ([]*provider.MachineType, error) {
+func (p *Provider) MachineTypes(_ context.Context) ([]*provider.MachineType, error) {
 	// TODO: for each region aws supports different machine types (get just region ones)
-	instTypes, err := p.client.AvailableInstanceTypes(ctx)
+	instTypes, err := instancetypes.RegionTypes(p.region)
 	if err != nil {
 		return nil, err
 	}
 
 	mTypes := make([]*provider.MachineType, 0, len(instTypes))
-	for i := range instTypes {
-		mem, err := parseMemory(instTypes[i].Attributes.Memory)
+	for _, vm := range instTypes {
+		mem, err := parseMemory(vm.MemoryGiB)
 		if err != nil {
-			return nil, errors.Wrapf(err, "memory: parse %s", instTypes[i].Attributes.Memory)
+			return nil, errors.Wrapf(err, "memory: parse %s", vm.MemoryGiB)
 		}
-		cpu, err := parseVCPU(instTypes[i].Attributes.VCPU)
+		cpu, err := parseVCPU(vm.VCPU)
 		if err != nil {
-			return nil, errors.Wrapf(err, "vcpu: parse %s", instTypes[i].Attributes.VCPU)
+			return nil, errors.Wrapf(err, "vcpu: parse %s", vm.VCPU)
 		}
 		mTypes = append(mTypes, &provider.MachineType{
-			Name:           instTypes[i].Attributes.InstanceType,
-			Memory:         instTypes[i].Attributes.Memory,
-			CPU:            instTypes[i].Attributes.VCPU,
+			Name:           vm.Name,
+			Memory:         vm.MemoryGiB,
+			CPU:            vm.VCPU,
 			MemoryResource: mem,
 			CPUResource:    cpu,
 		})
