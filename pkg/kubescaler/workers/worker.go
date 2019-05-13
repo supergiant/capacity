@@ -1,24 +1,20 @@
 package workers
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"strconv"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
+	"github.com/supergiant/capacity/pkg/api"
+	"github.com/supergiant/capacity/pkg/provider"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/typed/core/v1"
-
-	"github.com/supergiant/capacity/pkg/api"
-	"github.com/supergiant/capacity/pkg/provider"
 )
 
 const (
@@ -43,16 +39,6 @@ type WInterface interface {
 	ReserveWorker(ctx context.Context, worker *api.Worker) (*api.Worker, error)
 }
 
-type Config struct {
-	SSHPubKey         string
-	KubeVersion       string
-	MasterPrivateAddr string
-	KubeAPIPort       string
-	KubeAPIPassword   string
-	ProviderName      string
-	UserDataFile      string
-}
-
 func IsReserved(node *corev1.Node) bool {
 	if v, ok := node.Labels[LabelReserved]; ok {
 		if strings.ToLower(v) == ValTrue {
@@ -64,43 +50,23 @@ func IsReserved(node *corev1.Node) bool {
 
 type Manager struct {
 	clusterName  string
-	userData     string
+	userdata     string
 	nodesClient  v1.NodeInterface
 	provider     provider.Provider
 	machineTypes []*provider.MachineType
 }
 
-func NewManager(clusterName string, nodesClient v1.NodeInterface, provider provider.Provider, conf Config) (*Manager, error) {
+func NewManager(clusterName string, nodesClient v1.NodeInterface, provider provider.Provider, userdata string) (*Manager, error) {
 	mtypes, err := provider.MachineTypes(context.Background())
 	if err != nil {
 		return nil, errors.Wrap(err, "get machine types")
-	}
-
-	templ := []byte(userDataTpl)
-	//if userdata was provided
-	if conf.UserDataFile != "" {
-		//read userdata file
-		templ, err = ioutil.ReadFile(conf.UserDataFile)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	t, err := template.New("userData").Parse(string(templ))
-	if err != nil {
-		return nil, err
-	}
-
-	buff := &bytes.Buffer{}
-	if err = t.Execute(buff, &conf); err != nil {
-		return nil, err
 	}
 
 	//log.Debugf("worker manager: generated usedData: \n%s", buff.String())
 
 	return &Manager{
 		clusterName:  clusterName,
-		userData:     buff.String(),
+		userdata:     userdata,
 		nodesClient:  nodesClient,
 		provider:     provider,
 		machineTypes: mtypes,
@@ -108,7 +74,7 @@ func NewManager(clusterName string, nodesClient v1.NodeInterface, provider provi
 }
 
 func (m *Manager) CreateWorker(ctx context.Context, mtype string) (*api.Worker, error) {
-	machine, err := m.provider.CreateMachine(ctx, m.workerName(), mtype, ClusterRole, m.userData, nil)
+	machine, err := m.provider.CreateMachine(ctx, m.workerName(), mtype, ClusterRole, m.userdata, nil)
 	if err != nil {
 		return nil, err
 	}

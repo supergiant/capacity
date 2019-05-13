@@ -1,18 +1,15 @@
 package kubescaler
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/typed/core/v1"
-
 	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/kubernetes/config"
 	"github.com/supergiant/capacity/pkg/kubernetes/filters"
@@ -22,6 +19,10 @@ import (
 	"github.com/supergiant/capacity/pkg/persistentfile"
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/factory"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 const (
@@ -51,7 +52,6 @@ type Options struct {
 	ConfigMapName      string
 	ConfigMapNamespace string
 	Kubeconfig         string
-	UserDataFile       string
 }
 
 type Kubescaler struct {
@@ -59,8 +59,6 @@ type Kubescaler struct {
 	kclient        kubernetes.Clientset
 	listerRegistry listers.Registry
 
-	// TODO(stgleb): Shall user data go in config?
-	userData      string
 	configManager *ConfigManager
 
 	workerMutex   sync.RWMutex
@@ -102,7 +100,7 @@ func New(opts Options) (*Kubescaler, error) {
 }
 
 func (s *Kubescaler) Run() error {
-	pauseLockCheck := s.configManager.getConfig()
+	pauseLockCheck := s.configManager.GetConfig()
 	//checking to see if pauselock is engaged.
 	//We do this check here so the Warn will not eat up logs in the RunOnce func.
 	if pauseLockCheck.PauseLock == true {
@@ -148,7 +146,7 @@ func (s *Kubescaler) Stop(ctx context.Context) error {
 }
 
 func (s *Kubescaler) RunOnce(currentTime time.Time) error {
-	cfg := s.configManager.getConfig()
+	cfg := s.configManager.GetConfig()
 
 	//Paused defaults to false if omitted.
 	paused := cfg.Paused != nil && *(cfg.Paused)
@@ -482,7 +480,7 @@ func (s *Kubescaler) ReserveWorker(ctx context.Context, worker *api.Worker) (*ap
 func (s *Kubescaler) SetConfig(conf api.Config) error {
 	// Recreate worker manager on config update
 	log.Info("kubescaler set config")
-	err := s.configManager.setConfig(conf)
+	err := s.configManager.SetConfig(conf)
 
 	if err != nil {
 		return err
@@ -501,11 +499,11 @@ func (s *Kubescaler) SetConfig(conf api.Config) error {
 }
 
 func (s *Kubescaler) GetConfig() api.Config {
-	return s.configManager.getConfig()
+	return s.configManager.GetConfig()
 }
 
 func (s *Kubescaler) PatchConfig(conf api.Config) error {
-	err := s.configManager.patchConfig(conf)
+	err := s.configManager.PatchConfig(conf)
 
 	// Recreate worker manager on config update
 	if err != nil {
@@ -530,35 +528,56 @@ func (s *Kubescaler) IsReady() bool {
 }
 
 func (s *Kubescaler) buildWorkerManager() error {
-	cfg := s.configManager.getConfig()
+	cfg := s.configManager.GetConfig()
 
 	vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)
-
-	if err != nil {
-		return errors.Wrapf(err, "build worker manager")
-	}
-	v, err := s.kclient.ServerVersion()
 	if err != nil {
 		return errors.Wrapf(err, "build worker manager")
 	}
 
-	workersConf := workers.Config{
-		KubeVersion:       v.String(),
-		MasterPrivateAddr: cfg.MasterPrivateAddr,
-		KubeAPIPort:       cfg.KubeAPIPort,
-		KubeAPIPassword:   cfg.KubeAPIPassword,
-		ProviderName:      cfg.ProviderName,
-		SSHPubKey:         cfg.SSHPubKey,
-		UserDataFile:      s.userData,
+	if cfg.SupergiantV1Config != nil {
+		v, err := s.kclient.ServerVersion()
+		if err != nil {
+			return errors.Wrapf(err, "build kubernetes client")
+		}
+		cfg.SupergiantV1Config.KubeVersion = v.String()
 	}
+	userdata, err := buildUserdata(cfg)
+	if err != nil {
+		return errors.Wrap(err, "build userdata")
+	}
+
 	log.Infof("Create new worker manager for cluster %s", cfg.ClusterName)
-	workerManager, err := workers.NewManager(cfg.ClusterName,
-		s.kclient.CoreV1().Nodes(), vmProvider, workersConf)
-
+	workerManager, err := workers.NewManager(cfg.ClusterName, s.kclient.CoreV1().Nodes(), vmProvider, userdata)
 	if err != nil {
 		return errors.Wrapf(err, "build worker manager")
 	}
 
 	s.workerManager = workerManager
 	return nil
+}
+
+func buildUserdata(cfg api.Config) (string, error) {
+	switch {
+	case cfg.SupergiantV1Config != nil:
+		return parse(userDataTpl, cfg.SupergiantV1Config)
+	case len(cfg.Userdata) > 0:
+		return cfg.Userdata, nil
+	case len(cfg.UserdataTpl) > 0:
+		return parse(cfg.UserdataTpl, cfg.UserdataVars)
+	}
+
+	return "", errors.New("userdata configuration not found")
+}
+
+func parse(tpl string, data interface{}) (string, error) {
+	t, err := template.New("userdata").Parse(tpl)
+	if err != nil {
+		return "", err
+	}
+	buff := &bytes.Buffer{}
+	if err = t.Execute(buff, data); err != nil {
+		return "", err
+	}
+	return buff.String(), nil
 }
