@@ -2,6 +2,7 @@ package kubescaler
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -16,7 +17,10 @@ import (
 var ErrNoResourcesRequested = errors.New("empty cpu and RAM value")
 
 func (s *Kubescaler) scaleUp(unscheduledPods []*corev1.Pod, machineTypes []*provider.MachineType, currentTime time.Time) (bool, error) {
-	podsToScale := filterIgnoringPods(unscheduledPods, machineTypes, currentTime)
+	podsToScale, podsIgnored := filterPods(unscheduledPods, machineTypes, currentTime)
+	if len(podsIgnored) > 0 {
+		log.Debugf("ignored pods to scale: %v", podsIgnored)
+	}
 	if len(podsToScale) == 0 {
 		return false, nil
 	}
@@ -42,25 +46,38 @@ func (s *Kubescaler) scaleUp(unscheduledPods []*corev1.Pod, machineTypes []*prov
 	return true, err
 }
 
-func filterIgnoringPods(pods []*corev1.Pod, allowedMachines []*provider.MachineType, currentTime time.Time) []*corev1.Pod {
-	filtered := make([]*corev1.Pod, 0)
+func filterPods(pods []*corev1.Pod, allowedMachines []*provider.MachineType, currentTime time.Time) ([]*corev1.Pod, []string) {
+	toScale := make([]*corev1.Pod, 0)
+	ignored := make([]string, 0)
 	for _, pod := range pods {
-		ignore := isNewPod(pod, currentTime) ||
-			// skip standalone pods
-			!hasController(pod) ||
-			// skip daemonSet pods
-			hasDaemonSetController(pod) ||
-			// skip pods without explicit resource requests/limits
-			!hasCPUMemoryContstraints(pod) ||
-			// skip too large pods
-			!hasMachineFor(allowedMachines, pod)
-
-		if !ignore {
-			filtered = append(filtered, pod)
-
+		ignore, reason := isIgnored(pod, allowedMachines, currentTime)
+		if ignore {
+			ignored = append(ignored, fmt.Sprintf("%s=%s", pod.Name, reason))
+			continue
 		}
+		toScale = append(toScale, pod)
 	}
-	return filtered
+	return toScale, ignored
+}
+
+func isIgnored(pod *corev1.Pod, allowedMachines []*provider.MachineType, currentTime time.Time) (bool, string) {
+	switch {
+	case isNewPod(pod, currentTime):
+		return true, "new-pod"
+	case !hasController(pod):
+		// skip standalone pods
+		return true, "standalone-pod"
+	case hasDaemonSetController(pod):
+		// skip daemonSet pods
+		return true, "daemonset-pod"
+	case !hasCPUMemoryContstraints(pod):
+		// skip pods without explicit resource requests
+		return true, "not-requests-is-set"
+	case !hasMachineFor(allowedMachines, pod):
+		// skip too large pods
+		return true, "pod-exceeds-available-machine-resources"
+	}
+	return false, ""
 }
 
 func hasMachineFor(machineTypes []*provider.MachineType, pod *corev1.Pod) bool {

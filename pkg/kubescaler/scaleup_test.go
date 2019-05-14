@@ -226,7 +226,7 @@ func TestKubescalerScaleUp(t *testing.T) {
 
 }
 
-func TestFilterIgnoringPos(t *testing.T) {
+func TestFilterPods(t *testing.T) {
 	pods := []*corev1.Pod{
 		&podNew,
 		&podStandAlone,
@@ -238,8 +238,8 @@ func TestFilterIgnoringPos(t *testing.T) {
 	allowedMachines := []*provider.MachineType{&allowedMachine}
 	expectedRes := []*corev1.Pod{&podWithRequests}
 
-	res := filterIgnoringPods(pods, allowedMachines, currentTime)
-	require.Equal(t, expectedRes, res)
+	toScale, _ := filterPods(pods, allowedMachines, currentTime)
+	require.Equal(t, expectedRes, toScale)
 }
 
 func TestHasMachineFor(t *testing.T) {
