@@ -2,6 +2,7 @@ package aws
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -77,6 +78,10 @@ func New(clusterName string, config provider.Config) (*Provider, error) {
 		return nil, errors.Wrapf(err, "invalid %q volume size", config[VolSize])
 	}
 
+	if config[VolDeviceName] == "" {
+		config[VolDeviceName] = "/dev/sda1"
+	}
+
 	return &Provider{
 		clusterName: clusterName,
 		region:      region,
@@ -109,7 +114,7 @@ func (p *Provider) MachineTypes(_ context.Context) ([]*provider.MachineType, err
 
 	mTypes := make([]*provider.MachineType, 0, len(instTypes))
 	for _, vm := range instTypes {
-		mem, err := parseMemory(vm.MemoryGiB)
+		mem, err := parseGiB(vm.MemoryGiB)
 		if err != nil {
 			return nil, errors.Wrapf(err, "memory: parse %s", vm.MemoryGiB)
 		}
@@ -171,6 +176,7 @@ func (p *Provider) CreateMachine(ctx context.Context, name, mtype, clusterRole, 
 		EBSOptimized:     p.instConf.EBSOptimized,
 		Tags:             p.instConf.Tags,
 		UsedData:         userData,
+		HasPublicAddr:    true,
 	})
 	if err != nil {
 		return nil, err
@@ -202,6 +208,10 @@ func normalizeMemory(memory string) string {
 
 func parseMemory(memory string) (resource.Quantity, error) {
 	return resource.ParseQuantity(normalizeMemory(memory))
+}
+
+func parseGiB(in string) (resource.Quantity, error) {
+	return resource.ParseQuantity(fmt.Sprintf("%sGi", in))
 }
 
 func parseVCPU(vcpu string) (resource.Quantity, error) {
