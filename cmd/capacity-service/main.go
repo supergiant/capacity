@@ -10,6 +10,8 @@ import (
 	"github.com/gobuffalo/packr"
 	"github.com/kubernetes-sigs/kubebuilder/pkg/signals"
 	"github.com/sirupsen/logrus"
+
+	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/capacityserver"
 	"github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/log"
@@ -33,9 +35,11 @@ func (args) Version() string {
 
 func main() {
 	args := args{
-		ListenAddr: ":8081",
-		LogLevel:   "info",
-		LogFormat:  "txt",
+		ListenAddr:         ":8081",
+		LogLevel:           "info",
+		LogFormat:          "txt",
+		ConfigMapName:      api.DefaultConfigMapName,
+		ConfigMapNamespace: api.DefaultConfigMapNamespace,
 	}
 	arg.MustParse(&args)
 

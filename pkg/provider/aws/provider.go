@@ -2,8 +2,6 @@ package aws
 
 import (
 	"context"
-	"encoding/base64"
-	"github.com/supergiant/capacity/pkg/provider/aws/instancetypes"
 	"strconv"
 	"strings"
 
@@ -13,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/supergiant/capacity/pkg/provider"
+	"github.com/supergiant/capacity/pkg/provider/aws/instancetypes"
 )
 
 // Provider name:
@@ -171,7 +170,7 @@ func (p *Provider) CreateMachine(ctx context.Context, name, mtype, clusterRole, 
 		VolumeDeviceName: p.instConf.VolDeviceName,
 		EBSOptimized:     p.instConf.EBSOptimized,
 		Tags:             p.instConf.Tags,
-		UsedData:         base64.StdEncoding.EncodeToString([]byte(userData)),
+		UsedData:         userData,
 	})
 	if err != nil {
 		return nil, err
