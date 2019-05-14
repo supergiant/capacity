@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+
 	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/log"
 	"github.com/supergiant/capacity/pkg/persistentfile"
@@ -144,10 +145,6 @@ func writeExampleConfig(file persistentfile.Interface) error {
 		WorkersCountMin: 1,
 		Paused:          BoolPtr(true),
 		Userdata:        "REPLACE_IT",
-		UserdataTpl:     "REPLACE_IT",
-		UserdataVars: map[string]string{
-			"REPLACE_IT": "REPLACE_IT",
-		},
 		SupergiantV1Config: &api.SupergiantV1UserdataVars{
 			MasterPrivateAddr: "REPLACE_IT",
 			KubeAPIHost:       "REPLACE_IT",

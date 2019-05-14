@@ -10,6 +10,11 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/typed/core/v1"
+
 	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/kubernetes/config"
 	"github.com/supergiant/capacity/pkg/kubernetes/filters"
@@ -19,15 +24,10 @@ import (
 	"github.com/supergiant/capacity/pkg/persistentfile"
 	"github.com/supergiant/capacity/pkg/provider"
 	"github.com/supergiant/capacity/pkg/provider/factory"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 const (
 	DefaultConfigFilepath = "/etc/kubescaler.conf"
-	DefaultConfigMapKey   = "kubescaler.conf"
 
 	// How old the oldest unschedulable pod should be before starting scale up.
 	unschedulablePodTimeBuffer = 2 * time.Second
@@ -421,7 +421,7 @@ func getConfigFile(opts Options, cmGetter v1.ConfigMapsGetter) (persistentfile.I
 		Type:               persistentfile.ConfigMapFile,
 		ConfigMapName:      opts.ConfigMapName,
 		ConfigMapNamespace: opts.ConfigMapNamespace,
-		Key:                DefaultConfigMapKey,
+		Key:                api.DefaultConfigMapKey,
 		ConfigMapClient:    cmGetter,
 	})
 	if err == nil {
@@ -563,8 +563,6 @@ func buildUserdata(cfg api.Config) (string, error) {
 		return parse(userDataTpl, cfg.SupergiantV1Config)
 	case len(cfg.Userdata) > 0:
 		return cfg.Userdata, nil
-	case len(cfg.UserdataTpl) > 0:
-		return parse(cfg.UserdataTpl, cfg.UserdataVars)
 	}
 
 	return "", errors.New("userdata configuration not found")
