@@ -54,17 +54,17 @@ users:
   "workersCountMin": 1,
   "workersCountMax": 3,
   "machineTypes": [
-    "m4.large"
-  ]
+    "t2.micro"
+  ],
+  "userdata": "a base64 encoded provisioning script or cloud-init configuration"
 }
-
 ```
 
 ## Out of cluster
 
 Using the above files, command to run:
 ```
-./capacity --kubeconfig kubeconfig --kubescaler-config kubescaler.conf --user-data PATH_TO_USERDATA_FILE
+./capacity --kubeconfig kubeconfig --kubescaler-config kubescaler.conf
 INFO[0000] setup kubescaler...                          
 INFO[0000] kubescaler: get config from: "kubescaler.conf" file 
 INFO[0036] starting kubescaler...                       
@@ -76,9 +76,7 @@ INFO[0036] capacityservice: listen on ":8081"
 
 Create the `capacity-config` configmap with the `kubescaler.conf` file:
 ```
-kubectl create configmap capacity-config \
-    --from-file=kubescaler.conf=kubescaler.conf \
-    --from-file=userdata=PATH_TO_USERDATA_FILE
+kubectl create configmap capacity-config --from-file=kubescaler.conf=kubescaler.conf
 ```
 
 Deploy Capacity to the cluster (if rbac is enabled in cluster, setup the [permissions](#rbac-permissions) before):
@@ -117,8 +115,6 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-          - name: CAPACITY_USER_DATA
-            value: /etc/capacity-cervice/userdata
         ports:
         - containerPort: 8081
         resources:
@@ -126,17 +122,6 @@ spec:
             memory: 500Mi
           requests:
             memory: 450Mi
-        volumeMounts:
-          - name: userdata
-            mountPath: /etc/capacity-cervice
-      volumes:
-        - name: userdata
-          configMap:
-            name: capacity-config
-            optional: true
-            items:
-            - key: userdata
-              path: userdata
 ---
 apiVersion: v1
 kind: Service
@@ -157,6 +142,32 @@ EOF
 
 ```
 cat <<EOF | kubectl create -f -
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: capacity-configmap-updater
+  namespace: kube-system
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames: ["capacity"]
+  verbs: ["get", "patch"]
+---
+# for updating kubescaler config on configmap
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: capacity-configmap
+  namespace: kube-system
+subjects:
+- kind: ServiceAccount
+  name: capacity-service
+  namespace: default
+roleRef:
+  kind: Role
+  name: capacity-configmap-updater
+  apiGroup: rbac.authorization.k8s.io
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
@@ -196,7 +207,7 @@ rules:
   verbs: ["get", "list", "watch"]
 ---
 # capacity has to have access for pods/nodes
-kind: RoleBinding
+kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: capacity-permissions
