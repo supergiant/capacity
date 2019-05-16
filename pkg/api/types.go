@@ -31,6 +31,8 @@ type Worker struct {
 	Reserved bool `json:"reserved"`
 	// NodeName represents a name of the kubernetes node that runs on top of that machine.
 	NodeName string `json:"nodeName"`
+	// NodeState represents a kubernetes node state.
+	NodeState string `json:"nodeState"`
 	// NodeLabels represents a labels of the kubernetes node that runs on top of that machine.
 	NodeLabels map[string]string `json:"nodeLabels,omitempty"`
 }
@@ -52,7 +54,6 @@ type Config struct {
 	// TODO: this is hardcoded and isn't used at the moment
 	MaxMachineProvisionTime string            `json:"maxMachineProvisionTime"`
 	IgnoredNodeLabels       map[string]string `json:"ignoredNodeLabels"`
-	NewNodeTimeBuffer       int               `json:"newNodeTimeBuffer"`
 
 	// Userdata is a base64 encoded representation of shell commands or cloud-init directives
 	// that applies after the instance starts.

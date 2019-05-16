@@ -9,12 +9,14 @@ import (
 
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
-	"github.com/supergiant/capacity/pkg/api"
-	"github.com/supergiant/capacity/pkg/provider"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/typed/core/v1"
+
+	"github.com/supergiant/capacity/pkg/api"
+	"github.com/supergiant/capacity/pkg/kubernetes/filters"
+	"github.com/supergiant/capacity/pkg/provider"
 )
 
 const (
@@ -24,6 +26,9 @@ const (
 	ClusterRole = "worker"
 
 	MinWorkerLifespan = time.Minute * 20
+
+	NodeStateReady   = "ready"
+	NodeStateUnknown = "unknown"
 )
 
 var (
@@ -189,6 +194,7 @@ func (m *Manager) workerFrom(machine *provider.Machine, node corev1.Node) *api.W
 		CreationTimestamp: machine.CreationTimestamp,
 		Reserved:          IsReserved(&node),
 		NodeName:          node.Name,
+		NodeState:         getNodeState(node),
 		NodeLabels:        node.Labels,
 	}
 }
@@ -207,4 +213,11 @@ func (m *Manager) setReserved(w *api.Worker, reserved bool) (*api.Worker, error)
 func (m *Manager) patchNodeLabel(nodeName, key, val string) (*corev1.Node, error) {
 	return m.nodesClient.Patch(nodeName, types.MergePatchType,
 		[]byte(fmt.Sprintf(`{"metadata":{"labels":{%q:%q}}}`, key, val)))
+}
+
+func getNodeState(node corev1.Node) string {
+	if filters.IsNodeReadyAndSchedulable(&node) {
+		return NodeStateReady
+	}
+	return NodeStateUnknown
 }
