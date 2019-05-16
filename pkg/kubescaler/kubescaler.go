@@ -31,6 +31,9 @@ const (
 
 	// How old the oldest unschedulable pod should be before starting scale up.
 	unschedulablePodTimeBuffer = 2 * time.Second
+
+	// defaultNodeTimeBuffer is a time in seconds to wait for node is in Ready state.
+	defaultNodeTimeBuffer = 60
 )
 
 var (
@@ -175,7 +178,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 
 	failed, provisioning := s.checkWorkers(rss.workerList, currentTime)
 	if len(failed) > 0 {
-		// remove machines that are provisioning for a long time
+		// remove machines that are provisioning for a long time and with a not ready nodes
 		log.Debugf("kubescaler: removing %s failed machines", failed)
 		return s.removeFailedMachines(failed)
 	}
@@ -187,11 +190,6 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 	}
 
 	if len(rss.unscheduledPods) > 0 {
-		if newNodes := getNewNodes(rss.allNodes, currentTime, cfg.NewNodeTimeBuffer); len(newNodes) != 0 {
-			log.Debugf("kubescaler: scale up: newNodes=%v, skipping", newNodes)
-			return nil
-		}
-
 		nodePods := nodePodsMap(rss.scheduledPods)
 		log.Debugf("kubescaler: scale up: nodepods %v, ready nodes %v", nodePods, nodeNames(rss.readyNodes))
 
@@ -201,7 +199,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 		}
 
 		// TODO: use workers instead of nodes (workerList may contain 'terminating' machines)
-		if cfg.WorkersCountMax > 0 && cfg.WorkersCountMax > len(rss.readyNodes) {
+		if cfg.WorkersCountMax > 0 && cfg.WorkersCountMax > len(rss.workerList.Items) {
 			var scaled bool
 			// try to scale up the cluster. In case of success no need to scale down
 			scaled, err = s.scaleUp(rss.unscheduledPods, allowedMachineTypes, currentTime)
@@ -212,19 +210,19 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 				return nil
 			}
 		} else {
-			log.Debugf("kubescaler: scaleup: workersCountMax(%d) >= number of ready nodes(%d), skipping..",
-				cfg.WorkersCountMax, len(rss.readyNodes))
+			log.Debugf("kubescaler: scaleup: workersCountMax(%d) >= number of workers(%d), skipping..",
+				cfg.WorkersCountMax, len(rss.workerList.Items))
 		}
 	}
 
 	// TODO: workerList may contain 'terminating' machines.
-	if cfg.WorkersCountMin > 0 && cfg.WorkersCountMin < len(rss.readyNodes) {
+	if cfg.WorkersCountMin > 0 && cfg.WorkersCountMin < len(rss.workerList.Items) {
 		if err = s.scaleDown(rss.scheduledPods, rss.workerList, cfg.IgnoredNodeLabels, currentTime); err != nil {
 			return errors.Wrap(err, "scale down")
 		}
 	} else {
-		log.Debugf("kubescaler: scaledown: workersCountMin(%d) < number of ready nodes(%d), skipping..",
-			cfg.WorkersCountMin, len(rss.readyNodes))
+		log.Debugf("kubescaler: scaledown: workersCountMin(%d) < number of workers(%d), skipping..",
+			cfg.WorkersCountMin, len(rss.workerList.Items))
 	}
 
 	return nil
@@ -279,12 +277,15 @@ func (s *Kubescaler) checkWorkers(workerList *api.WorkerList, currentTime time.T
 	//	- state == 'pending' || 'running', https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-lifecycle.html
 	//	- running <= maxProvisionTime
 	//	- have no registered node, skip master
+	//	- node state is not ready
 	provisioning := make([]string, 0)
 
 	for _, worker := range workerList.Items {
 		ignored := !(worker.MachineState == "pending" || worker.MachineState == "running") ||
 			worker.NodeName != "" ||
-			isMaster(worker)
+			isMaster(worker) ||
+			worker.NodeState != workers.NodeStateReady
+
 		if ignored {
 			continue
 		}
@@ -382,20 +383,6 @@ func getEmptyNodes(nodes []*corev1.Node, pods []*corev1.Pod) []*corev1.Node {
 		}
 	}
 	return emptyNodes
-}
-
-func getNewNodes(nodes []*corev1.Node, currentTime time.Time, newNodeTimeBuffer int) []*corev1.Node {
-	newNodes := make([]*corev1.Node, 0)
-	for _, node := range nodes {
-		if isNewNode(node, currentTime, newNodeTimeBuffer) {
-			newNodes = append(newNodes, node)
-		}
-	}
-	return newNodes
-}
-
-func isNewNode(node *corev1.Node, currentTime time.Time, newNodeTimeBuffer int) bool {
-	return node.CreationTimestamp.Add(time.Duration(newNodeTimeBuffer) * time.Second).After(currentTime)
 }
 
 // getConfigFile tries to locate the kubescaler config file.

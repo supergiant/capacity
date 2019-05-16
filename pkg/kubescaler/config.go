@@ -36,9 +36,6 @@ func Merge(c, patch api.Config) api.Config {
 	if len(patch.IgnoredNodeLabels) != 0 {
 		c.IgnoredNodeLabels = patch.IgnoredNodeLabels
 	}
-	if patch.NewNodeTimeBuffer != 0 {
-		c.NewNodeTimeBuffer = patch.NewNodeTimeBuffer
-	}
 	return c
 }
 
