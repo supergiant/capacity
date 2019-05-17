@@ -70,6 +70,7 @@ type Kubescaler struct {
 }
 
 func New(opts Options) (*Kubescaler, error) {
+	// TODO: use corev1 client
 	kclient, err := config.GetKubernetesClientSet("", opts.Kubeconfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "build kubernetes client")
