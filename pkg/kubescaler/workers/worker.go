@@ -29,6 +29,10 @@ const (
 
 	NodeStateReady   = "ready"
 	NodeStateUnknown = "unknown"
+
+	// TODO: check new labels too
+	// https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/service/service_controller.go#L66
+	nodeLabelRole = "node-role.kubernetes.io/master"
 )
 
 var (
@@ -114,9 +118,14 @@ func (m *Manager) ListWorkers(ctx context.Context) (*api.WorkerList, error) {
 		return nil, err
 	}
 
+	var node corev1.Node
 	workers := make([]*api.Worker, len(machines))
 	for i := range machines {
-		workers[i] = m.workerFrom(machines[i], nodesMap[machines[i].ID])
+		node = nodesMap[machines[i].ID]
+		if _, ok := node.Labels[nodeLabelRole]; ok {
+			continue
+		}
+		workers[i] = m.workerFrom(machines[i], node)
 	}
 
 	return &api.WorkerList{
