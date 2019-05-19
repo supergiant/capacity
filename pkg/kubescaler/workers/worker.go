@@ -119,13 +119,13 @@ func (m *Manager) ListWorkers(ctx context.Context) (*api.WorkerList, error) {
 	}
 
 	var node corev1.Node
-	workers := make([]*api.Worker, len(machines))
+	workers := make([]*api.Worker, 0)
 	for i := range machines {
 		node = nodesMap[machines[i].ID]
 		if _, ok := node.Labels[nodeLabelRole]; ok {
 			continue
 		}
-		workers[i] = m.workerFrom(machines[i], node)
+		workers = append(workers, m.workerFrom(machines[i], node))
 	}
 
 	return &api.WorkerList{
