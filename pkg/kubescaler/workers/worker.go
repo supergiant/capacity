@@ -190,7 +190,7 @@ func (m *Manager) nodesMap() (map[string]corev1.Node, error) {
 }
 
 func (m *Manager) workerName() string {
-	return fmt.Sprintf("%s-%s-%s", m.clusterName, "worker", uuid.NewUUID().String())
+	return fmt.Sprintf("%s-%s-%s", m.clusterName, "node", uuid.NewUUID().String()[:4])
 }
 
 func (m *Manager) workerFrom(machine *provider.Machine, node corev1.Node) *api.Worker {
