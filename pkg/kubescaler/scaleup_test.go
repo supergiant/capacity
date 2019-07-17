@@ -24,23 +24,57 @@ var (
 	trueVar     = true
 	errFake     = errors.New("fake error")
 
-	resource13   = resource.MustParse("13")
-	resource13Mi = resource.MustParse("13Mi")
-	resource33   = resource.MustParse("33")
-	resource33Mi = resource.MustParse("33Mi")
+	resource1    = resource.MustParse("1")
+	resource1Mi  = resource.MustParse("1Mi")
+	resource2    = resource.MustParse("2")
+	resource2Mi  = resource.MustParse("2Mi")
 	resource42   = resource.MustParse("42")
 	resource42Mi = resource.MustParse("42Mi")
 
-	machineType13 = provider.MachineType{Name: "13", CPUResource: resource13, MemoryResource: resource13Mi}
-	machineType42 = provider.MachineType{Name: "42", CPUResource: resource42, MemoryResource: resource42Mi}
-
-	resourceList13CPU13Mi = corev1.ResourceList{
-		"cpu":    resource13,
-		"memory": resource13Mi,
+	vmPrice1CPU1Mem1 = provider.MachineType{
+		Name:           "Price1CPU1Mem1",
+		PriceHour:      1,
+		CPUResource:    resource1,
+		MemoryResource: resource1Mi,
 	}
-	resourceList33CPU33Mi = corev1.ResourceList{
-		"cpu":    resource33,
-		"memory": resource33Mi,
+	vmPrice1CPU2Mem1 = provider.MachineType{
+		Name:           "Price1CPU2Mem1",
+		PriceHour:      1,
+		CPUResource:    resource2,
+		MemoryResource: resource1Mi,
+	}
+	vmPrice1CPU1Mem2 = provider.MachineType{
+		Name:           "Price1CPU1Mem2",
+		PriceHour:      1,
+		CPUResource:    resource1,
+		MemoryResource: resource2Mi,
+	}
+	vmPrice1CPU2Mem2 = provider.MachineType{
+		Name:           "Price1CPU2Mem2",
+		PriceHour:      1,
+		CPUResource:    resource2,
+		MemoryResource: resource2Mi,
+	}
+	vmPrice2CPU2Mem2 = provider.MachineType{
+		Name:           "Price2CPU2Mem2",
+		PriceHour:      2,
+		CPUResource:    resource2,
+		MemoryResource: resource2Mi,
+	}
+	machinePrice42Type42 = provider.MachineType{
+		Name:           "42",
+		CPUResource:    resource42,
+		MemoryResource: resource42Mi,
+		PriceHour:      42,
+	}
+
+	resourceList1CPU1Mi = corev1.ResourceList{
+		"cpu":    resource1,
+		"memory": resource1,
+	}
+	resourceList2CPU2Mi = corev1.ResourceList{
+		"cpu":    resource2,
+		"memory": resource2,
 	}
 	resourceList42CPU42Mi = corev1.ResourceList{
 		"cpu":    resource42,
@@ -61,7 +95,7 @@ var (
 			Name: NodeReadyName,
 		},
 		Status: corev1.NodeStatus{
-			Allocatable: resourceList13CPU13Mi,
+			Allocatable: resourceList1CPU1Mi,
 		},
 	}
 	NodeScaleDownName = "nodeScaleDown"
@@ -114,7 +148,7 @@ var (
 			Containers: []corev1.Container{
 				{
 					Resources: corev1.ResourceRequirements{
-						Requests: resourceList13CPU13Mi,
+						Requests: resourceList1CPU1Mi,
 					},
 				},
 			},
@@ -136,7 +170,7 @@ var (
 			Containers: []corev1.Container{
 				{
 					Resources: corev1.ResourceRequirements{
-						Limits: resourceList33CPU33Mi,
+						Limits: resourceList2CPU2Mi,
 					},
 				},
 			},
@@ -254,7 +288,7 @@ func TestHasMachineFor(t *testing.T) {
 		},
 		{
 			pod:          &podWithRequests,
-			machineTypes: []*provider.MachineType{&machineType42},
+			machineTypes: []*provider.MachineType{&vmPrice1CPU1Mem2},
 			expectedRes:  true,
 		},
 	}
@@ -266,6 +300,15 @@ func TestHasMachineFor(t *testing.T) {
 }
 
 func TestBestMachineFor(t *testing.T) {
+	vmTypes := []*provider.MachineType{
+		&vmPrice1CPU1Mem1,
+		&vmPrice1CPU1Mem2,
+		&vmPrice1CPU2Mem1,
+		&vmPrice1CPU2Mem2,
+		&vmPrice2CPU2Mem2,
+		&machinePrice42Type42,
+	}
+
 	tcs := []struct {
 		cpu, mem     resource.Quantity
 		machineTypes []*provider.MachineType
@@ -278,44 +321,44 @@ func TestBestMachineFor(t *testing.T) {
 			expectedErr: ErrNoAllowedMachines,
 		},
 		{ // TC#2
-			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
+			machineTypes: vmTypes,
 			expectedErr:  ErrNoResourcesRequested,
 		},
 		{ // TC#3
 			cpu:          resource.MustParse("1"),
 			mem:          resource.MustParse("1Mi"),
-			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
-			expectedRes:  machineType13,
+			machineTypes: vmTypes,
+			expectedRes:  vmPrice1CPU2Mem2,
 		},
 		{ // TC#4
-			cpu:          resource.MustParse("13"),
-			mem:          resource.MustParse("12Mi"),
-			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
-			expectedRes:  machineType13,
+			cpu:          resource.MustParse("1"),
+			mem:          resource.MustParse("2Mi"),
+			machineTypes: vmTypes,
+			expectedRes:  vmPrice1CPU2Mem2,
 		},
 		{ // TC#5
-			cpu:          resource.MustParse("13"),
-			mem:          resource.MustParse("13Mi"),
-			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
-			expectedRes:  machineType13,
+			cpu:          resource.MustParse("2"),
+			mem:          resource.MustParse("1Mi"),
+			machineTypes: vmTypes,
+			expectedRes:  vmPrice1CPU2Mem2,
 		},
 		{ // TC#6
-			cpu:          resource.MustParse("35"),
-			mem:          resource.MustParse("45Mi"),
-			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
-			expectedRes:  machineType42,
+			cpu:          resource.MustParse("2"),
+			mem:          resource.MustParse("2Mi"),
+			machineTypes: vmTypes,
+			expectedRes:  vmPrice1CPU2Mem2,
 		},
 		{ // TC#7
-			cpu:          resource.MustParse("64"),
+			cpu:          resource.MustParse("1"),
 			mem:          resource.MustParse("64Mi"),
-			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
-			expectedRes:  machineType42,
+			machineTypes: vmTypes,
+			expectedRes:  vmPrice1CPU2Mem2,
 		},
-		{ // TC#8
+		{ // TC#9
 			cpu:          resource.MustParse("64"),
 			mem:          resource.MustParse("64Mi"),
-			machineTypes: []*provider.MachineType{&machineType42, &machineType13},
-			expectedRes:  machineType42,
+			machineTypes: vmTypes,
+			expectedRes:  vmPrice1CPU2Mem2,
 		},
 	}
 
@@ -388,7 +431,7 @@ func TestGetCPUMem(t *testing.T) {
 		{&podNew, resource.Quantity{}, resource.Quantity{}},
 		{&podStandAlone, resource.Quantity{}, resource.Quantity{}},
 		{&podDaemonSet, resource.Quantity{}, resource.Quantity{}},
-		{&podWithRequests, resource13, resource13Mi},
+		{&podWithRequests, resource1, resource1},
 		{&podWithLimits, resource.Quantity{}, resource.Quantity{}},
 		{&podWithHugeRequests, resource.MustParse("1024"), resource.MustParse("1024Gi")},
 	}
@@ -405,7 +448,7 @@ func TestTotalCPUMem(t *testing.T) {
 		&podWithRequests,
 		&podWithLimits,
 	}
-	expectedCPU, expectedMem := resource.MustParse("13"), resource.MustParse("13Mi")
+	expectedCPU, expectedMem := resource1, resource1
 
 	cpu, mem := totalCPUMem(pods)
 	require.Equal(t, expectedCPU.Value(), cpu.Value(), "cpu")

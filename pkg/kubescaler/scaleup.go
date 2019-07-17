@@ -98,14 +98,15 @@ func bestMachineFor(cpu, mem resource.Quantity, machineTypes []*provider.Machine
 		return provider.MachineType{}, ErrNoAllowedMachines
 	}
 
-	var biggest provider.MachineType
+	var biggest *provider.MachineType
+	// machine types are sorted by price
 	for _, m := range provider.SortedMachineTypes(machineTypes) {
 		if hasResources(m, cpu, mem) {
 			return *m, nil
 		}
-		biggest = *m
+		biggest = takeBest(biggest, m)
 	}
-	return biggest, nil
+	return *biggest, nil
 }
 
 func hasCPUMemoryContstraints(pod *corev1.Pod) bool {
@@ -158,4 +159,20 @@ func podNames(pods []*corev1.Pod) []string {
 func hasResources(m *provider.MachineType, cpu, mem resource.Quantity) bool {
 	// machine.cpu >= requested.cpu && machine.mem >= requested.mem
 	return m.CPUResource.Cmp(cpu) >= 0 && m.MemoryResource.Cmp(mem) >= 0
+}
+
+func takeBest(old, new *provider.MachineType) *provider.MachineType {
+	if old == nil {
+		return new
+	}
+	if new != nil && new.PriceHour <= old.PriceHour {
+		moreCPU := new.CPUResource.Cmp(old.CPUResource) == 1
+		equalCPU := new.CPUResource.Cmp(old.CPUResource) == 0
+		moreMemory := new.MemoryResource.Cmp(old.MemoryResource) == 1
+
+		if moreCPU || (equalCPU && moreMemory) {
+			return new
+		}
+	}
+	return old
 }

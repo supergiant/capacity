@@ -122,12 +122,18 @@ func (p *Provider) MachineTypes(_ context.Context) ([]*provider.MachineType, err
 		if err != nil {
 			return nil, errors.Wrapf(err, "vcpu: parse %s", vm.VCPU)
 		}
+		price, err := strconv.ParseInt(vm.PriceHour, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "hour price: parse %s", vm.PriceHour)
+		}
 		mTypes = append(mTypes, &provider.MachineType{
 			Name:           vm.Name,
 			Memory:         vm.MemoryGiB,
 			CPU:            vm.VCPU,
 			MemoryResource: mem,
 			CPUResource:    cpu,
+			PriceHour:      price,
+			Description:    vm.Description,
 		})
 	}
 

@@ -43,6 +43,14 @@ var (
 		MemoryResource: resource.MustParse("8Gi"),
 		CPUResource:    resource.MustParse("4"),
 	}
+	mtype1CPU1GiPrice1 = &MachineType{
+		Name:           "mtype1CPU1Gi",
+		Memory:         "1Gi",
+		CPU:            "1",
+		MemoryResource: resource.MustParse("1Gi"),
+		CPUResource:    resource.MustParse("1"),
+		PriceHour:      1,
+	}
 )
 
 func TestSortedMachineTypes(t *testing.T) {
@@ -52,11 +60,15 @@ func TestSortedMachineTypes(t *testing.T) {
 	}{
 		{
 			in:       []*MachineType{mtype4CPU8Gi, mtype4CPU4Gi, mtype2CPU8Gi, mtype4CPU2Gi, mtype1CPU1Gi},
-			expected: []*MachineType{mtype1CPU1Gi, mtype2CPU8Gi, mtype4CPU2Gi, mtype4CPU4Gi, mtype4CPU8Gi},
+			expected: []*MachineType{mtype4CPU8Gi, mtype4CPU4Gi, mtype4CPU2Gi, mtype2CPU8Gi, mtype1CPU1Gi},
 		},
 		{
 			in:       []*MachineType{mtype1CPU1Gi, mtype2CPU8Gi, mtype4CPU2Gi, mtype4CPU4Gi, mtype4CPU8Gi},
-			expected: []*MachineType{mtype1CPU1Gi, mtype2CPU8Gi, mtype4CPU2Gi, mtype4CPU4Gi, mtype4CPU8Gi},
+			expected: []*MachineType{mtype4CPU8Gi, mtype4CPU4Gi, mtype4CPU2Gi, mtype2CPU8Gi, mtype1CPU1Gi},
+		},
+		{
+			in:       []*MachineType{mtype1CPU1Gi, mtype1CPU1GiPrice1, mtype2CPU8Gi, mtype4CPU2Gi, mtype4CPU4Gi, mtype4CPU8Gi},
+			expected: []*MachineType{mtype4CPU8Gi, mtype4CPU4Gi, mtype4CPU2Gi, mtype2CPU8Gi, mtype1CPU1Gi, mtype1CPU1GiPrice1},
 		},
 	}
 
