@@ -83,7 +83,7 @@ func isIgnored(pod *corev1.Pod, allowedMachines []*provider.MachineType, current
 func hasMachineFor(machineTypes []*provider.MachineType, pod *corev1.Pod) bool {
 	cpu, mem := getCPUMemForScheduling(pod)
 	for _, m := range machineTypes {
-		if m.CPUResource.Cmp(cpu) >= 0 && m.MemoryResource.Cmp(mem) == 1 {
+		if hasResources(m, cpu, mem) {
 			return true
 		}
 	}
@@ -100,7 +100,7 @@ func bestMachineFor(cpu, mem resource.Quantity, machineTypes []*provider.Machine
 
 	var biggest provider.MachineType
 	for _, m := range provider.SortedMachineTypes(machineTypes) {
-		if m.CPUResource.Cmp(cpu) > -1 && m.MemoryResource.Cmp(mem) == 1 {
+		if hasResources(m, cpu, mem) {
 			return *m, nil
 		}
 		biggest = *m
@@ -153,4 +153,9 @@ func podNames(pods []*corev1.Pod) []string {
 		list[i] = pods[i].Name
 	}
 	return list
+}
+
+func hasResources(m *provider.MachineType, cpu, mem resource.Quantity) bool {
+	// machine.cpu >= requested.cpu && machine.mem >= requested.mem
+	return m.CPUResource.Cmp(cpu) >= 0 && m.MemoryResource.Cmp(mem) >= 0
 }

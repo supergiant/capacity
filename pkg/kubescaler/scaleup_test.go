@@ -297,7 +297,7 @@ func TestBestMachineFor(t *testing.T) {
 			cpu:          resource.MustParse("13"),
 			mem:          resource.MustParse("13Mi"),
 			machineTypes: []*provider.MachineType{&machineType13, &machineType42},
-			expectedRes:  machineType42,
+			expectedRes:  machineType13,
 		},
 		{ // TC#6
 			cpu:          resource.MustParse("35"),
