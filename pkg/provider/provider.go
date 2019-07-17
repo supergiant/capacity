@@ -36,19 +36,27 @@ type MachineType struct {
 	CPU            string            `json:"cpu"`
 	MemoryResource resource.Quantity `json:"-"`
 	CPUResource    resource.Quantity `json:"-"`
+	PriceHour      int64             `json:"priceHour"`
+	Description    string            `json:"description"`
 }
 
 func SortedMachineTypes(mtypes []*MachineType) []*MachineType {
 	sorted := make([]*MachineType, len(mtypes))
 	copy(sorted, mtypes)
-	sort.SliceStable(sorted, func(i, j int) bool {
-		lessCPU := sorted[i].CPUResource.Cmp(sorted[j].CPUResource) == -1
+	sort.Slice(sorted, func(i, j int) bool {
+		equalPrice := sorted[i].PriceHour == sorted[j].PriceHour
+		lessPrice := sorted[i].PriceHour < sorted[j].PriceHour
+		moreCPU := sorted[i].CPUResource.Cmp(sorted[j].CPUResource) == 1
 		equalCPU := sorted[i].CPUResource.Cmp(sorted[j].CPUResource) == 0
-		lessMemory := sorted[i].MemoryResource.Cmp(sorted[j].MemoryResource) == -1
-		if equalCPU {
-			return lessMemory
+		moreMemory := sorted[i].MemoryResource.Cmp(sorted[j].MemoryResource) == 1
+
+		if equalPrice {
+			if equalCPU {
+				return moreMemory
+			}
+			return moreCPU
 		}
-		return lessCPU
+		return lessPrice
 	})
 	return sorted
 }

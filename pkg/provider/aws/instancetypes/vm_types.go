@@ -13,10 +13,12 @@ type manager struct {
 }
 
 type VM struct {
-	Name      string
-	VCPU      string
-	MemoryGiB string
-	GPU       string
+	Name        string
+	VCPU        string
+	MemoryGiB   string
+	GPU         string
+	PriceHour   string
+	Description string
 }
 
 func (s manager) regionTypes(region string) ([]VM, error) {
