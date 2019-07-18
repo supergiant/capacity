@@ -40,6 +40,29 @@
           }
         }
       },
+      "post": {
+        "description": "This will set configuration for the application.",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "https",
+          "http"
+        ],
+        "tags": [
+          "config"
+        ],
+        "summary": "Returns a view of the kubescaler configuration.",
+        "operationId": "createConfig",
+        "responses": {
+          "201": {
+            "$ref": "#/responses/configResponse"
+          }
+        }
+      },
       "patch": {
         "description": "This will update current configuration of the application.",
         "consumes": [
@@ -230,6 +253,9 @@
     "Config": {
       "type": "object",
       "properties": {
+        "SupergiantV1Config": {
+          "$ref": "#/definitions/SupergiantV1UserdataVars"
+        },
         "clusterName": {
           "type": "string",
           "x-go-name": "ClusterName"
@@ -241,22 +267,6 @@
           },
           "x-go-name": "IgnoredNodeLabels"
         },
-        "kubeAPIHost": {
-          "type": "string",
-          "x-go-name": "KubeAPIHost"
-        },
-        "kubeAPIPassword": {
-          "type": "string",
-          "x-go-name": "KubeAPIPassword"
-        },
-        "kubeAPIPort": {
-          "type": "string",
-          "x-go-name": "KubeAPIPort"
-        },
-        "kubeAPIUser": {
-          "type": "string",
-          "x-go-name": "KubeAPIUser"
-        },
         "machineTypes": {
           "type": "array",
           "items": {
@@ -264,18 +274,10 @@
           },
           "x-go-name": "MachineTypes"
         },
-        "masterPrivateAddr": {
-          "type": "string",
-          "x-go-name": "MasterPrivateAddr"
-        },
         "maxMachineProvisionTime": {
+          "description": "TODO: this is hardcoded and isn't used at the moment",
           "type": "string",
           "x-go-name": "MaxMachineProvisionTime"
-        },
-        "newNodeTimeBuffer": {
-          "type": "integer",
-          "format": "int64",
-          "x-go-name": "NewNodeTimeBuffer"
         },
         "pauseLock": {
           "type": "boolean",
@@ -300,9 +302,10 @@
           "type": "string",
           "x-go-name": "ScanInterval"
         },
-        "sshPubKey": {
+        "userdata": {
+          "description": "Userdata is a base64 encoded representation of shell commands or cloud-init directives\nthat applies after the instance starts.\nhttps://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html",
           "type": "string",
-          "x-go-name": "SSHPubKey"
+          "x-go-name": "Userdata"
         },
         "workersCountMax": {
           "type": "integer",
@@ -315,7 +318,7 @@
           "x-go-name": "WorkersCountMin"
         }
       },
-      "x-go-package": "github.com/supergiant/capacity/pkg/kubescaler"
+      "x-go-package": "github.com/supergiant/capacity/pkg/api"
     },
     "Info": {
       "type": "object",
@@ -356,6 +359,10 @@
           "type": "string",
           "x-go-name": "CPU"
         },
+        "description": {
+          "type": "string",
+          "x-go-name": "Description"
+        },
         "memory": {
           "type": "string",
           "x-go-name": "Memory"
@@ -363,9 +370,44 @@
         "name": {
           "type": "string",
           "x-go-name": "Name"
+        },
+        "priceHour": {
+          "type": "integer",
+          "format": "int64",
+          "x-go-name": "PriceHour"
         }
       },
       "x-go-package": "github.com/supergiant/capacity/pkg/provider"
+    },
+    "SupergiantV1UserdataVars": {
+      "type": "object",
+      "properties": {
+        "kubeAPIHost": {
+          "type": "string",
+          "x-go-name": "KubeAPIHost"
+        },
+        "kubeAPIPassword": {
+          "type": "string",
+          "x-go-name": "KubeAPIPassword"
+        },
+        "kubeAPIPort": {
+          "type": "string",
+          "x-go-name": "KubeAPIPort"
+        },
+        "kubeAPIUser": {
+          "type": "string",
+          "x-go-name": "KubeAPIUser"
+        },
+        "masterPrivateAddr": {
+          "type": "string",
+          "x-go-name": "MasterPrivateAddr"
+        },
+        "sshPubKey": {
+          "type": "string",
+          "x-go-name": "SSHPubKey"
+        }
+      },
+      "x-go-package": "github.com/supergiant/capacity/pkg/api"
     },
     "Worker": {
       "description": "It contains data from a (virtual) machine and a kubernetes node running on it.",
@@ -419,13 +461,18 @@
           "type": "string",
           "x-go-name": "NodeName"
         },
+        "nodeState": {
+          "description": "NodeState represents a kubernetes node state.",
+          "type": "string",
+          "x-go-name": "NodeState"
+        },
         "reserved": {
           "description": "Reserved is a parameter that is used to prevent downscaling of the worker.",
           "type": "boolean",
           "x-go-name": "Reserved"
         }
       },
-      "x-go-package": "github.com/supergiant/capacity/pkg/kubescaler/workers"
+      "x-go-package": "github.com/supergiant/capacity/pkg/api"
     },
     "WorkerList": {
       "type": "object",
@@ -438,7 +485,7 @@
           "x-go-name": "Items"
         }
       },
-      "x-go-package": "github.com/supergiant/capacity/pkg/kubescaler/workers"
+      "x-go-package": "github.com/supergiant/capacity/pkg/api"
     }
   },
   "responses": {
