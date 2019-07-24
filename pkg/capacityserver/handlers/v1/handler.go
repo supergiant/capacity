@@ -63,6 +63,6 @@ func readyMiddleware(ks *kubescaler.Kubescaler, h http.HandlerFunc) http.Handler
 
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprint(w, "kube scaler was not configured yet, to configure "+
-			"make POST request to /api/v1/configHandler with valid configHandler object")
+			"make POST request to /api/v1/config Handler with valid configHandler object")
 	}
 }

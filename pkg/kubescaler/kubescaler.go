@@ -13,7 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/typed/core/v1"
+	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/kubernetes/config"
@@ -96,8 +96,9 @@ func New(opts Options) (*Kubescaler, error) {
 
 	// We skip this error because on this stage capacity service may not be
 	// configured
-	if err := kubeScaler.buildWorkerManager(); err == nil {
-		kubeScaler.isReady = true
+	if err := kubeScaler.buildWorkerManager(); err != nil {
+		log.Infof("kubescaler was not configured yet, to configure " +
+			"make POST request to /api/v1/config Handler with valid configHandler object")
 	}
 
 	return kubeScaler, nil
@@ -118,6 +119,9 @@ func (s *Kubescaler) Run() error {
 			select {
 			case <-time.After(DefaultScanInterval):
 				{
+					if !s.IsReady() {
+						continue
+					}
 					if err := s.RunOnce(time.Now()); err != nil {
 						log.Errorf("kubescaler: %v", err)
 					}
@@ -467,23 +471,14 @@ func (s *Kubescaler) ReserveWorker(ctx context.Context, worker *api.Worker) (*ap
 
 func (s *Kubescaler) SetConfig(conf api.Config) error {
 	// Recreate worker manager on config update
-	log.Info("kubescaler set config")
-	err := s.configManager.SetConfig(conf)
-
-	if err != nil {
+	if err := s.configManager.SetConfig(conf); err != nil {
 		return err
 	}
 
-	log.Info("Aquire worker mutex")
 	s.workerMutex.Lock()
 	defer s.workerMutex.Unlock()
-	err = s.buildWorkerManager()
 
-	if err != nil {
-		return err
-	}
-	s.isReady = true
-	return nil
+	return s.buildWorkerManager()
 }
 
 func (s *Kubescaler) GetConfig() api.Config {
@@ -491,22 +486,14 @@ func (s *Kubescaler) GetConfig() api.Config {
 }
 
 func (s *Kubescaler) PatchConfig(conf api.Config) error {
-	err := s.configManager.PatchConfig(conf)
-
-	// Recreate worker manager on config update
-	if err != nil {
+	if err := s.configManager.PatchConfig(conf); err != nil {
 		return err
 	}
 
 	s.workerMutex.Lock()
 	defer s.workerMutex.Unlock()
 
-	err = s.buildWorkerManager()
-	if err != nil {
-		return err
-	}
-	s.isReady = true
-	return nil
+	return s.buildWorkerManager()
 }
 
 func (s *Kubescaler) IsReady() bool {
@@ -520,7 +507,7 @@ func (s *Kubescaler) buildWorkerManager() error {
 
 	vmProvider, err := factory.New(cfg.ClusterName, cfg.ProviderName, cfg.Provider)
 	if err != nil {
-		return errors.Wrapf(err, "build worker manager")
+		return errors.Wrapf(err, "build vm provider")
 	}
 
 	if cfg.SupergiantV1Config != nil {
@@ -538,16 +525,18 @@ func (s *Kubescaler) buildWorkerManager() error {
 	log.Infof("Create new worker manager for cluster %s", cfg.ClusterName)
 	workerManager, err := workers.NewManager(cfg.ClusterName, s.kclient.CoreV1().Nodes(), vmProvider, userdata)
 	if err != nil {
-		return errors.Wrapf(err, "build worker manager")
+		return err
 	}
 
 	s.workerManager = workerManager
+	s.isReady = true
 	return nil
 }
 
 func buildUserdata(cfg api.Config) (string, error) {
 	switch {
 	case cfg.SupergiantV1Config != nil:
+		cfg.SupergiantV1Config.ProviderName = cfg.ProviderName
 		return parse(userDataTpl, cfg.SupergiantV1Config)
 	case len(cfg.Userdata) > 0:
 		return cfg.Userdata, nil
@@ -563,7 +552,7 @@ func parse(tpl string, data interface{}) (string, error) {
 	}
 	buff := &bytes.Buffer{}
 	if err = t.Execute(buff, data); err != nil {
-		return "", err
+		return "", errors.Wrap(err, "parse supergiantV1 userdata")
 	}
 	return buff.String(), nil
 }

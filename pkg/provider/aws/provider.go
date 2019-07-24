@@ -122,7 +122,7 @@ func (p *Provider) MachineTypes(_ context.Context) ([]*provider.MachineType, err
 		if err != nil {
 			return nil, errors.Wrapf(err, "vcpu: parse %s", vm.VCPU)
 		}
-		price, err := strconv.ParseInt(vm.PriceHour, 10, 64)
+		price, err := strconv.ParseFloat(vm.PriceHour, 10)
 		if err != nil {
 			return nil, errors.Wrapf(err, "hour price: parse %s", vm.PriceHour)
 		}

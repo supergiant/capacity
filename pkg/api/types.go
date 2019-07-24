@@ -71,6 +71,7 @@ type SupergiantV1UserdataVars struct {
 	KubeAPIPassword   string `json:"kubeAPIPassword"`
 	SSHPubKey         string `json:"sshPubKey"`
 	KubeVersion       string `json:"-"`
+	ProviderName      string `json:"-"`
 }
 
 func (c Config) Validate() error {
