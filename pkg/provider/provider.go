@@ -36,7 +36,7 @@ type MachineType struct {
 	CPU            string            `json:"cpu"`
 	MemoryResource resource.Quantity `json:"-"`
 	CPUResource    resource.Quantity `json:"-"`
-	PriceHour      int64             `json:"priceHour"`
+	PriceHour      float64           `json:"priceHour"`
 	Description    string            `json:"description"`
 }
 
