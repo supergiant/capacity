@@ -179,7 +179,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 		return err
 	}
 
-	log.Debugf("kubescaler: rss: nodes=%v unscheduledPods=%v", workerNodeNames(rss.workerList.Items), podNames(rss.unscheduledPods))
+	log.Debugf("kubescaler: rss: unscheduledPods=%v", podNames(rss.unscheduledPods))
 
 	failed, provisioning := s.checkWorkers(rss.workerList, currentTime)
 	if len(failed) > 0 {
@@ -195,9 +195,6 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 	}
 
 	if len(rss.unscheduledPods) > 0 {
-		nodePods := nodePodsMap(rss.scheduledPods)
-		log.Debugf("kubescaler: scale up: nodepods %v, ready nodes %v", nodePods, nodeNames(rss.readyNodes))
-
 		if emptyNodes := getEmptyNodes(rss.readyNodes, rss.allPods); len(emptyNodes) > 0 {
 			log.Debugf("kubescaler: scale up: there are %v ready empty nodes in the cluster", nodeNames(emptyNodes))
 			return nil

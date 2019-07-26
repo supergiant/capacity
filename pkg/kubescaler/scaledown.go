@@ -21,9 +21,9 @@ func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, workerList *api.Work
 
 	emptyapi := getEmpty(workerList, nodePodsMap)
 	if len(emptyapi) == 0 {
+		log.Debug("kubescaler: scale down: there are no empty nodes")
 		return nil
 	}
-	log.Debugf("kubescaler: scale down: nodepods %v", nodePodsMap)
 	log.Debugf("kubescaler: scale down: nodes to delete: %v", workerNodeNames(emptyapi))
 
 	removed := make([]string, 0)
