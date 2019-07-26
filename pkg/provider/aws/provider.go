@@ -154,9 +154,12 @@ func (p *Provider) Machines(ctx context.Context) ([]*provider.Machine, error) {
 		return nil, nil
 	}
 
-	machines := make([]*provider.Machine, len(insts))
+	machines := make([]*provider.Machine, 0)
 	for i := range insts {
-		machines[i] = machineFrom(insts[i])
+		if toString(insts[i].State) == ec2.InstanceStateNameTerminated {
+			continue
+		}
+		machines = append(machines, machineFrom(insts[i]))
 	}
 
 	return machines, nil
