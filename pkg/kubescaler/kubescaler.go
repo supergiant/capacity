@@ -203,7 +203,6 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 			return nil
 		}
 
-		// TODO: use workers instead of nodes (workerList may contain 'terminating' machines)
 		if cfg.WorkersCountMax > 0 && cfg.WorkersCountMax > len(rss.workerList.Items) {
 			var scaled bool
 			// try to scale up the cluster. In case of success no need to scale down
@@ -220,7 +219,6 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 		}
 	}
 
-	// TODO: workerList may contain 'terminating' machines.
 	if cfg.WorkersCountMin > 0 && cfg.WorkersCountMin < len(rss.workerList.Items) {
 		if err = s.scaleDown(rss.scheduledPods, rss.workerList, cfg.IgnoredNodeLabels, currentTime); err != nil {
 			return errors.Wrap(err, "scale down")
@@ -272,33 +270,35 @@ func (s *Kubescaler) getResources() (*resources, error) {
 }
 
 func (s *Kubescaler) checkWorkers(workerList *api.WorkerList, currentTime time.Time) ([]string, []string) {
-	//failedMachines:
-	//	- state == 'running'
-	//	- running >= maxProvisionTime
-	//	- have no registered node, skip master
-	failed := make([]string, 0)
-
 	//	provisioning machines:
 	//	- state == 'pending' || 'running', https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-lifecycle.html
 	//	- running <= maxProvisionTime
+	//	- nodeState != 'ready'
 	//	- have no registered node, skip master
 	//	- node state is not ready
 	provisioning := make([]string, 0)
 
+	//failedMachines:
+	//	- running > maxProvisionTime
+	//	- have no registered node, skip master
+	failed := make([]string, 0)
+
 	for _, worker := range workerList.Items {
 		ignored := !(worker.MachineState == "pending" || worker.MachineState == "running") ||
-			worker.NodeName != "" ||
-			isMaster(worker) ||
-			worker.NodeState != workers.NodeStateReady
+			worker.NodeState == workers.NodeStateReady ||
+			isMaster(worker)
 
 		if ignored {
 			continue
 		}
 
-		if worker.CreationTimestamp.Add(DefaultMaxMachineProvisionTime).Before(currentTime) {
-			failed = append(failed, worker.MachineID)
-		} else {
+		if worker.CreationTimestamp.Add(DefaultMaxMachineProvisionTime).After(currentTime) {
 			provisioning = append(provisioning, worker.MachineID)
+			continue
+		}
+
+		if worker.NodeName == "" {
+			failed = append(failed, worker.MachineID)
 		}
 	}
 
