@@ -108,13 +108,20 @@ func (c *Client) CreateInstance(ctx context.Context, cfg InstanceConfig) (*ec2.I
 				},
 			},
 		},
+		SecurityGroupIds: cfg.SecurityGroups,
+		SubnetId:         aws.String(cfg.SubnetID),
 		TagSpecifications: []*ec2.TagSpecification{
 			{
 				ResourceType: aws.String(ec2.ResourceTypeInstance),
 				Tags:         getTags(c.tags, &cfg),
 			},
 		},
-		NetworkInterfaces: []*ec2.InstanceNetworkInterfaceSpecification{
+	}
+	if cfg.UsedData != "" {
+		instanceInp.UserData = aws.String(cfg.UsedData)
+	}
+	if cfg.HasPublicAddr {
+		instanceInp.NetworkInterfaces = []*ec2.InstanceNetworkInterfaceSpecification{
 			{
 				DeviceIndex:              aws.Int64(0),
 				AssociatePublicIpAddress: aws.Bool(cfg.HasPublicAddr),
@@ -122,10 +129,7 @@ func (c *Client) CreateInstance(ctx context.Context, cfg InstanceConfig) (*ec2.I
 				Groups:                   cfg.SecurityGroups,
 				SubnetId:                 aws.String(cfg.SubnetID),
 			},
-		},
-	}
-	if cfg.UsedData != "" {
-		instanceInp.UserData = aws.String(cfg.UsedData)
+		}
 	}
 
 	res, err := ec2S.RunInstancesWithContext(ctx, instanceInp)
