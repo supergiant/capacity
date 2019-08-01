@@ -3,6 +3,8 @@ package kubescaler
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -12,8 +14,10 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	kubeversion "k8s.io/apimachinery/pkg/version"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	v1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
 
 	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/kubernetes/config"
@@ -59,7 +63,7 @@ type Options struct {
 
 type Kubescaler struct {
 	stopCh         chan struct{}
-	kclient        kubernetes.Clientset
+	kclient        corev1client.CoreV1Interface
 	listerRegistry listers.Registry
 
 	configManager *ConfigManager
@@ -71,12 +75,12 @@ type Kubescaler struct {
 
 func New(opts Options) (*Kubescaler, error) {
 	// TODO: use corev1 client
-	kclient, err := config.GetKubernetesClientSet("", opts.Kubeconfig)
+	kclient, err := config.GetCoreV1Client("", opts.Kubeconfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "build kubernetes client")
 	}
 
-	f, err := getConfigFile(opts, kclient.CoreV1())
+	f, err := getConfigFile(opts, kclient)
 	if err != nil {
 		return nil, err
 	}
@@ -88,10 +92,10 @@ func New(opts Options) (*Kubescaler, error) {
 	}
 
 	kubeScaler := &Kubescaler{
-		kclient:        *kclient,
+		kclient:        kclient,
 		configManager:  conf,
 		stopCh:         make(chan struct{}),
-		listerRegistry: listers.NewRegistryWithDefaultListers(kclient, nil),
+		listerRegistry: listers.NewRegistryWithDefaultListers(kclient.RESTClient(), nil),
 	}
 
 	// We skip this error because on this stage capacity service may not be
@@ -508,7 +512,7 @@ func (s *Kubescaler) buildWorkerManager() error {
 	}
 
 	if cfg.SupergiantV1Config != nil {
-		v, err := s.kclient.ServerVersion()
+		v, err := getServerVersion(s.kclient.RESTClient())
 		if err != nil {
 			return errors.Wrapf(err, "build kubernetes client")
 		}
@@ -520,7 +524,7 @@ func (s *Kubescaler) buildWorkerManager() error {
 	}
 
 	log.Infof("Create new worker manager for cluster %s", cfg.ClusterName)
-	workerManager, err := workers.NewManager(cfg.ClusterName, s.kclient.CoreV1().Nodes(), vmProvider, userdata)
+	workerManager, err := workers.NewManager(cfg.ClusterName, s.kclient.Nodes(), vmProvider, userdata)
 	if err != nil {
 		return err
 	}
@@ -552,4 +556,18 @@ func parse(tpl string, data interface{}) (string, error) {
 		return "", errors.Wrap(err, "parse supergiantV1 userdata")
 	}
 	return buff.String(), nil
+}
+
+// getServerVersion retrieves and parses the server's version (git version).
+func getServerVersion(restclient rest.Interface) (*kubeversion.Info, error) {
+	body, err := restclient.Get().AbsPath("/version").Do().Raw()
+	if err != nil {
+		return nil, err
+	}
+	var info kubeversion.Info
+	err = json.Unmarshal(body, &info)
+	if err != nil {
+		return nil, fmt.Errorf("got '%s': %v", string(body), err)
+	}
+	return &info, nil
 }

@@ -2,10 +2,8 @@ package config
 
 import (
 	"errors"
-	"time"
 
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -25,30 +23,14 @@ func GetConfig(masterURL, kubeconfig string) (*rest.Config, error) {
 	return rest.InClusterConfig()
 }
 
-// GetKubernetesClientSet creates a *kubernetes.ClientSet for talking to a Kubernetes apiserver.
-// If kubeconfig is set, will use the kubeconfig file at that location.  Otherwise will assume running
-// in cluster and use the cluster provided kubeconfig.
-func GetKubernetesClientSet(masterURL, kubeconfig string) (*kubernetes.Clientset, error) {
+// GetCoreV1Client creates a client for talking to a Kubernetes corev1 resources.
+func GetCoreV1Client(masterURL, kubeconfig string) (corev1client.CoreV1Interface, error) {
 	config, err := GetConfig(masterURL, kubeconfig)
 	if err != nil {
 		return nil, err
 	}
-	return kubernetes.NewForConfig(config)
-}
 
-// GetKubernetesInformers creates a informers.SharedInformerFactory for talking to a Kubernetes apiserver.
-// If kubeconfig is set, will use the kubeconfig file at that location.  Otherwise will assume running
-// in cluster and use the cluster provided kubeconfig.
-func GetKubernetesInformers(masterURL, kubeconfig string) (informers.SharedInformerFactory, error) {
-	config, err := GetConfig(masterURL, kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-	i, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	return informers.NewSharedInformerFactory(i, time.Minute*5), nil
+	return corev1client.NewForConfig(config)
 }
 
 // GetBasicAuthConfig is a helper function that builds configs for a kubernetes client
@@ -74,12 +56,4 @@ func GetBasicAuthConfig(host, port, username, pass string) (*rest.Config, error)
 			Insecure: true,
 		},
 	}, nil
-}
-
-func GetKubernetesClientSetBasicAuth(host, port, username, pass string) (*kubernetes.Clientset, error) {
-	config, err := GetBasicAuthConfig(host, port, username, pass)
-	if err != nil {
-		return nil, err
-	}
-	return kubernetes.NewForConfig(config)
 }
