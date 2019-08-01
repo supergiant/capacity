@@ -42,14 +42,18 @@ func GetUnschedulablePods(pods []*corev1.Pod) []*corev1.Pod {
 
 // IsPodScheduled returns true if pod has been scheduled and is in "pending" or "running" phase.
 func IsPodScheduled(p *corev1.Pod) bool {
-	// TODO: review status of the scheduled pods
 	return p.Spec.NodeName != "" && !itemIn(string(p.Status.Phase), []string{string(corev1.PodSucceeded), string(corev1.PodFailed)})
 }
 
 // IsPodUnschedulable returns true if pod has not been scheduled and is in "pending", "running" or "unknown" phase.
 func IsPodUnschedulable(p *corev1.Pod) bool {
-	// TODO: add a check for: reason == "Unschedulable"
-	return p.Spec.NodeName == "" && !itemIn(string(p.Status.Phase), []string{string(corev1.PodSucceeded), string(corev1.PodFailed)})
+	_, condition := GetPodCondition(&p.Status, corev1.PodScheduled)
+	return p.Spec.NodeName == "" &&
+		p.Status.Phase != corev1.PodSucceeded &&
+		p.Status.Phase != corev1.PodFailed &&
+		condition != nil &&
+		condition.Status == corev1.ConditionFalse &&
+		condition.Reason == corev1.PodReasonUnschedulable
 }
 
 func itemIn(item string, list []string) bool {
@@ -74,7 +78,6 @@ func IsNodeReadyAndSchedulable(node *corev1.Node) bool {
 }
 
 // GetReadinessState gets readiness state for the node.
-// TODO: review it due to https://kubernetes.io/docs/concepts/architecture/nodes/#condition
 func GetReadinessState(node *corev1.Node) (isNodeReady bool, lastTransitionTime time.Time, err error) {
 	canNodeBeReady, readyFound := true, false
 	lastTransitionTime = time.Time{}
@@ -109,4 +112,27 @@ func GetReadinessState(node *corev1.Node) (isNodeReady bool, lastTransitionTime 
 		return false, time.Time{}, fmt.Errorf("readiness information not found")
 	}
 	return canNodeBeReady, lastTransitionTime, nil
+}
+
+// GetPodCondition extracts the provided condition from the given status and returns that.
+// Returns nil and -1 if the condition is not present, and the index of the located condition.
+func GetPodCondition(status *corev1.PodStatus, conditionType corev1.PodConditionType) (int, *corev1.PodCondition) {
+	if status == nil {
+		return -1, nil
+	}
+	return GetPodConditionFromList(status.Conditions, conditionType)
+}
+
+// GetPodConditionFromList extracts the provided condition from the given list of condition and
+// returns the index of the condition and the condition. Returns -1 and nil if the condition is not present.
+func GetPodConditionFromList(conditions []corev1.PodCondition, conditionType corev1.PodConditionType) (int, *corev1.PodCondition) {
+	if conditions == nil {
+		return -1, nil
+	}
+	for i := range conditions {
+		if conditions[i].Type == conditionType {
+			return i, &conditions[i]
+		}
+	}
+	return -1, nil
 }
