@@ -3,6 +3,7 @@ package kubescaler
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/pkg/errors"
@@ -10,13 +11,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/log"
 	"github.com/supergiant/capacity/pkg/provider"
 )
 
 var ErrNoResourcesRequested = errors.New("empty cpu and RAM value")
 
-func (s *Kubescaler) scaleUp(unscheduledPods []*corev1.Pod, machineTypes []*provider.MachineType, currentTime time.Time) (bool, error) {
+func (s *Kubescaler) scaleUp(unscheduledPods []*corev1.Pod, machineTypes []*provider.MachineType, strategy api.ScaleUpStrategy, currentTime time.Time) (bool, error) {
 	podsToScale, podsIgnored := filterPods(unscheduledPods, machineTypes, currentTime)
 	if len(podsIgnored) > 0 {
 		log.Debugf("ignored pods to scale: %v", podsIgnored)
@@ -27,15 +29,10 @@ func (s *Kubescaler) scaleUp(unscheduledPods []*corev1.Pod, machineTypes []*prov
 
 	log.Debugf("kubescaler: run: scale up: unscheduled pods: %v", podNames(podsToScale))
 
-	// get required cpu/mem for unscheduled pods and pick up a machine type
-	podsCPU, podsMem := totalCPUMem(podsToScale)
-	mtype, err := bestMachineFor(podsCPU, podsMem, machineTypes)
+	mtype, err := machineToScale(unscheduledPods, machineTypes, strategy)
 	if err != nil {
 		return false, errors.Wrap(err, "find an appropriate machine type")
 	}
-
-	log.Debugf("kubescaler: run: scale up: unscheduled pods needs cpu=%s, mem=%s: pick the %s machine (cpu=%s, mem=%s)",
-		podsCPU.String(), podsMem.String(), mtype.Name, mtype.CPU, mtype.Memory)
 
 	worker, err := s.CreateWorker(context.Background(), mtype.Name)
 	if err != nil {
@@ -46,13 +43,35 @@ func (s *Kubescaler) scaleUp(unscheduledPods []*corev1.Pod, machineTypes []*prov
 	return true, err
 }
 
+func machineToScale(pods []*corev1.Pod, machineTypes []*provider.MachineType, strategy api.ScaleUpStrategy) (provider.MachineType, error) {
+	// get required cpu/mem for unscheduled pods and pick up a machine type
+	var cpu, mem resource.Quantity
+	switch strategy {
+	case api.SmallCPUBox:
+		cpu, mem = smallestCPUMem(pods)
+	case api.SmallMemBox:
+		cpu, mem = smallestMemCPU(pods)
+	default:
+		cpu, mem = totalCPUMem(pods)
+	}
+
+	mtype, err := bestMachineFor(cpu, mem, machineTypes)
+	if err != nil {
+		return provider.MachineType{}, errors.Wrap(err, "find an appropriate machine type")
+	}
+
+	log.Debugf("kubescaler: run: scale up: strategy %s: unscheduled pod(s) needs cpu=%s, mem=%s: pick the %s machine (cpu=%s, mem=%s)",
+		strategy, cpu.String(), mem.String(), mtype.Name, mtype.CPU, mtype.Memory)
+	return mtype, nil
+}
+
 func filterPods(pods []*corev1.Pod, allowedMachines []*provider.MachineType, currentTime time.Time) ([]*corev1.Pod, []string) {
 	toScale := make([]*corev1.Pod, 0)
 	ignored := make([]string, 0)
 	for _, pod := range pods {
 		ignore, reason := isIgnored(pod, allowedMachines, currentTime)
 		if ignore {
-			ignored = append(ignored, fmt.Sprintf("%s=%s", pod.Name, reason))
+			ignored = append(ignored, fmt.Sprintf("%s/%s=%s", pod.Namespace, pod.Name, reason))
 			continue
 		}
 		toScale = append(toScale, pod)
@@ -72,7 +91,7 @@ func isIgnored(pod *corev1.Pod, allowedMachines []*provider.MachineType, current
 		return true, "daemonset-pod"
 	case !hasCPUMemoryContstraints(pod):
 		// skip pods without explicit resource requests
-		return true, "not-requests-is-set"
+		return true, "no-requests-set"
 	case !hasMachineFor(allowedMachines, pod):
 		// skip too large pods
 		return true, "pod-exceeds-available-machine-resources"
@@ -111,7 +130,7 @@ func bestMachineFor(cpu, mem resource.Quantity, machineTypes []*provider.Machine
 
 func hasCPUMemoryContstraints(pod *corev1.Pod) bool {
 	cpu, mem := getCPUMemForScheduling(pod)
-	return cpu.Value() != 0 || mem.Value() != 0
+	return cpu.Value() != 0 && mem.Value() != 0
 }
 
 func hasController(pod *corev1.Pod) bool {
@@ -148,10 +167,46 @@ func totalCPUMem(pods []*corev1.Pod) (resource.Quantity, resource.Quantity) {
 	return cpu, mem
 }
 
+func smallestCPUMem(pods []*corev1.Pod) (resource.Quantity, resource.Quantity) {
+	if len(pods) == 0 {
+		return resource.Quantity{}, resource.Quantity{}
+	}
+	sort.Slice(pods, func(i, j int) bool {
+		icpu, imem := getCPUMemForScheduling(pods[i])
+		jcpu, jmem := getCPUMemForScheduling(pods[j])
+		lessCPU := icpu.Cmp(jcpu) == -1
+		equalCPU := icpu.Cmp(jcpu) == 0
+		lessMem := imem.Cmp(jmem) == -1
+		if equalCPU {
+			return lessMem
+		}
+		return lessCPU
+	})
+	return getCPUMemForScheduling(pods[0])
+}
+
+func smallestMemCPU(pods []*corev1.Pod) (resource.Quantity, resource.Quantity) {
+	if len(pods) == 0 {
+		return resource.Quantity{}, resource.Quantity{}
+	}
+	sort.Slice(pods, func(i, j int) bool {
+		icpu, imem := getCPUMemForScheduling(pods[i])
+		jcpu, jmem := getCPUMemForScheduling(pods[j])
+		lessMem := imem.Cmp(jmem) == -1
+		equalMem := imem.Cmp(jmem) == 0
+		lessCPU := icpu.Cmp(jcpu) == -1
+		if equalMem {
+			return lessCPU
+		}
+		return lessMem
+	})
+	return getCPUMemForScheduling(pods[0])
+}
+
 func podNames(pods []*corev1.Pod) []string {
 	list := make([]string, len(pods))
 	for i := range pods {
-		list[i] = pods[i].Name
+		list[i] = fmt.Sprintf("%s/%s", pods[i].Namespace, pods[i].Name)
 	}
 	return list
 }

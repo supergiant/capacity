@@ -207,7 +207,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 		if cfg.WorkersCountMax > 0 && cfg.WorkersCountMax > len(rss.workerList.Items) {
 			var scaled bool
 			// try to scale up the cluster. In case of success no need to scale down
-			scaled, err = s.scaleUp(rss.unscheduledPods, allowedMachineTypes, currentTime)
+			scaled, err = s.scaleUp(rss.unscheduledPods, allowedMachineTypes, cfg.Strategy, currentTime)
 			if err != nil {
 				return errors.Wrap(err, "scale up")
 			}

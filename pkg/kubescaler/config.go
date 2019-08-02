@@ -52,12 +52,13 @@ func NewConfigManager(file persistentfile.Interface) (*ConfigManager, error) {
 
 	// If error has happen or content is simply empty - dont try to unmarshall it
 	if err != nil || len(raw) == 0 {
-		log.Warnf("Read config %v", err)
+		log.Warnf("read %s config: %s", file.Info(), err)
 	} else {
 		// TODO: use codec to support more formats
 		if err = json.Unmarshal(raw, &conf); err != nil {
 			return nil, errors.Wrap(err, "decode config")
 		}
+		log.Infof("found config: %+v", conf)
 	}
 
 	return &ConfigManager{

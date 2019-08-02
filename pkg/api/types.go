@@ -53,15 +53,33 @@ type Config struct {
 	MachineTypes    []string          `json:"machineTypes"`
 	// TODO: this is hardcoded and isn't used at the moment
 	MaxMachineProvisionTime string            `json:"maxMachineProvisionTime"`
-	IgnoredNodeLabels       map[string]string `json:"ignoredNodeLabels"`
+	IgnoredNodeLabels       map[string]string `json:"ignoredNodeLabels,omitempty"`
 
 	// Userdata is a base64 encoded representation of shell commands or cloud-init directives
 	// that applies after the instance starts.
 	// https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html
 	Userdata string `json:"userdata"`
-
-	SupergiantV1Config *SupergiantV1UserdataVars
+	// SupergiantV1Config holds configuration for userdata parameters used to provision Supergiant v1 nodes
+	// DEPRECATED: sg v1 has no support.
+	SupergiantV1Config *SupergiantV1UserdataVars `json:"supergiantV1Config,omitempty"`
+	// Strategy is a way capacity determines a machine to create for unscheduled pods. Capacity recognizes 'bigBox',
+	// 'smallCPUBox' and 'smallMemBox' ones. The 'bigBox' one is used by default.
+	Strategy ScaleUpStrategy `json:"strategy"`
 }
+
+type ScaleUpStrategy string
+
+var (
+	// BigBox is a strategy for capacity. It's used to determine a machine type that fits most of the unscheduled pods at once.
+	// The one with the lower price and higher amount of CPU and memory will be created.
+	BigBox ScaleUpStrategy = "bigBox"
+	// SmallCPUBox is a strategy for capacity. It's used to determine a machine type for the smallest pod at once.
+	// The one with the lower price and higher amount of CPU and memory will be created. Has priority by CPU.
+	SmallCPUBox ScaleUpStrategy = "smallCPUBox"
+	// SmallMemBox is a strategy for capacity. It's used to determine a machine type for the smallest pod at once.
+	// The one with the lower price and higher amount of memory and CPU will be created. Has priority by memory.
+	SmallMemBox ScaleUpStrategy = "smallMemBox"
+)
 
 type SupergiantV1UserdataVars struct {
 	MasterPrivateAddr string `json:"masterPrivateAddr"`
