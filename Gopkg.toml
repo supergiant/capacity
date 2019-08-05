@@ -207,4 +207,4 @@ branch="master"
 
 [[constraint]]
   name = "github.com/supergiant/control"
-  revision = "7fe615d0992b6649f36bb3c767798b0edc41fc65"
+  revision = "736954f5b2507cc81c9538e4d858f424c7b5cc8e"

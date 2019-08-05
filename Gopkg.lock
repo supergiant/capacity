@@ -396,11 +396,11 @@
   version = "v1.2.2"
 
 [[projects]]
-  digest = "1:1da74740bf5a2c703f4292aee274ee9bcf2f467cba3e3936e6db780b7b54de54"
+  digest = "1:73f7e61923fef03ac7d371df2a851195ae7c5c10c2d92871c9cd8d2fe8a74c2c"
   name = "github.com/supergiant/control"
   packages = ["pkg/clouds/aws"]
   pruneopts = "UT"
-  revision = "7fe615d0992b6649f36bb3c767798b0edc41fc65"
+  revision = "736954f5b2507cc81c9538e4d858f424c7b5cc8e"
 
 [[projects]]
   digest = "1:3f3a05ae0b95893d90b9b3b5afdb79a9b3d96e4e36e099d841ae602e4aca0da8"
