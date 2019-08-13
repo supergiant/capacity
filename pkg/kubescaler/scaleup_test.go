@@ -24,12 +24,25 @@ var (
 	trueVar     = true
 	errFake     = errors.New("fake error")
 
+	resource05   = resource.MustParse("0.5")
 	resource1    = resource.MustParse("1")
-	resource1Mi  = resource.MustParse("1Mi")
 	resource2    = resource.MustParse("2")
+	resource3    = resource.MustParse("3")
+	resource4    = resource.MustParse("4")
+	resource8    = resource.MustParse("8")
+	resource1Mi  = resource.MustParse("1Mi")
 	resource2Mi  = resource.MustParse("2Mi")
 	resource42   = resource.MustParse("42")
 	resource42Mi = resource.MustParse("42Mi")
+	resource2G   = resource.MustParse("2G")
+	resource4G   = resource.MustParse("4G")
+	resource8G   = resource.MustParse("8G")
+	resource8Gi  = resource.MustParse("8Gi")
+	resource16G  = resource.MustParse("16G")
+	resource16Gi = resource.MustParse("16Gi")
+	resource32G  = resource.MustParse("32G")
+	resource32Gi = resource.MustParse("32Gi")
+	resource64Gi = resource.MustParse("64Gi")
 
 	vmPrice1CPU1Mem1 = provider.MachineType{
 		Name:           "Price1CPU1Mem1",
@@ -66,6 +79,43 @@ var (
 		CPUResource:    resource42,
 		MemoryResource: resource42Mi,
 		PriceHour:      42,
+	}
+
+	vmM4LargePrice02CPU2Mem4G = provider.MachineType{
+		Name:           "m4.large",
+		CPUResource:    resource2,
+		MemoryResource: resource8Gi,
+		PriceHour:      0.1,
+	}
+	vmM4xLargePrice02CPU2Mem4G = provider.MachineType{
+		Name:           "m4.xlarge",
+		CPUResource:    resource4,
+		MemoryResource: resource16Gi,
+		PriceHour:      0.2,
+	}
+	vmM42xLargePrice02CPU2Mem4G = provider.MachineType{
+		Name:           "m4.2xlarge",
+		CPUResource:    resource8,
+		MemoryResource: resource32Gi,
+		PriceHour:      0.4,
+	}
+	vmR5LargePrice02CPU2Mem4G = provider.MachineType{
+		Name:           "r5.large",
+		CPUResource:    resource2,
+		MemoryResource: resource16Gi,
+		PriceHour:      0.126,
+	}
+	vmR5xLargePrice02CPU2Mem4G = provider.MachineType{
+		Name:           "r5.xlarge",
+		CPUResource:    resource4,
+		MemoryResource: resource32Gi,
+		PriceHour:      0.252,
+	}
+	vmR52xLargePrice02CPU2Mem4G = provider.MachineType{
+		Name:           "r5.2xlarge",
+		CPUResource:    resource8,
+		MemoryResource: resource64Gi,
+		PriceHour:      0.504,
 	}
 
 	resourceList1CPU1Mi = corev1.ResourceList{
@@ -197,6 +247,207 @@ var (
 			},
 		},
 	}
+
+	pod05CPU2GMem = corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "pod05CPU2GMem",
+			CreationTimestamp: metav1.Time{Time: currentTime.Add(-time.Hour)},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind:       "Deployment",
+					Controller: &trueVar,
+				},
+			},
+		},
+		Spec: corev1.PodSpec{
+			NodeName: NodeReadyName,
+			Containers: []corev1.Container{
+				{
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							"cpu":    resource05,
+							"memory": resource2G,
+						},
+					},
+				},
+			},
+		},
+	}
+	pod05CPU4GMem = corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "pod05CPU4GMem",
+			CreationTimestamp: metav1.Time{Time: currentTime.Add(-time.Hour)},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind:       "Deployment",
+					Controller: &trueVar,
+				},
+			},
+		},
+		Spec: corev1.PodSpec{
+			NodeName: NodeReadyName,
+			Containers: []corev1.Container{
+				{
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							"cpu":    resource05,
+							"memory": resource4G,
+						},
+					},
+				},
+			},
+		},
+	}
+	pod1CPU4GMem = corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "pod1CPU4GMem",
+			CreationTimestamp: metav1.Time{Time: currentTime.Add(-time.Hour)},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind:       "Deployment",
+					Controller: &trueVar,
+				},
+			},
+		},
+		Spec: corev1.PodSpec{
+			NodeName: NodeReadyName,
+			Containers: []corev1.Container{
+				{
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							"cpu":    resource1,
+							"memory": resource4G,
+						},
+					},
+				},
+			},
+		},
+	}
+	pod1CPU8GMem = corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "pod1CPU8GMem",
+			CreationTimestamp: metav1.Time{Time: currentTime.Add(-time.Hour)},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind:       "Deployment",
+					Controller: &trueVar,
+				},
+			},
+		},
+		Spec: corev1.PodSpec{
+			NodeName: NodeReadyName,
+			Containers: []corev1.Container{
+				{
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							"cpu":    resource1,
+							"memory": resource8G,
+						},
+					},
+				},
+			},
+		},
+	}
+	pod2CPU8GMem = corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "pod2CPU8GMem",
+			CreationTimestamp: metav1.Time{Time: currentTime.Add(-time.Hour)},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind:       "Deployment",
+					Controller: &trueVar,
+				},
+			},
+		},
+		Spec: corev1.PodSpec{
+			NodeName: NodeReadyName,
+			Containers: []corev1.Container{
+				{
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							"cpu":    resource2,
+							"memory": resource8G,
+						},
+					},
+				},
+			},
+		},
+	}
+	pod2CPU16GMem = corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "pod2CPU16GMem",
+			CreationTimestamp: metav1.Time{Time: currentTime.Add(-time.Hour)},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind:       "Deployment",
+					Controller: &trueVar,
+				},
+			},
+		},
+		Spec: corev1.PodSpec{
+			NodeName: NodeReadyName,
+			Containers: []corev1.Container{
+				{
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							"cpu":    resource2,
+							"memory": resource16G,
+						},
+					},
+				},
+			},
+		},
+	}
+	pod4CPU16GMem = corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "pod4CPU16GMem",
+			CreationTimestamp: metav1.Time{Time: currentTime.Add(-time.Hour)},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind:       "Deployment",
+					Controller: &trueVar,
+				},
+			},
+		},
+		Spec: corev1.PodSpec{
+			NodeName: NodeReadyName,
+			Containers: []corev1.Container{
+				{
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							"cpu":    resource4,
+							"memory": resource16G,
+						},
+					},
+				},
+			},
+		},
+	}
+	pod3CPU32GMem = corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "pod3CPU32GMem",
+			CreationTimestamp: metav1.Time{Time: currentTime.Add(-time.Hour)},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind:       "Deployment",
+					Controller: &trueVar,
+				},
+			},
+		},
+		Spec: corev1.PodSpec{
+			NodeName: NodeReadyName,
+			Containers: []corev1.Container{
+				{
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							"cpu":    resource3,
+							"memory": resource32G,
+						},
+					},
+				},
+			},
+		},
+	}
 )
 
 type fakeProvider struct {
@@ -254,8 +505,92 @@ func TestKubescalerScaleUp(t *testing.T) {
 			workerManager: fake.NewManager(tc.providerErr),
 		}
 
-		_, err = ks.scaleUp(tc.pods, allowedMachines, currentTime)
+		_, err = ks.scaleUp(tc.pods, allowedMachines, "", currentTime)
 		require.Equalf(t, tc.expectedErr, errors.Cause(err), "TC#%d", i+1)
+	}
+
+}
+
+func TestMachineToScale_SmallCPUBox(t *testing.T) {
+	tcs := []struct {
+		name        string
+		pods        []*corev1.Pod
+		expectedVM  provider.MachineType
+		expectedErr error
+	}{
+		{
+			name:       "1 2cpu/8GB pod, expect m4.large",
+			pods:       []*corev1.Pod{&pod2CPU8GMem},
+			expectedVM: vmM4LargePrice02CPU2Mem4G,
+		},
+		{
+			name:       "1 2cpu/16GB pod, expect r5.large",
+			pods:       []*corev1.Pod{&pod2CPU16GMem},
+			expectedVM: vmR5LargePrice02CPU2Mem4G,
+		},
+		{
+			name:       "1 4cpu/16GB pod, expect r5.xlarge",
+			pods:       []*corev1.Pod{&pod4CPU16GMem},
+			expectedVM: vmM4xLargePrice02CPU2Mem4G,
+		},
+		{
+			name:       "1 3cpu/32GB pod, expect r5.xlarge",
+			pods:       []*corev1.Pod{&pod3CPU32GMem},
+			expectedVM: vmR5xLargePrice02CPU2Mem4G,
+		},
+		{
+			name:       "2 2cpu/8GB pod, expect m4.large",
+			pods:       []*corev1.Pod{&pod2CPU8GMem, &pod2CPU8GMem},
+			expectedVM: vmM4LargePrice02CPU2Mem4G,
+		},
+		{
+			name:       "2 2cpu/16GB pod, expect r5.large",
+			pods:       []*corev1.Pod{&pod2CPU16GMem, &pod2CPU16GMem},
+			expectedVM: vmR5LargePrice02CPU2Mem4G,
+		},
+		{
+			name:       "3 2cpu/8GB pod, expect m4.large",
+			pods:       []*corev1.Pod{&pod2CPU8GMem, &pod2CPU8GMem},
+			expectedVM: vmM4LargePrice02CPU2Mem4G,
+		},
+		{
+			name:       "1 1cpu/4GB pod, expect m4.large",
+			pods:       []*corev1.Pod{&pod1CPU4GMem},
+			expectedVM: vmM4LargePrice02CPU2Mem4G,
+		},
+		{
+			name:       "1 1cpu/8GB pod, expect m4.large",
+			pods:       []*corev1.Pod{&pod1CPU8GMem},
+			expectedVM: vmM4LargePrice02CPU2Mem4G,
+		},
+		{
+			name:       "1 0.5cpu/2GB pod, expect m4.large",
+			pods:       []*corev1.Pod{&pod05CPU2GMem},
+			expectedVM: vmM4LargePrice02CPU2Mem4G,
+		},
+		{
+			name:       "1 0.5cpu/4GB pod, expect m4.large",
+			pods:       []*corev1.Pod{&pod05CPU4GMem},
+			expectedVM: vmM4LargePrice02CPU2Mem4G,
+		},
+		{
+			name:       "2 1cpu/4GB pod, expect m4.large",
+			pods:       []*corev1.Pod{&pod1CPU4GMem, &pod1CPU4GMem},
+			expectedVM: vmM4LargePrice02CPU2Mem4G,
+		},
+		{
+			name:       "2 1cpu/8GB pod, expect m4.large",
+			pods:       []*corev1.Pod{&pod1CPU8GMem, &pod1CPU8GMem},
+			expectedVM: vmM4LargePrice02CPU2Mem4G,
+		},
+	}
+
+	vmTypes := []*provider.MachineType{&vmM4LargePrice02CPU2Mem4G, &vmM4xLargePrice02CPU2Mem4G, &vmM42xLargePrice02CPU2Mem4G,
+		&vmR5LargePrice02CPU2Mem4G, &vmR5xLargePrice02CPU2Mem4G, &vmR52xLargePrice02CPU2Mem4G}
+	for _, tc := range tcs {
+		mtype, err := machineToScale(tc.pods, vmTypes, api.SmallCPUBox)
+		require.Equalf(t, tc.expectedErr, errors.Cause(err), "TC: %s: check error", tc.name)
+		require.Equalf(t, tc.expectedVM, mtype, "TC: %s: check machine type", tc.name)
 	}
 
 }

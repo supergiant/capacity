@@ -253,9 +253,6 @@
     "Config": {
       "type": "object",
       "properties": {
-        "SupergiantV1Config": {
-          "$ref": "#/definitions/SupergiantV1UserdataVars"
-        },
         "clusterName": {
           "type": "string",
           "x-go-name": "ClusterName"
@@ -301,6 +298,12 @@
         "scanInterval": {
           "type": "string",
           "x-go-name": "ScanInterval"
+        },
+        "strategy": {
+          "$ref": "#/definitions/ScaleUpStrategy"
+        },
+        "supergiantV1Config": {
+          "$ref": "#/definitions/SupergiantV1UserdataVars"
         },
         "userdata": {
           "description": "Userdata is a base64 encoded representation of shell commands or cloud-init directives\nthat applies after the instance starts.\nhttps://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html",
@@ -372,12 +375,16 @@
           "x-go-name": "Name"
         },
         "priceHour": {
-          "type": "integer",
-          "format": "int64",
+          "type": "number",
+          "format": "double",
           "x-go-name": "PriceHour"
         }
       },
       "x-go-package": "github.com/supergiant/capacity/pkg/provider"
+    },
+    "ScaleUpStrategy": {
+      "type": "string",
+      "x-go-package": "github.com/supergiant/capacity/pkg/api"
     },
     "SupergiantV1UserdataVars": {
       "type": "object",
