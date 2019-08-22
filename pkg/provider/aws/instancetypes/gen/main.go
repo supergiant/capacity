@@ -196,7 +196,7 @@ func getEC2types(location string) ([]VM, error) {
 				Field: aws.String("capacitystatus"),
 				Type:  aws.String("TERM_MATCH"),
 				Value: aws.String("UnusedCapacityReservation"), // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-capacity-reservations.html
-				                                                  // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/capacity-reservations-pricing-biling.html
+				// https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/capacity-reservations-pricing-biling.html
 			},
 		},
 		FormatVersion: aws.String("aws_v1"),

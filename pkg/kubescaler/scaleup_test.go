@@ -81,37 +81,37 @@ var (
 		PriceHour:      42,
 	}
 
-	vmM4LargePrice02CPU2Mem4G = provider.MachineType{
+	vmM4LargePrice01CPU2Mem8G = provider.MachineType{
 		Name:           "m4.large",
 		CPUResource:    resource2,
 		MemoryResource: resource8Gi,
 		PriceHour:      0.1,
 	}
-	vmM4xLargePrice02CPU2Mem4G = provider.MachineType{
+	vmM4xLargePrice02CPU4Mem16G = provider.MachineType{
 		Name:           "m4.xlarge",
 		CPUResource:    resource4,
 		MemoryResource: resource16Gi,
 		PriceHour:      0.2,
 	}
-	vmM42xLargePrice02CPU2Mem4G = provider.MachineType{
+	vmM42xLargePrice04CPU8Mem32G = provider.MachineType{
 		Name:           "m4.2xlarge",
 		CPUResource:    resource8,
 		MemoryResource: resource32Gi,
 		PriceHour:      0.4,
 	}
-	vmR5LargePrice02CPU2Mem4G = provider.MachineType{
+	vmR5LargePrice0126CPU2Mem16G = provider.MachineType{
 		Name:           "r5.large",
 		CPUResource:    resource2,
 		MemoryResource: resource16Gi,
 		PriceHour:      0.126,
 	}
-	vmR5xLargePrice02CPU2Mem4G = provider.MachineType{
+	vmR5xLargePrice0252CPU4Mem32G = provider.MachineType{
 		Name:           "r5.xlarge",
 		CPUResource:    resource4,
 		MemoryResource: resource32Gi,
 		PriceHour:      0.252,
 	}
-	vmR52xLargePrice02CPU2Mem4G = provider.MachineType{
+	vmR52xLargePrice0504CPU8Mem64G = provider.MachineType{
 		Name:           "r5.2xlarge",
 		CPUResource:    resource8,
 		MemoryResource: resource64Gi,
@@ -505,92 +505,130 @@ func TestKubescalerScaleUp(t *testing.T) {
 			workerManager: fake.NewManager(tc.providerErr),
 		}
 
-		_, err = ks.scaleUp(tc.pods, allowedMachines, "", currentTime)
-		require.Equalf(t, tc.expectedErr, errors.Cause(err), "TC#%d", i+1)
+		_, err = ks.scaleUp(tc.pods, allowedMachines, DefaultProvisionAtOnceLimit, currentTime)
+		require.Equalf(t, tc.expectedErr, errors.Cause(err), "TC#%d: %s", i+1, err)
 	}
 
 }
 
-func TestMachineToScale_SmallCPUBox(t *testing.T) {
+func TestMachineToScale(t *testing.T) {
 	tcs := []struct {
 		name        string
 		pods        []*corev1.Pod
-		expectedVM  provider.MachineType
+		expectedVMs []provider.MachineType
 		expectedErr error
 	}{
 		{
-			name:       "1 2cpu/8GB pod, expect m4.large",
-			pods:       []*corev1.Pod{&pod2CPU8GMem},
-			expectedVM: vmM4LargePrice02CPU2Mem4G,
+			name: "1 2cpu/8GB pod, expect m4.large",
+			pods: []*corev1.Pod{&pod2CPU8GMem},
+			expectedVMs: []provider.MachineType{
+				vmM4LargePrice01CPU2Mem8G,
+			},
 		},
 		{
-			name:       "1 2cpu/16GB pod, expect r5.large",
-			pods:       []*corev1.Pod{&pod2CPU16GMem},
-			expectedVM: vmR5LargePrice02CPU2Mem4G,
+			name: "1 2cpu/16GB pod, expect r5.large",
+			pods: []*corev1.Pod{&pod2CPU16GMem},
+			expectedVMs: []provider.MachineType{
+				vmR5LargePrice0126CPU2Mem16G,
+			},
 		},
 		{
-			name:       "1 4cpu/16GB pod, expect r5.xlarge",
-			pods:       []*corev1.Pod{&pod4CPU16GMem},
-			expectedVM: vmM4xLargePrice02CPU2Mem4G,
+			name: "1 4cpu/16GB pod, expect m4.xlarge",
+			pods: []*corev1.Pod{&pod4CPU16GMem},
+			expectedVMs: []provider.MachineType{
+				vmM4xLargePrice02CPU4Mem16G,
+			},
 		},
 		{
-			name:       "1 3cpu/32GB pod, expect r5.xlarge",
-			pods:       []*corev1.Pod{&pod3CPU32GMem},
-			expectedVM: vmR5xLargePrice02CPU2Mem4G,
+			name: "1 3cpu/32GB pod, expect r5.xlarge",
+			pods: []*corev1.Pod{&pod3CPU32GMem},
+			expectedVMs: []provider.MachineType{
+				vmR5xLargePrice0252CPU4Mem32G,
+			},
 		},
 		{
-			name:       "2 2cpu/8GB pod, expect m4.large",
-			pods:       []*corev1.Pod{&pod2CPU8GMem, &pod2CPU8GMem},
-			expectedVM: vmM4LargePrice02CPU2Mem4G,
+			name: "2 2cpu/8GB pod, expect 2 m4.large",
+			pods: []*corev1.Pod{&pod2CPU8GMem, &pod2CPU8GMem},
+			expectedVMs: []provider.MachineType{
+				vmM4LargePrice01CPU2Mem8G,
+				vmM4LargePrice01CPU2Mem8G,
+			},
 		},
 		{
-			name:       "2 2cpu/16GB pod, expect r5.large",
-			pods:       []*corev1.Pod{&pod2CPU16GMem, &pod2CPU16GMem},
-			expectedVM: vmR5LargePrice02CPU2Mem4G,
+			name: "2 2cpu/16GB pod, expect 2 r5.large",
+			pods: []*corev1.Pod{&pod2CPU16GMem, &pod2CPU16GMem},
+			expectedVMs: []provider.MachineType{
+				vmR5LargePrice0126CPU2Mem16G,
+				vmR5LargePrice0126CPU2Mem16G,
+			},
 		},
 		{
-			name:       "3 2cpu/8GB pod, expect m4.large",
-			pods:       []*corev1.Pod{&pod2CPU8GMem, &pod2CPU8GMem},
-			expectedVM: vmM4LargePrice02CPU2Mem4G,
+			name: "3 2cpu/8GB pod, expect 3 m4.large",
+			pods: []*corev1.Pod{&pod2CPU8GMem, &pod2CPU8GMem},
+			expectedVMs: []provider.MachineType{
+				vmM4LargePrice01CPU2Mem8G,
+				vmM4LargePrice01CPU2Mem8G,
+			},
 		},
 		{
-			name:       "1 1cpu/4GB pod, expect m4.large",
-			pods:       []*corev1.Pod{&pod1CPU4GMem},
-			expectedVM: vmM4LargePrice02CPU2Mem4G,
+			name: "3 2cpu/16GB pod, expect 3 m5.large",
+			pods: []*corev1.Pod{&pod2CPU16GMem, &pod2CPU16GMem, &pod2CPU16GMem},
+			expectedVMs: []provider.MachineType{
+				vmR5LargePrice0126CPU2Mem16G,
+				vmR5LargePrice0126CPU2Mem16G,
+				vmR5LargePrice0126CPU2Mem16G,
+			},
 		},
 		{
-			name:       "1 1cpu/8GB pod, expect m4.large",
-			pods:       []*corev1.Pod{&pod1CPU8GMem},
-			expectedVM: vmM4LargePrice02CPU2Mem4G,
+			name: "1 1cpu/4GB pod, expect m4.large",
+			pods: []*corev1.Pod{&pod1CPU4GMem},
+			expectedVMs: []provider.MachineType{
+				vmM4LargePrice01CPU2Mem8G,
+			},
 		},
 		{
-			name:       "1 0.5cpu/2GB pod, expect m4.large",
-			pods:       []*corev1.Pod{&pod05CPU2GMem},
-			expectedVM: vmM4LargePrice02CPU2Mem4G,
+			name: "1 1cpu/8GB pod, expect m4.large",
+			pods: []*corev1.Pod{&pod1CPU8GMem},
+			expectedVMs: []provider.MachineType{
+				vmM4LargePrice01CPU2Mem8G,
+			},
 		},
 		{
-			name:       "1 0.5cpu/4GB pod, expect m4.large",
-			pods:       []*corev1.Pod{&pod05CPU4GMem},
-			expectedVM: vmM4LargePrice02CPU2Mem4G,
+			name: "1 0.5cpu/2GB pod, expect m4.large",
+			pods: []*corev1.Pod{&pod05CPU2GMem},
+			expectedVMs: []provider.MachineType{
+				vmM4LargePrice01CPU2Mem8G,
+			},
 		},
 		{
-			name:       "2 1cpu/4GB pod, expect m4.large",
-			pods:       []*corev1.Pod{&pod1CPU4GMem, &pod1CPU4GMem},
-			expectedVM: vmM4LargePrice02CPU2Mem4G,
+			name: "1 0.5cpu/4GB pod, expect m4.large",
+			pods: []*corev1.Pod{&pod05CPU4GMem},
+			expectedVMs: []provider.MachineType{
+				vmM4LargePrice01CPU2Mem8G,
+			},
 		},
 		{
-			name:       "2 1cpu/8GB pod, expect m4.large",
-			pods:       []*corev1.Pod{&pod1CPU8GMem, &pod1CPU8GMem},
-			expectedVM: vmM4LargePrice02CPU2Mem4G,
+			name: "2 1cpu/4GB pod, expect m4.large",
+			pods: []*corev1.Pod{&pod1CPU4GMem, &pod1CPU4GMem},
+			expectedVMs: []provider.MachineType{
+				vmM4LargePrice01CPU2Mem8G,
+			},
+		},
+		{
+			name: "2 1cpu/8GB pod, expect r5.large",
+			pods: []*corev1.Pod{&pod1CPU8GMem, &pod1CPU8GMem},
+			expectedVMs: []provider.MachineType{
+				vmR5LargePrice0126CPU2Mem16G,
+			},
 		},
 	}
 
-	vmTypes := []*provider.MachineType{&vmM4LargePrice02CPU2Mem4G, &vmM4xLargePrice02CPU2Mem4G, &vmM42xLargePrice02CPU2Mem4G,
-		&vmR5LargePrice02CPU2Mem4G, &vmR5xLargePrice02CPU2Mem4G, &vmR52xLargePrice02CPU2Mem4G}
+	vmTypes := []*provider.MachineType{&vmM4LargePrice01CPU2Mem8G, &vmM4xLargePrice02CPU4Mem16G, &vmM42xLargePrice04CPU8Mem32G,
+		&vmR5LargePrice0126CPU2Mem16G, &vmR5xLargePrice0252CPU4Mem32G, &vmR52xLargePrice0504CPU8Mem64G}
 	for _, tc := range tcs {
-		mtype, err := machineToScale(tc.pods, vmTypes, api.SmallCPUBox)
+		mtypes, err := machinesToScale(tc.pods, vmTypes, DefaultProvisionAtOnceLimit)
 		require.Equalf(t, tc.expectedErr, errors.Cause(err), "TC: %s: check error", tc.name)
-		require.Equalf(t, tc.expectedVM, mtype, "TC: %s: check machine type", tc.name)
+		require.Equalf(t, tc.expectedVMs, mtypes, "TC: %s: check machine type", tc.name)
 	}
 
 }

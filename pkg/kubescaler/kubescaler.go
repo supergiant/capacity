@@ -38,6 +38,8 @@ const (
 
 	// defaultNodeTimeBuffer is a time in seconds to wait for node is in Ready state.
 	defaultNodeTimeBuffer = 60
+
+	DefaultProvisionAtOnceLimit = 5
 )
 
 var (
@@ -183,8 +185,6 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 		return err
 	}
 
-	log.Debugf("kubescaler: rss: unscheduledPods=%v", podNames(rss.unscheduledPods))
-
 	failed, provisioning := s.checkWorkers(rss.workerList, currentTime)
 	if len(failed) > 0 {
 		// remove machines that are provisioning for a long time and with a not ready nodes
@@ -198,6 +198,8 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 		return nil
 	}
 
+	log.Debugf("kubescaler: rss: unscheduledPods=%v", podNames(rss.unscheduledPods))
+
 	if len(rss.unscheduledPods) > 0 {
 		if emptyNodes := getEmptyNodes(rss.readyNodes, rss.allPods); len(emptyNodes) > 0 {
 			log.Debugf("kubescaler: scale up: there are %v ready empty nodes in the cluster", nodeNames(emptyNodes))
@@ -207,7 +209,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 		if cfg.WorkersCountMax > 0 && cfg.WorkersCountMax > len(rss.workerList.Items) {
 			var scaled bool
 			// try to scale up the cluster. In case of success no need to scale down
-			scaled, err = s.scaleUp(rss.unscheduledPods, allowedMachineTypes, cfg.Strategy, currentTime)
+			scaled, err = s.scaleUp(rss.unscheduledPods, allowedMachineTypes, DefaultProvisionAtOnceLimit, currentTime)
 			if err != nil {
 				return errors.Wrap(err, "scale up")
 			}

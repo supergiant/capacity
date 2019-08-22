@@ -11,14 +11,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/supergiant/capacity/pkg/api"
 	"github.com/supergiant/capacity/pkg/log"
 	"github.com/supergiant/capacity/pkg/provider"
 )
 
 var ErrNoResourcesRequested = errors.New("empty cpu and RAM value")
 
-func (s *Kubescaler) scaleUp(unscheduledPods []*corev1.Pod, machineTypes []*provider.MachineType, strategy api.ScaleUpStrategy, currentTime time.Time) (bool, error) {
+func (s *Kubescaler) scaleUp(unscheduledPods []*corev1.Pod, machineTypes []*provider.MachineType, machinesLimit int, currentTime time.Time) (bool, error) {
 	podsToScale, podsIgnored := filterPods(unscheduledPods, machineTypes, currentTime)
 	if len(podsIgnored) > 0 {
 		log.Debugf("ignored pods to scale: %v", podsIgnored)
@@ -29,40 +28,41 @@ func (s *Kubescaler) scaleUp(unscheduledPods []*corev1.Pod, machineTypes []*prov
 
 	log.Debugf("kubescaler: run: scale up: unscheduled pods: %v", podNames(podsToScale))
 
-	mtype, err := machineToScale(unscheduledPods, machineTypes, strategy)
+	mtypes, err := machinesToScale(podsToScale, machineTypes, machinesLimit)
 	if err != nil {
 		return false, errors.Wrap(err, "find an appropriate machine type")
 	}
 
-	worker, err := s.CreateWorker(context.Background(), mtype.Name)
-	if err != nil {
-		return true, errors.Wrap(err, "create a worker")
+	log.Infof("kubescaler: run: scale up: machines to scale: %v", toNames(mtypes))
+
+	for _, mtype := range mtypes {
+		worker, err := s.CreateWorker(context.Background(), mtype.Name)
+		if err != nil {
+			return true, errors.Wrap(err, "create a worker")
+		}
+		log.Infof("kubescaler: run: scale up: has created a %s worker (%s)", worker.MachineType, worker.MachineID)
 	}
 
-	log.Infof("kubescaler: run: scale up: has created a %s worker (%s)", worker.MachineType, worker.MachineID)
 	return true, err
 }
 
-func machineToScale(pods []*corev1.Pod, machineTypes []*provider.MachineType, strategy api.ScaleUpStrategy) (provider.MachineType, error) {
-	// get required cpu/mem for unscheduled pods and pick up a machine type
-	var cpu, mem resource.Quantity
-	switch strategy {
-	case api.SmallCPUBox:
-		cpu, mem = smallestCPUMem(pods)
-	case api.SmallMemBox:
-		cpu, mem = smallestMemCPU(pods)
-	default:
-		cpu, mem = totalCPUMem(pods)
-	}
-
-	mtype, err := bestMachineFor(cpu, mem, machineTypes)
+func machinesToScale(pods []*corev1.Pod, machineTypes []*provider.MachineType, machinesLimit int) ([]provider.MachineType, error) {
+	smallBoxesNeeded, err := smallBoxesFor(pods, machineTypes, machinesLimit)
 	if err != nil {
-		return provider.MachineType{}, errors.Wrap(err, "find an appropriate machine type")
+		return nil, errors.Wrap(err, "calculate small boxes")
+	}
+	largeBoxesNeeded, err := largeBoxesFor(pods, machineTypes, machinesLimit)
+	if err != nil {
+		return nil, errors.Wrap(err, "calculate large box")
 	}
 
-	log.Debugf("kubescaler: run: scale up: strategy %s: unscheduled pod(s) needs cpu=%s, mem=%s: pick the %s machine (cpu=%s, mem=%s)",
-		strategy, cpu.String(), mem.String(), mtype.Name, mtype.CPU, mtype.Memory)
-	return mtype, nil
+	log.Debugf("kubescaler: run: scale up: smallBoxesNeeded: %v, price=%f", toNames(smallBoxesNeeded), priceFor(smallBoxesNeeded))
+	log.Debugf("kubescaler: run: scale up: largeBoxNeeded: %s, price=%f", toNames(largeBoxesNeeded), priceFor(largeBoxesNeeded))
+
+	if priceFor(smallBoxesNeeded) <= priceFor(largeBoxesNeeded) {
+		return smallBoxesNeeded, nil
+	}
+	return largeBoxesNeeded, nil
 }
 
 func filterPods(pods []*corev1.Pod, allowedMachines []*provider.MachineType, currentTime time.Time) ([]*corev1.Pod, []string) {
@@ -230,4 +230,160 @@ func takeBest(old, new *provider.MachineType) *provider.MachineType {
 		}
 	}
 	return old
+}
+
+type machineInfo struct {
+	mtype provider.MachineType
+	pods  []*corev1.Pod
+}
+
+func new(mtype provider.MachineType) machineInfo {
+	return machineInfo{
+		mtype: mtype,
+		pods:  make([]*corev1.Pod, 0),
+	}
+}
+
+func (mi *machineInfo) resourcesAvailable() (resource.Quantity, resource.Quantity) {
+	cpu, mem := mi.mtype.CPUResource, mi.mtype.MemoryResource
+	for _, p := range mi.pods {
+		pcpu, pmem := getCPUMemForScheduling(p)
+		cpu.Sub(pcpu)
+		mem.Sub(pmem)
+	}
+	return cpu, mem
+}
+
+func (mi *machineInfo) set(pod *corev1.Pod) error {
+	cpu, mem := mi.resourcesAvailable()
+	pcpu, pmem := getCPUMemForScheduling(pod)
+
+	if cpu.Cmp(pcpu) == -1 {
+		return fmt.Errorf("cpu: available=%s < need=%s", cpu.String(), pcpu.String())
+	}
+	if mem.Cmp(pmem) == -1 {
+		return fmt.Errorf("memory: available=%s < need=%s", mem.String(), pmem.String())
+	}
+
+	if mi.pods == nil {
+		mi.pods = make([]*corev1.Pod, 0)
+	}
+	mi.pods = append(mi.pods, pod)
+	return nil
+}
+
+func largeBoxesFor(pods []*corev1.Pod, machineTypes []*provider.MachineType, machinesLimit int) ([]provider.MachineType, error) {
+	podsCopy := make([]*corev1.Pod, 0, len(pods))
+	for _, p := range pods {
+		podsCopy = append(podsCopy, p)
+	}
+
+	machinesNeeded := make([]machineInfo, 0)
+	for {
+		if len(podsCopy) == 0 {
+			break
+		}
+
+		// take the largest VM and assign pods to it
+		cpu, mem := totalCPUMem(podsCopy)
+		mtype, err := bestMachineFor(cpu, mem, machineTypes)
+		if err != nil {
+			return nil, err
+		}
+
+		mi := machineInfo{mtype: mtype}
+		unscheduledPods := make([]*corev1.Pod, 0)
+		for _, pod := range podsCopy {
+			if err := mi.set(pod); err != nil {
+				unscheduledPods = append(unscheduledPods, pod)
+			}
+		}
+
+		machinesNeeded = append(machinesNeeded, mi)
+		if len(machinesNeeded) >= machinesLimit {
+			break
+		}
+		podsCopy = unscheduledPods
+	}
+
+	return toVMTypes(machinesNeeded), nil
+}
+
+func smallBoxesFor(pods []*corev1.Pod, machineTypes []*provider.MachineType, machinesLimit int) ([]provider.MachineType, error) {
+	machinesNeeded := make([]machineInfo, 0)
+	for _, pod := range sortByCPUMem(pods) {
+		if assignTo(machinesNeeded, pod) {
+			continue
+		}
+		mtype, err := bestMachineForPod(pod, machineTypes)
+		if err != nil {
+			return nil, errors.Wrapf(err, "pod %s/%s", pod.Namespace, pod.Name)
+		}
+
+		machinesNeeded = append(machinesNeeded, machineInfo{
+			mtype: mtype,
+			pods:  []*corev1.Pod{pod},
+		})
+		if len(machinesNeeded) >= machinesLimit {
+			break
+		}
+
+	}
+	return toVMTypes(machinesNeeded), nil
+}
+
+func assignTo(machineInfos []machineInfo, pod *corev1.Pod) bool {
+	for _, mi := range machineInfos {
+		if err := mi.set(pod); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+func sortByCPUMem(pods []*corev1.Pod) []*corev1.Pod {
+	if len(pods) == 0 {
+		return pods
+	}
+	sort.Slice(pods, func(i, j int) bool {
+		icpu, imem := getCPUMemForScheduling(pods[i])
+		jcpu, jmem := getCPUMemForScheduling(pods[j])
+		lessCPU := icpu.Cmp(jcpu) == -1
+		equalCPU := icpu.Cmp(jcpu) == 0
+		lessMem := imem.Cmp(jmem) == -1
+		if equalCPU {
+			return lessMem
+		}
+		return lessCPU
+	})
+	return pods
+}
+
+func bestMachineForPod(pod *corev1.Pod, machineTypes []*provider.MachineType) (provider.MachineType, error) {
+	pcpu, pmem := getCPUMemForScheduling(pod)
+	return bestMachineFor(pcpu, pmem, machineTypes)
+}
+
+func toVMTypes(machineInfos []machineInfo) []provider.MachineType {
+	out := make([]provider.MachineType, 0, len(machineInfos))
+	for _, mi := range machineInfos {
+		out = append(out, mi.mtype)
+	}
+	return out
+}
+
+func toNames(mtypes []provider.MachineType) []string {
+	out := make([]string, 0, len(mtypes))
+	for _, mtype := range mtypes {
+		out = append(out, mtype.Name)
+	}
+	return out
+}
+
+func priceFor(mtypes []provider.MachineType) float64 {
+	var out float64
+	for _, mtype := range mtypes {
+		out += mtype.PriceHour
+	}
+	return out
 }

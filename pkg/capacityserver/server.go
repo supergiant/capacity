@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers"
-	"github.com/supergiant/capacity/pkg/capacityserver/handlers/v1"
+	v1 "github.com/supergiant/capacity/pkg/capacityserver/handlers/v1"
 	"github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/log"
 )

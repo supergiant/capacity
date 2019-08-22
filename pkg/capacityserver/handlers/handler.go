@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/mux"
 
 	_ "github.com/supergiant/capacity/pkg/capacityserver/handlers/swagger" // for swagger generation
-	"github.com/supergiant/capacity/pkg/capacityserver/handlers/v1"
+	v1 "github.com/supergiant/capacity/pkg/capacityserver/handlers/v1"
 	"github.com/supergiant/capacity/pkg/capacityserver/handlers/version" //"github.com/supergiant/capacity/pkg/kubescaler"
 	"github.com/supergiant/capacity/pkg/kubescaler"
 )
