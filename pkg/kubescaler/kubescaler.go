@@ -221,7 +221,7 @@ func (s *Kubescaler) RunOnce(currentTime time.Time) error {
 	}
 
 	if cfg.WorkersCountMin > 0 && cfg.WorkersCountMin < len(rss.workerList.Items) {
-		if err = s.scaleDown(rss.scheduledPods, rss.workerList, cfg.IgnoredNodeLabels, currentTime); err != nil {
+		if err = s.scaleDown(rss.scheduledPods, rss.workerList, cfg.IgnoredNodeLabels, cfg.WorkersLifespanMinutes, currentTime); err != nil {
 			return errors.Wrap(err, "scale down")
 		}
 	} else {

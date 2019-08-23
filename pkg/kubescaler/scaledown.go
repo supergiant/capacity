@@ -14,7 +14,7 @@ import (
 )
 
 // TODO: use workers here
-func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, workerList *api.WorkerList, ignoreLabels map[string]string, currentTime time.Time) error {
+func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, workerList *api.WorkerList, ignoreLabels map[string]string, lifespanMin int, currentTime time.Time) error {
 	// TODO: don't skip failed stateful pods?
 	scheduledPods = filterOutDaemonSetPods(filterOutStandalonePods(scheduledPods))
 	nodePodsMap := nodePodsMap(scheduledPods)
@@ -38,7 +38,7 @@ func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, workerList *api.Work
 	}()
 
 	for _, w := range emptyapi {
-		if reason := ignoreReason(w, ignoreLabels, currentTime); reason != "" {
+		if reason := ignoreReason(w, ignoreLabels, lifespanMin, currentTime); reason != "" {
 			ignored = append(ignored, fmt.Sprintf("%s(%s,%s)", w.NodeName, w.MachineID, reason))
 			continue
 		}
@@ -52,13 +52,13 @@ func (s *Kubescaler) scaleDown(scheduledPods []*corev1.Pod, workerList *api.Work
 	return nil
 }
 
-func ignoreReason(w *api.Worker, ignoreLabels map[string]string, currentTime time.Time) string {
+func ignoreReason(w *api.Worker, ignoreLabels map[string]string, lifespanMin int, currentTime time.Time) string {
 	switch {
 	case w.Reserved:
 		return "reserved=true"
 	case hasIgnoredLabel(w, ignoreLabels):
 		return "ignoredLabel=true"
-	case isNewWorker(w, currentTime):
+	case isNewWorker(w, lifespanMin, currentTime):
 		return "lifespan=" + currentTime.Sub(w.CreationTimestamp).String()
 	}
 	return ""
@@ -124,8 +124,11 @@ func workerNodeNames(wkrs []*api.Worker) []string {
 	return list
 }
 
-func isNewWorker(worker *api.Worker, currentTime time.Time) bool {
-	return worker.CreationTimestamp.Add(workers.MinWorkerLifespan).After(currentTime)
+func isNewWorker(worker *api.Worker, lifespanMin int, currentTime time.Time) bool {
+	if lifespanMin == 0 {
+		lifespanMin = workers.MinWorkerLifespanMin
+	}
+	return worker.CreationTimestamp.Add(time.Duration(lifespanMin) * time.Minute).After(currentTime)
 }
 
 func hasIgnoredLabel(worker *api.Worker, ignored map[string]string) bool {
