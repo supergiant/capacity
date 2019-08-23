@@ -81,7 +81,7 @@ func TestKubescalerScaleDown(t *testing.T) {
 			workerManager: fake.NewManager(tc.providerErr),
 		}
 
-		err = ks.scaleDown(tc.pods, tc.workerList, nil, time.Now())
+		err = ks.scaleDown(tc.pods, tc.workerList, nil, 0, time.Now())
 		require.Equalf(t, tc.expectedErr, err, "TC#%d", i+1)
 	}
 

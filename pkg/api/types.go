@@ -55,6 +55,7 @@ type Config struct {
 	MaxMachineProvisionTime string            `json:"maxMachineProvisionTime"`
 	IgnoredNodeLabels       map[string]string `json:"ignoredNodeLabels,omitempty"`
 
+	WorkersLifespanMinutes int `json:"workersLifespanMinutes"`
 	// Userdata is a base64 encoded representation of shell commands or cloud-init directives
 	// that applies after the instance starts.
 	// https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html
