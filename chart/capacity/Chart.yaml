@@ -1,7 +1,0 @@
-apiVersion: v1
-version: 0.1.0
-appVersion: "0.1.0"
-name: capacity
-description: Capcity Service supergiant.io
-home: https://github.com/supergiant
-icon: https://user-images.githubusercontent.com/26225544/48772264-8abe2200-eccc-11e8-8b7c-e35225aa9030.png
