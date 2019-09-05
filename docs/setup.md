@@ -138,6 +138,10 @@ spec:
 EOF
 ```
 
+## Install with helm
+
+Use the capacity chart: https://github.com/supergiant/charts/tree/master/capacity
+
 ## RBAC permissions
 
 ```
